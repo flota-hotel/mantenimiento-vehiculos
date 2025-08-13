@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestión de Flota — Google Sheets API (LIVE)</title>
+  <style>
+    :root{ --bg:#f7f8fa;--card:#ffffff;--ink:#111827;--muted:#6b7280;--primary:#0ea5e9;--warn:#f59e0b;--danger:#ef4444;--line:#e5e7eb; }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;color:var(--ink);background:var(--bg)}
+    header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);z-index:5}
+    .topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 24px}
+    .brand{font-weight:700}
+    .search{flex:1;display:flex;gap:8px}
+    input, select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+    button{border:0;border-radius:10px;padding:10px 14px;background:var(--primary);color:#fff;cursor:pointer}
+    button.secondary{background:#1118270d;color:var(--ink);border:1px solid var(--line)}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px 24px}
+    .tab{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+    .tab.active{background:var(--primary);color:#fff;border-color:transparent}
+    .container{max-width:1200px;margin:0 auto;padding:24px}
+    .grid{display:grid;gap:16px}
+    .kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+    .card h3{margin:0 0 8px 0;font-size:14px;color:var(--muted)}
+    .big{font-size:28px;font-weight:800}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
+    th{color:var(--muted);font-weight:600}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px}
+    .ok{background:#10b9811a;color:#065f46;border:1px solid #10b98140}
+    .warnP{background:#f59e0b1a;color:#7c2d12;border:1px solid #f59e0b40}
+    .dangerP{background:#ef44441a;color:#7f1d1d;border:1px solid #ef444440}
+    .hidden{display:none}
+    .sticky-actions{position:fixed;right:24px;bottom:24px;display:flex;flex-direction:column;gap:10px}
+    .footer{padding:24px;color:#6b7280;font-size:12px;text-align:center}
+    .tag{font-size:12px;color:#6b7280;border:1px solid var(--line);border-radius:999px;padding:2px 6px}
+    .test{font-size:12px;color:#111827}
+    .test .pass{color:#059669}
+    .test .fail{color:#b91c1c}
+    /* highlight bitácora */
+    .flash{transition:background 0.4s}
+    .flash td{background:inherit}
+    .flash-ret{background:#fff7ed !important}
+    .flash-ent{background:#eef2ff !important}
+    .newtag{display:inline-block;margin-right:6px;font-size:12px}
+  </style>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">🚗 Flota Hotelera (Sheets — LIVE)</div>
+      <div class="search">
+        <input id="qPlaca" type="text" placeholder="Buscar por placa (ej. ABC123)…"/>
+        <button class="secondary" onclick="buscarPlaca()">Buscar</button>
+      </div>
+      <div>Rol: <select id="rol" onchange="render()"><option value="admin">Administrador</option><option value="mecanico">Mecánico/Operaciones</option><option value="recepcion">Recepción/Conductor</option><option value="lectura">Solo lectura</option></select></div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="dashboard" onclick="setTab('dashboard')">Dashboard</button>
+      <button class="tab" data-tab="vehiculos" onclick="setTab('vehiculos')">Vehículos</button>
+      <button class="tab" data-tab="polizas" onclick="setTab('polizas')">Pólizas & RTV</button>
+      <button class="tab" data-tab="mantenimientos" onclick="setTab('mantenimientos')">Mantenimientos</button>
+      <button class="tab" data-tab="combustible" onclick="setTab('combustible')">Combustible</button>
+      <button class="tab" data-tab="bitacora" onclick="setTab('bitacora')">Bitácora</button>
+      <button class="tab" data-tab="reportes" onclick="setTab('reportes')">Reportes</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="tab-dashboard" class="tabpanel">
+      <div class="grid kpis">
+        <div class="card"><h3>Vehículos activos</h3><div class="big" id="kpiVeh"></div></div>
+        <div class="card"><h3>Pólizas ≤30d</h3><div class="big" id="kpiPol30"></div></div>
+        <div class="card"><h3>Pólizas ≤7d</h3><div class="big" id="kpiPol7"></div></div>
+        <div class="card"><h3>RTV ≤30d</h3><div class="big" id="kpiRtv30"></div></div>
+        <div class="card"><h3>Mantenimientos mes</h3><div class="big" id="kpiMantMes"></div></div>
+        <div class="card"><h3>Gasto combustible mes</h3><div class="big" id="kpiFuelMes"></div></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><strong>Alertas</strong><input id="fltAlertPlaca" type="text" placeholder="Filtrar por placa…" oninput="renderAlertas()"/></div>
+        <table><thead><tr><th>Tipo</th><th>Placa</th><th>Días/Km</th><th>Estado</th></tr></thead><tbody id="tblAlertas"></tbody></table>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <details>
+          <summary>🧪 Pruebas rápidas (dev)</summary>
+          <div class="test" id="testOut"></div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="secondary" onclick="runTests('get')">Probar GET Vehículos</button>
+            <button class="secondary" onclick="runTests('ui')">Probar UI (selects)</button>
+            <button class="secondary" onclick="runTests('core')">Probar Core (setTab/XLSX)</button>
+            <button class="secondary" onclick="runTests('auto')">Probar autoProximoKm</button>
+            <button class="secondary" onclick="runTests('bit')">Probar reset & filtro Bitácora</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section id="tab-vehiculos" class="tabpanel hidden">
+      <form class="card" onsubmit="guardarVehiculo(event)" style="margin-bottom:12px">
+        <h3 style="margin:0 0 8px 0;color:var(--ink)">+ Vehículo</h3>
+        <div class="row">
+          <div><label>Placa</label><input id="vPlaca" type="text" placeholder="ABC123" required/></div>
+          <div><label>Marca</label><input id="vMarca" type="text" required/></div>
+        </div>
+        <div class="row">
+          <div><label>Modelo</label><input id="vModelo" type="text" required/></div>
+          <div><label>Año</label><input id="vAnio" type="number" min="1990" max="2100" required/></div>
+        </div>
+        <div class="row">
+          <div><label>Tipo</label>
+            <select id="vTipo"><option value="sedán">sedán</option><option value="pickup">pickup</option><option value="SUV">SUV</option><option value="buseta">buseta</option><option value="otro">otro</option></select>
+          </div>
+          <div><label>Estado</label>
+            <select id="vEstado"><option value="activo">activo</option><option value="inactivo">inactivo</option></select>
+          </div>
+        </div>
+        <div style="margin-top:12px"><button>Guardar</button></div>
+      </form>
+      <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="display:flex;gap:8px"><select id="fltVehPlaca" onchange="renderVehiculos()"><option value="">Todas las placas</option></select><select id="fltVehEstado" onchange="renderVehiculos()"><option value="">Todos</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+        <div><button class="secondary" onclick="exportarVehiculo()">Exportar vehículo (Excel)</button></div>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>Placa</th><th>Marca/Modelo</th><th>Año</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tblVeh"></tbody></table>
+      </div>
+    </section>
+
+    <section id="tab-polizas" class="tabpanel hidden">
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="margin:0 0 8px 0;color:var(--ink)">+ Póliza / + RTV</h3>
+        <div class="row">
+          <div>
+            <div class="row"><div><label>Vehículo</label><select id="pVeh"></select></div><div><label>Aseguradora</label><input id="pAseg" type="text" placeholder="INS"/></div></div>
+            <div class="row"><div><label>N° Póliza</label><input id="pNum" type="text"/></div><div><label>Vence (póliza)</label><input id="pVence" type="date"/></div></div>
+            <div><button class="secondary" onclick="guardarPoliza(event)">Guardar póliza</button></div>
+          </div>
+          <div>
+            <div class="row"><div><label>Vehículo</label><select id="rVeh"></select></div><div><label>N° Cita</label><input id="rCita" type="text"/></div></div>
+            <div class="row"><div><label>Vence (RTV)</label><input id="rVence" type="date"/></div><div></div></div>
+            <div><button class="secondary" onclick="guardarRTV(event)">Guardar RTV</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Pólizas</strong><select id="fltPolVencer" onchange="renderPolizas()"><option value="">Todas</option><option value="30">Solo ≤30 días</option><option value="7">Solo ≤7 días</option></select></div>
+          <table><thead><tr><th>Placa</th><th>Aseguradora</th><th>N° Póliza</th><th>Vence</th><th>Semáforo</th></tr></thead><tbody id="tblPol"></tbody></table>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>RTV</strong><select id="fltRtvVencer" onchange="renderRtv()"><option value="">Todas</option><option value="30">Solo ≤30 días</option><option value="7">Solo ≤7 días</option></select></div>
+          <table><thead><tr><th>Placa</th><th>N° Cita</th><th>Vence</th><th>Semáforo</th></tr></thead><tbody id="tblRtv"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-mantenimientos" class="tabpanel hidden">
+      <div class="row">
+        <form class="card" onsubmit="guardarMantenimiento(event)">
+          <h3 style="margin-bottom:8px;color:var(--ink)">+ Mantenimiento</h3>
+          <div class="row"><div><label>Vehículo</label><select id="mVeh"></select></div><div><label>Tipo</label><select id="mTipo"><option value="cambio_aceite">Cambio de aceite</option><option value="llantas">Llantas</option><option value="frenos">Frenos</option><option value="bateria">Batería</option><option value="alineacion">Alineación</option><option value="otro">Otro</option></select></div></div>
+          <div class="row"><div><label>Fecha</label><input id="mFecha" type="date" required/></div><div><label>Costo</label><input id="mCosto" type="number" min="0" step="0.01" required/></div></div>
+          <div class="row"><div><label>Km actual</label><input id="mKm" type="number" min="0"/></div><div><label>Próximo km</label><input id="mProx" type="number" min="0" placeholder="auto si cambio de aceite"/></div></div>
+          <div class="row"><div><label>Último cambio aceite (km)</label><input id="mKmPrevAceite" type="number" readonly/></div><div></div></div>
+          <div><label>Observaciones</label><input id="mObs" type="text" placeholder="Detalles"/></div>
+          <div style="margin-top:12px;display:flex;gap:8px"><button>Guardar</button><button type="button" class="secondary" onclick="autoProximoKm()">Sugerir próximo (+5,000)</button></div>
+        </form>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Histórico</strong><div style="display:flex;gap:8px"><select id="fltMantPlaca" onchange="renderMant()"><option value="">Todas las placas</option></select><select id="fltMantTipo" onchange="renderMant()"><option value="">Todos</option><option value="cambio_aceite">Cambio de aceite</option><option value="llantas">Llantas</option><option value="frenos">Frenos</option><option value="bateria">Batería</option><option value="alineacion">Alineación</option><option value="otro">Otro</option></select></div></div>
+          <table><thead><tr><th>Placa</th><th>Fecha</th><th>Tipo</th><th>Costo</th><th>Km</th><th>Próx.</th><th>Obs</th></tr></thead><tbody id="tblMant"></tbody></table>
+          <div style="margin-top:8px"><span class="tag" id="sumMant"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-combustible" class="tabpanel hidden">
+      <div class="row">
+        <form class="card" onsubmit="guardarCombustible(event)">
+          <h3 style="margin-bottom:8px;color:var(--ink)">+ Carga de combustible</h3>
+          <div class="row"><div><label>Vehículo</label><select id="cVeh"></select></div><div><label>Fecha</label><input id="cFecha" type="date" required/></div></div>
+          <div class="row"><div><label>Litros</label><input id="cLitros" type="number" step="0.01" min="0.01" required oninput="calcCosto();calcKmLEstimado()"/></div><div><label>₡/Litro</label><input id="cPPL" type="number" step="0.01" min="0" required oninput="calcCosto();calcKmLEstimado()"/></div></div>
+          <div class="row"><div><label>Odómetro km</label><input id="cOdo" type="number" min="0" required oninput="calcCosto();calcKmLEstimado()"/></div><div><label>Proveedor</label><input id="cProv" type="text"/></div></div>
+          <div class="row"><div><label>Odómetro anterior</label><input id="cOdoPrev" type="number" readonly/></div><div><label>Km/L estimado</label><input id="cKmLEst" type="number" step="0.01" readonly/></div></div>
+          <div class="row"><div><label>Costo total</label><input id="cCosto" type="number" readonly/></div><div></div></div>
+          <div style="margin-top:12px"><button>Guardar</button></div>
+        </form>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Registros</strong><select id="fltFuelPlaca" onchange="renderFuel()"><option value="">Todas las placas</option></select></div>
+          <table><thead><tr><th>Placa</th><th>Fecha</th><th>Litros</th><th>₡/L</th><th>Costo</th><th>Odómetro</th><th>Km/L</th></tr></thead><tbody id="tblFuel"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-bitacora" class="tabpanel hidden">
+      <div class="row">
+        <form class="card" onsubmit="guardarBitacora(event)">
+          <h3 style="margin-bottom:8px;color:var(--ink)">+ Bitácora</h3>
+          <div class="row"><div><label>Vehículo</label><select id="bVeh"></select></div><div><label>Acción</label><select id="bAccion"><option value="retiro">Retiro</option><option value="entrega">Entrega</option></select></div></div>
+          <div class="row"><div><label>Conductor</label><input id="bCond" type="text" placeholder="Obligatorio en retiro"/></div><div><label>Fecha/hora</label><input id="bFecha" type="datetime-local"/></div></div>
+          <div class="row"><div><label>Kilometraje</label><input id="bKm" type="number" min="0" required/></div><div><label>Nivel combustible</label><select id="bNivel"><option>0%</option><option>1/4</option><option>1/2</option><option>3/4</option><option selected>lleno</option></select></div></div>
+          <div class="row"><div><label>Km anterior</label><input id="bKmPrev" type="number" readonly/></div><div></div></div>
+          <div class="row"><div><label>Chequeos</label><div style="display:flex;gap:8px;flex-wrap:wrap"><label><input type="checkbox" id="bFrenos"/> Frenos</label><label><input type="checkbox" id="bDir"/> Dirección</label><label><input type="checkbox" id="bLuces"/> Luces</label></div></div><div><label>Golpes carrocería</label><select id="bGolpes"><option value="false">No</option><option value="true">Sí</option></select></div></div>
+          <div><label>Observaciones</label><input id="bObs" type="text" placeholder="Obligatorio si hay golpes"/></div>
+          <div style="margin-top:12px"><button>Guardar</button></div>
+        </form>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Histórico</strong><select id="fltBitPlaca" onchange="renderBit()"><option value="">Todas las placas</option></select></div>
+          <table><thead><tr><th>Placa</th><th>Acción</th><th>Conductor</th><th>Fecha</th><th>Km</th><th>Nivel</th><th>Chequeos</th><th>Obs</th></tr></thead><tbody id="tblBit"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-reportes" class="tabpanel hidden">
+      <div class="card">
+        <h3>Reportes</h3>
+        <div class="row">
+          <div><label>Tipo</label>
+            <select id="repTipo">
+              <option value="mantenimientos">Mantenimientos</option>
+              <option value="combustible">Combustible</option>
+              <option value="bitacora">Bitácora</option>
+              <option value="polizas_rtv">Pólizas & RTV</option>
+            </select>
+          </div>
+          <div><label>Placa</label><select id="repPlaca"><option value="">Todas las placas</option></select></div>
+        </div>
+        <div class="row"><div><label>Desde</label><input id="repA" type="date"/></div><div><label>Hasta</label><input id="repB" type="date"/></div></div>
+        <div style="margin-top:12px"><button class="secondary" onclick="exportReportXLSX()">Exportar Excel</button></div>
+      </div>
+    </section>
+
+    <div class="sticky-actions"><button onclick="setTab('mantenimientos')">+ Mantenimiento</button><button onclick="setTab('combustible')" class="secondary">+ Combustible</button></div>
+  </main>
+
+  <div class="footer">Conectado a tu Google Sheets vía Apps Script — URL ya integrada.</div>
+
+  <script>
+  // ====== API: integrada con tu URL ======
+  const API = "https://script.google.com/macros/s/AKfycbw-rp2SfA6Exw1Yl6mSm7skgnnyhQ18eTHAB-asVsr1vMagT49N0haWR5KZ-YUGZD_a/exec";
+  const API_KEY = ""; // si activas API key, colócala aquí
+
+  // ====== ESTADO ======
+  let Vehiculos=[], Polizas=[], RTV=[], Mantenimientos=[], Combustible=[], Bitacora=[], Alertas=[];
+
+  // ====== HELPERS BÁSICOS Y NAVEGACIÓN (definidos ANTES de usarlos) ======
+  const byId = id=> document.getElementById(id);
+  const fmt = n=> new Intl.NumberFormat('es-CR',{style:'currency',currency:'CRC',maximumFractionDigits:0}).format(Number(n)||0);
+  const vehById = id=> Vehiculos.find(v=> Number(v.id)===Number(id));
+  const today = ()=> new Date().toISOString().slice(0,10);
+  const diasRestantes = (iso)=> Math.ceil((new Date(iso) - new Date())/86400000);
+  const semaforo = (d)=> d<=7? '<span class="pill dangerP">≤7d</span>' : (d<=30? '<span class="pill warnP">≤30d</span>' : '<span class="pill ok">OK</span>');
+
+  function setTab(name){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    const btn = document.querySelector(`.tab[data-tab="${name}"]`);
+    if(btn) btn.classList.add('active');
+    document.querySelectorAll('.tabpanel').forEach(s=>s.classList.add('hidden'));
+    const sec = byId('tab-'+name);
+    if(sec) sec.classList.remove('hidden');
+    render();
+  }
+
+  // ====== API CLIENT ======
+  async function apiGet(table, q=""){
+    const ts = Date.now();
+    const url = `${API}?table=${encodeURIComponent(table)}&q=${encodeURIComponent(q)}${API_KEY?`&api_key=${API_KEY}`:''}&_=${ts}`;
+    const r = await fetch(url, { cache: 'no-store' });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'GET error');
+    return j.data;
+  }
+  async function apiPost(table, data, action=null){
+    const body = { table, data };
+    if(action) body.action = action;
+    if(API_KEY) body.api_key = API_KEY;
+    const payload = 'payload=' + encodeURIComponent(JSON.stringify(body));
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: payload, cache: 'no-store' });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'POST error');
+    return j.data?.inserted || j.data;
+  }
+
+  // ====== CARGA INICIAL ======
+  async function loadAll(){
+    try{
+      [Vehiculos, Polizas, RTV, Mantenimientos, Combustible, Bitacora, Alertas] = await Promise.all([
+        apiGet('Vehiculos'), apiGet('Polizas'), apiGet('RTV'), apiGet('Mantenimientos'), apiGet('Combustible'), apiGet('Bitacora'), apiGet('Alertas')
+      ]);
+      fillVehSelects();
+      fillPlacaFilters();
+      render();
+    }catch(e){ alert('Error cargando datos: '+e.message); }
+  }
+
+  // ====== RENDER ======
+  function render(){ renderKpis(); renderAlertas(); renderVehiculos(); renderPolizas(); renderRtv(); renderMant(); renderFuel(); renderBit(); refreshHints(); }
+
+  function renderKpis(){
+    byId('kpiVeh').textContent = Vehiculos.filter(v=>v.estado==='activo').length;
+    const p30 = Polizas.filter(p=> diasRestantes(p.vencimiento_poliza)<=30 && diasRestantes(p.vencimiento_poliza)>=0).length;
+    const p7 = Polizas.filter(p=> diasRestantes(p.vencimiento_poliza)<=7 && diasRestantes(p.vencimiento_poliza)>=0).length;
+    const r30 = RTV.filter(r=> diasRestantes(r.vencimiento_rtv)<=30 && diasRestantes(r.vencimiento_rtv)>=0).length;
+    byId('kpiPol30').textContent=p30; byId('kpiPol7').textContent=p7; byId('kpiRtv30').textContent=r30;
+    const month=new Date(); month.setDate(1);
+    const gastoMes = Combustible.filter(f=> new Date(f.fecha)>=month)
+      .reduce((a,f)=> a + Number(f.litros)*Number(f.precio_por_litro), 0);
+    byId('kpiFuelMes').textContent = fmt(gastoMes);
+    const mantMes = Mantenimientos.filter(m=> new Date(m.fecha).getMonth()===new Date().getMonth() && new Date(m.fecha).getFullYear()===new Date().getFullYear()).length;
+    byId('kpiMantMes').textContent = mantMes;
+  }
+  function renderAlertas(){
+    const q=byId('fltAlertPlaca').value?.trim().toUpperCase();
+    const rows = (Alertas||[])
+      .filter(a=> !q || (vehById(a.vehiculo_id)?.placa||'').includes(q))
+      .map(a=>`<tr><td>${a.tipo}</td><td>${vehById(a.vehiculo_id)?.placa||''}</td><td>${a.dias_restantes||''} ${a.km_restantes? ((a.dias_restantes?' / ':'')+a.km_restantes+' km'):''}</td><td><span class="pill ${a.estado==='pendiente'?'warnP':'ok'}">${a.estado}</span></td></tr>`)
+      .join('');
+    byId('tblAlertas').innerHTML = rows || '<tr><td colspan="4">Sin alertas</td></tr>';
+  }
+  function renderVehiculos(){
+    const q=byId('fltVehPlaca').value||''; const est=byId('fltVehEstado').value;
+    const rows = Vehiculos
+      .filter(v=> (!q || (v.placa||'')===q) && (!est || v.estado===est))
+      .map(v=>`<tr><td>${v.placa}</td><td>${v.marca} ${v.modelo}</td><td>${v.anio}</td><td>${v.tipo}</td><td>${v.estado}</td><td><button class="secondary" onclick="exportFichaExcel('${v.placa}')">Exportar</button></td></tr>`)
+      .join('');
+    byId('tblVeh').innerHTML = rows || '<tr><td colspan="6">Sin vehículos</td></tr>';
+  }
+  function renderPolizas(){
+    const mode=byId('fltPolVencer').value;
+    const rows = Polizas.map(p=>{
+      const d=diasRestantes(p.vencimiento_poliza);
+      if(mode==='30' && d>30) return '';
+      if(mode==='7' && d>7) return '';
+      return `<tr><td>${vehById(p.vehiculo_id)?.placa||''}</td><td>${p.aseguradora}</td><td>${p.numero_poliza}</td><td>${p.vencimiento_poliza}</td><td>${semaforo(d)}</td></tr>`;
+    }).join('');
+    byId('tblPol').innerHTML = rows || '<tr><td colspan="5">Sin datos</td></tr>';
+  }
+  function renderRtv(){
+    const mode=byId('fltRtvVencer').value;
+    const rows = RTV.map(r=>{
+      const d=diasRestantes(r.vencimiento_rtv);
+      if(mode==='30' && d>30) return '';
+      if(mode==='7' && d>7) return '';
+      return `<tr><td>${vehById(r.vehiculo_id)?.placa||''}</td><td>${r.numero_cita||'-'}</td><td>${r.vencimiento_rtv}</td><td>${semaforo(d)}</td></tr>`;
+    }).join('');
+    byId('tblRtv').innerHTML = rows || '<tr><td colspan="4">Sin datos</td></tr>';
+  }
+  function renderMant(){
+    const q=byId('fltMantPlaca').value||''; const t=byId('fltMantTipo').value;
+    const rows = Mantenimientos
+      .filter(m=> (!t || m.tipo===t) && (!q || (vehById(m.vehiculo_id)?.placa||'')===q))
+      .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))
+      .map(m=>`<tr><td>${vehById(m.vehiculo_id)?.placa||''}</td><td>${m.fecha}</td><td>${m.tipo}</td><td>${fmt(m.costo)}</td><td>${m.km_actual??''}</td><td>${m.proximo_km??''}</td><td>${m.observaciones||''}</td></tr>`)
+      .join('');
+    byId('tblMant').innerHTML = rows || '<tr><td colspan="7">Sin registros</td></tr>';
+    const total = Mantenimientos
+      .filter(m=> (!t || m.tipo===t) && (!q || (vehById(m.vehiculo_id)?.placa||'')===q))
+      .reduce((a,b)=>a+(Number(b.costo)||0),0);
+    byId('sumMant').textContent = 'Total: '+fmt(total);
+  }
+  function renderFuel(){
+    const q=byId('fltFuelPlaca').value||'';
+    const rec = Combustible
+      .filter(f=> (!q || (vehById(f.vehiculo_id)?.placa||'')===q))
+      .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha));
+    const rows = rec.map(f=>{
+      const prev = Combustible
+        .filter(x=> Number(x.vehiculo_id)===Number(f.vehiculo_id) && new Date(x.fecha) < new Date(f.fecha))
+        .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
+      const dist = prev? (Number(f.odometro_km)-Number(prev.odometro_km)): null;
+      const kmL = (dist && dist>0)? (dist/Number(f.litros)): null;
+      return `<tr><td>${vehById(f.vehiculo_id)?.placa||''}</td><td>${f.fecha}</td><td>${f.litros}</td><td>${f.precio_por_litro}</td><td>${fmt(Number(f.litros)*Number(f.precio_por_litro))}</td><td>${f.odometro_km}</td><td>${kmL? kmL.toFixed(2):''}</td></tr>`;
+    }).join('');
+    byId('tblFuel').innerHTML = rows || '<tr><td colspan="7">Sin registros</td></tr>';
+  }
+  function fmtDT(v){
+    if(v===undefined || v===null) return '';
+    const d = new Date(v);
+    if(!isNaN(d)) return d.toISOString().slice(0,16).replace('T',' ');
+    const s = String(v);
+    return s.indexOf('T')>-1 ? s.replace('T',' ').slice(0,16) : s;
+  }
+  function renderBit(){
+    const q=byId('fltBitPlaca').value||'';
+    const rows = Bitacora
+      .filter(b=> (!q || (vehById(b.vehiculo_id)?.placa||'')===q))
+      .sort((a,b)=> new Date(b.fecha_hora) - new Date(a.fecha_hora))
+      .map(b=>`<tr><td>${vehById(b.vehiculo_id)?.placa||''}</td><td>${b.accion}</td><td>${b.conductor||''}</td><td>${fmtDT(b.fecha_hora)}</td><td>${b.km}</td><td>${b.nivel_combustible}</td><td>${['F:',b.chequeo_frenos?'✔':'✖',' D:',b.chequeo_direccion?'✔':'✖',' L:',b.chequeo_luces?'✔':'✖'].join('')}</td><td>${b.observaciones||''}</td></tr>`)
+      .join('');
+    byId('tblBit').innerHTML = rows || '<tr><td colspan="8">Sin registros</td></tr>';
+  }
+  function fillVehSelects(){
+    const opts = Vehiculos.map(v=>`<option value="${v.id}">${v.placa}</option>`).join('');
+    ['mVeh','cVeh','bVeh','pVeh','rVeh'].forEach(id=> { const el = byId(id); if(el) el.innerHTML = opts; });
+  }
+  function fillPlacaFilters(){
+    const placas = Array.from(new Set(Vehiculos.map(v=>v.placa))).sort();
+    const ids=['fltVehPlaca','fltMantPlaca','fltFuelPlaca','fltBitPlaca','repPlaca'];
+    ids.forEach(id=>{ const el=byId(id); if(!el) return; const cur = el.value; el.innerHTML = '<option value="">Todas las placas</option>' + placas.map(p=>`<option value="${p}">${p}</option>`).join(''); if(placas.includes(cur)) el.value=cur; });
+  }
+
+  // ====== FORM HANDLERS ======
+  async function guardarVehiculo(e){
+    e.preventDefault();
+    const rol=byId('rol').value; if(rol!=='admin') return alert('Solo admin puede crear vehículos');
+    try{
+      const anio=Number(byId('vAnio').value); const year=new Date().getFullYear();
+      if(anio<1990||anio>year+1) return alert('Año fuera de rango');
+      const obj={ placa:(byId('vPlaca').value||'').trim().toUpperCase(), marca:byId('vMarca').value||'', modelo:byId('vModelo').value||'', anio, tipo:byId('vTipo').value||'otro', estado:byId('vEstado').value||'activo' };
+      await apiPost('Vehiculos', obj);
+      Vehiculos = await apiGet('Vehiculos');
+      fillVehSelects(); fillPlacaFilters(); renderVehiculos(); renderKpis();
+      alert('Vehículo creado');
+    }catch(e2){ alert('Error: '+e2.message); }
+  }
+  async function guardarPoliza(e){
+    if(e&&e.preventDefault) e.preventDefault();
+    const rol=byId('rol').value; if(rol!=='admin') return alert('Solo admin puede crear pólizas');
+    try{
+      const obj={ vehiculo_id:Number(byId('pVeh').value), aseguradora:byId('pAseg').value||'', numero_poliza:byId('pNum').value||'', vencimiento_poliza:byId('pVence').value||'' };
+      if(!obj.vencimiento_poliza) return alert('Vencimiento requerido');
+      await apiPost('Polizas', obj);
+      Polizas = await apiGet('Polizas');
+      renderPolizas(); renderKpis();
+      alert('Póliza guardada');
+    }catch(e2){ alert('Error: '+e2.message); }
+  }
+  async function guardarRTV(e){
+    if(e&&e.preventDefault) e.preventDefault();
+    const rol=byId('rol').value; if(rol!=='admin') return alert('Solo admin puede crear RTV');
+    try{
+      const obj={ vehiculo_id:Number(byId('rVeh').value), numero_cita:byId('rCita').value||'', vencimiento_rtv:byId('rVence').value||'' };
+      if(!obj.vencimiento_rtv) return alert('Vencimiento RTV requerido');
+      await apiPost('RTV', obj);
+      RTV = await apiGet('RTV');
+      renderRtv(); renderKpis();
+      alert('RTV guardada');
+    }catch(e2){ alert('Error: '+e2.message); }
+  }
+  async function guardarMantenimiento(e){
+    e.preventDefault();
+    const rol=byId('rol').value; if(!['admin','mecanico'].includes(rol)) return alert('Sin permiso');
+    const obj = { vehiculo_id: Number(byId('mVeh').value), tipo: byId('mTipo').value, fecha: byId('mFecha').value, costo: Number(byId('mCosto').value||0), km_actual: byId('mKm').value? Number(byId('mKm').value): '', proximo_km: byId('mProx').value? Number(byId('mProx').value): '', observaciones: byId('mObs').value || '' };
+    try{ await apiPost('Mantenimientos', obj); Mantenimientos = await apiGet('Mantenimientos'); renderMant(); renderKpis(); refreshHints(); alert('Mantenimiento guardado'); }catch(e2){ alert('Error: '+e2.message); }
+  }
+  async function guardarCombustible(e){
+    e.preventDefault();
+    const rol=byId('rol').value; if(!['admin','mecanico'].includes(rol)) return alert('Sin permiso');
+    const obj = { vehiculo_id:Number(byId('cVeh').value), fecha:byId('cFecha').value, litros:Number(byId('cLitros').value), precio_por_litro:Number(byId('cPPL').value), odometro_km:Number(byId('cOdo').value), proveedor:byId('cProv').value||'' };
+    try{ await apiPost('Combustible', obj); Combustible = await apiGet('Combustible'); Alertas = await apiGet('Alertas'); renderFuel(); renderKpis(); renderAlertas(); refreshHints(); alert('Carga guardada'); }catch(e2){ alert('Error: '+e2.message); }
+  }
+  function resetBitacoraForm(){
+    byId('bVeh').selectedIndex = 0;
+    byId('bAccion').value = 'retiro';
+    byId('bCond').value = '';
+    byId('bFecha').value = '';
+    byId('bKm').value = '';
+    byId('bNivel').value = 'lleno';
+    byId('bFrenos').checked = false;
+    byId('bDir').checked = false;
+    byId('bLuces').checked = false;
+    byId('bGolpes').value = 'false';
+    byId('bObs').value = '';
+  }
+  async function guardarBitacora(e){
+    e.preventDefault();
+    const rol=byId('rol').value; if(!['admin','recepcion'].includes(rol)) return alert('Sin permiso');
+    const obj = { vehiculo_id:Number(byId('bVeh').value), accion:byId('bAccion').value, conductor:byId('bCond').value||'', fecha_hora:byId('bFecha').value||new Date().toISOString().slice(0,16), km:Number(byId('bKm').value), nivel_combustible:byId('bNivel').value, golpes_carroceria:(byId('bGolpes').value==='true'), chequeo_frenos:byId('bFrenos').checked, chequeo_direccion:byId('bDir').checked, chequeo_luces:byId('bLuces').checked, observaciones:byId('bObs').value||'' };
+    if(obj.accion==='retiro' && !obj.conductor) return alert('Conductor obligatorio en retiro');
+    if(obj.accion==='entrega' && obj.golpes_carroceria && !obj.observaciones) return alert('Si hay golpes, agregue observaciones');
+    try {
+      await apiPost('Bitacora', obj);
+      Bitacora = await apiGet('Bitacora');
+      Alertas  = await apiGet('Alertas');
+      const placaSel = vehById(obj.vehiculo_id)?.placa || '';
+      const flt = byId('fltBitPlaca'); if (flt && placaSel) flt.value = placaSel;
+      setTab('bitacora');
+      renderBit();
+      renderAlertas();
+      const tbody = byId('tblBit');
+      if (tbody && tbody.firstElementChild){
+        const firstRow = tbody.firstElementChild;
+        try { firstRow.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+        const flashClass = (obj.accion === 'retiro') ? 'flash-ret' : 'flash-ent';
+        firstRow.classList.add('flash', flashClass);
+        setTimeout(() => firstRow.classList.remove('flash', 'flash-ret', 'flash-ent'), 3000);
+        const firstCell = firstRow.cells && firstRow.cells[0];
+        if (firstCell){
+          const badge = document.createElement('span');
+          badge.textContent = '🆕';
+          badge.className = 'newtag';
+          badge.title = (obj.accion === 'retiro') ? 'Nuevo retiro' : 'Nueva entrega';
+          firstCell.prepend(badge);
+          setTimeout(() => { try{ badge.remove(); }catch{} }, 60000);
+        }
+        const dateCell = firstRow.cells && firstRow.cells[3];
+        if (dateCell){
+          const original = dateCell.textContent || (typeof fmtDT==='function' ? fmtDT(obj.fecha_hora) : String(obj.fecha_hora||''));
+          dateCell.dataset.old = original;
+          dateCell.textContent = 'justo ahora';
+          setTimeout(() => { dateCell.textContent = dateCell.dataset.old || original; }, 60000);
+        }
+      }
+      resetBitacoraForm();
+      refreshHints();
+      alert('Bitácora guardada');
+    } catch (err) {
+      console.error('Error guardando Bitácora', err);
+      alert('Error guardando Bitácora: ' + (err?.message || err));
+    }
+  }
+
+  // ====== UTILIDADES ======
+  function getLastBitKm(vid){
+    const rec = (Bitacora||[]).filter(b=> Number(b.vehiculo_id)===Number(vid)).sort((a,b)=> new Date(b.fecha_hora)-new Date(a.fecha_hora))[0];
+    return rec? (Number(rec.km)||'') : '';
+  }
+  function getLastFuelOdo(vid){
+    const rec = (Combustible||[]).filter(c=> Number(c.vehiculo_id)===Number(vid)).sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
+    return rec? (Number(rec.odometro_km)||'') : '';
+  }
+  function getLastOilKm(vid){
+    const rec = (Mantenimientos||[]).filter(m=> Number(m.vehiculo_id)===Number(vid) && m.tipo==='cambio_aceite').sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
+    return rec? (Number(rec.km_actual)||'') : '';
+  }
+  function refreshHints(){
+    const bSel = byId('bVeh'); if(bSel && bSel.value){ const v = getLastBitKm(bSel.value); const el=byId('bKmPrev'); if(el) el.value = v; }
+    const cSel = byId('cVeh'); if(cSel && cSel.value){ const v = getLastFuelOdo(cSel.value); const el=byId('cOdoPrev'); if(el) el.value = v; }
+    const mSel = byId('mVeh'); if(mSel && mSel.value){ const v = getLastOilKm(mSel.value); const el=byId('mKmPrevAceite'); if(el) el.value = v; }
+    calcKmLEstimado();
+  }
+  function calcCosto(){ const L=Number(byId('cLitros').value||0); const P=Number(byId('cPPL').value||0); byId('cCosto').value = (L*P)||0; }
+  function calcKmLEstimado(){
+    const prev = Number(byId('cOdoPrev')?.value||0);
+    const odo = Number(byId('cOdo')?.value||0);
+    const litros = Number(byId('cLitros')?.value||0);
+    const dist = odo - prev;
+    const val = (litros>0 && dist>0)? (dist/litros).toFixed(2): '';
+    if(byId('cKmLEst')) byId('cKmLEst').value = val;
+  }
+  function buscarPlaca(){ const v=byId('qPlaca').value.trim().toUpperCase(); if(!v) return; const sel = byId('fltVehPlaca'); if(sel){ sel.value=v; } setTab('vehiculos'); renderVehiculos(); }
+  function exportarVehiculo(){ const placa = byId('fltVehPlaca').value; if(!placa) return alert('Seleccione una placa en el filtro'); exportFichaExcel(placa); }
+  function autoProximoKm(){ const tipo = byId('mTipo').value; if(tipo !== 'cambio_aceite') { alert('Aplica solo a "Cambio de aceite"'); return; } const km = parseInt(byId('mKm').value||'0',10); if(!km || Number.isNaN(km) || km<0){ alert('Ingrese km actual válido'); return; } byId('mProx').value = km + 5000; }
+
+  // ====== EXPORTS (XLSX) ======
+  function exportFichaExcel(placa){
+    const v = Vehiculos.find(x=>x.placa===placa); if(!v) return alert('Placa no existe');
+    const mant = Mantenimientos.filter(x=> Number(x.vehiculo_id)===Number(v.id)).map(x=>({Fecha:x.fecha, Tipo:x.tipo, Costo:Number(x.costo)||0, Km_actual:x.km_actual||'', Proximo_km:x.proximo_km||'', Obs:x.observaciones||''}));
+    const fuel = Combustible.filter(x=> Number(x.vehiculo_id)===Number(v.id)).map(x=>({Fecha:x.fecha, Litros:Number(x.litros)||0, Precio_por_litro:Number(x.precio_por_litro)||0, Costo:(Number(x.litros)*Number(x.precio_por_litro))||0, Odometro:Number(x.odometro_km)||0}));
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(mant); ws1['!cols']=[{wch:12},{wch:18},{wch:12},{wch:12},{wch:12},{wch:30}];
+    const ws2 = XLSX.utils.json_to_sheet(fuel); ws2['!cols']=[{wch:12},{wch:10},{wch:14},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Mantenimientos');
+    XLSX.utils.book_append_sheet(wb, ws2, 'Combustible');
+    XLSX.writeFile(wb, `ficha_${placa}.xlsx`);
+  }
+  function exportMantXLSX(){
+    const a='2025-01-01'; const b=today(); const p='';
+    const data = Mantenimientos.filter(x=> x.fecha>=a && x.fecha<=b && (!p || (vehById(x.vehiculo_id)?.placa||'')===p)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Tipo:x.tipo, Costo:Number(x.costo)||0, Km_actual:x.km_actual||'', Proximo_km:x.proximo_km||'', Obs:x.observaciones||''}));
+    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:18},{wch:12},{wch:12},{wch:12},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Mantenimientos'); XLSX.writeFile(wb, 'reporte_mantenimientos.xlsx');
+  }
+  function exportFuelXLSX(){
+    const a='2025-01-01'; const b=today(); const p='';
+    const data = Combustible.filter(x=> x.fecha>=a && x.fecha<=b && (!p || (vehById(x.vehiculo_id)?.placa||'')===p)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Litros:Number(x.litros)||0, Precio_por_litro:Number(x.precio_por_litro)||0, Costo:(Number(x.litros)*Number(x.precio_por_litro))||0, Odometro:Number(x.odometro_km)||0}));
+    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:10},{wch:16},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Combustible'); XLSX.writeFile(wb, 'reporte_combustible.xlsx');
+  }
+  function exportAlertXLSX(){
+    const data = (Alertas||[]).map(a=>({Tipo:a.tipo, Placa:vehById(a.vehiculo_id)?.placa||'', Dias:a.dias_restantes||'', Km:a.km_restantes||'', Estado:a.estado}));
+    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:22},{wch:12},{wch:8},{wch:10},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Alertas'); XLSX.writeFile(wb, 'reporte_alertas.xlsx');
+  }
+  function exportReportXLSX(){
+    const tipo = byId('repTipo').value;
+    const placa = byId('repPlaca').value||'';
+    const a = byId('repA').value||'2000-01-01';
+    const b = byId('repB').value||today();
+    const wb = XLSX.utils.book_new();
+
+    if(tipo==='mantenimientos'){
+      const data = Mantenimientos.filter(x=> x.fecha>=a && x.fecha<=b && (!placa || (vehById(x.vehiculo_id)?.placa||'')===placa)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Tipo:x.tipo, Costo:Number(x.costo)||0, Km_actual:x.km_actual||'', Proximo_km:x.proximo_km||'', Obs:x.observaciones||''}));
+      const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:18},{wch:12},{wch:12},{wch:12},{wch:30}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Mantenimientos');
+      XLSX.writeFile(wb, 'reporte_mantenimientos.xlsx');
+      return;
+    }
+    if(tipo==='combustible'){
+      const data = Combustible.filter(x=> x.fecha>=a && x.fecha<=b && (!placa || (vehById(x.vehiculo_id)?.placa||'')===placa)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Litros:Number(x.litros)||0, Precio_por_litro:Number(x.precio_por_litro)||0, Costo:(Number(x.litros)*Number(x.precio_por_litro))||0, Odometro:Number(x.odometro_km)||0}));
+      const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:10},{wch:16},{wch:12},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Combustible');
+      XLSX.writeFile(wb, 'reporte_combustible.xlsx');
+      return;
+    }
+    if(tipo==='bitacora'){
+      const data = Bitacora.filter(x=> (!placa || (vehById(x.vehiculo_id)?.placa||'')===placa) && (String(x.fecha_hora).slice(0,10)>=a) && (String(x.fecha_hora).slice(0,10)<=b)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Accion:x.accion, Conductor:x.conductor||'', FechaHora:x.fecha_hora, Km:x.km||'', Nivel:x.nivel_combustible||'', Frenos:!!x.chequeo_frenos, Direccion:!!x.chequeo_direccion, Luces:!!x.chequeo_luces, Obs:x.observaciones||''}));
+      const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:10},{wch:16},{wch:18},{wch:10},{wch:10},{wch:10},{wch:12},{wch:12},{wch:30}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Bitacora');
+      XLSX.writeFile(wb, 'reporte_bitacora.xlsx');
+      return;
+    }
+    if(tipo==='polizas_rtv'){
+      const dataP = Polizas.map(p=>({Placa:vehById(p.vehiculo_id)?.placa||'', Aseguradora:p.aseguradora||'', Numero:p.numero_poliza||'', Vence:p.vencimiento_poliza||''}));
+      const dataR = RTV.map(r=>({Placa:vehById(r.vehiculo_id)?.placa||'', Cita:r.numero_cita||'', Vence:r.vencimiento_rtv||''}));
+      const wsP=XLSX.utils.json_to_sheet(dataP); wsP['!cols']=[{wch:10},{wch:16},{wch:16},{wch:12}];
+      const wsR=XLSX.utils.json_to_sheet(dataR); wsR['!cols']=[{wch:10},{wch:12},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, wsP, 'Polizas');
+      XLSX.utils.book_append_sheet(wb, wsR, 'RTV');
+      XLSX.writeFile(wb, 'reporte_polizas_rtv.xlsx');
+      return;
+    }
+  }
+
+  // ====== TESTS ======
+  function tlog(msg, ok=true){ const el=byId('testOut'); if(!el) return; const div=document.createElement('div'); div.className= ok? 'pass' : 'fail'; div.textContent = (ok?'✔ ':'✖ ')+msg; el.appendChild(div); }
+  function clearTests(){ const el=byId('testOut'); if(el) el.innerHTML=''; }
+  async function runTests(kind){ clearTests(); try{
+      if(kind==='get'){ const data = await apiGet('Vehiculos'); tlog('GET Vehiculos devolvió array', Array.isArray(data)); tlog('GET no lanzó error', true); }
+      if(kind==='ui'){ fillVehSelects(); const m = byId('mVeh'); tlog('Select mVeh existe', !!m); tlog('Select mVeh poblado (si hay vehículos)', m && m.options.length>=0); }
+      if(kind==='core'){
+        tlog('Función setTab definida', typeof setTab==='function');
+        try{ setTab('dashboard'); tlog('setTab ejecuta sin throw', true); }catch(e){ tlog('setTab lanzó excepción: '+e.message, false); }
+        tlog('Librería XLSX cargada', !!window.XLSX);
+        tlog('exportReportXLSX existe', typeof exportReportXLSX==='function');
+        tlog('refreshHints existe', typeof refreshHints==='function');
+      }
+      if(kind==='auto'){
+        const old = window.alert; let lastMsg=''; window.alert = (m)=>{ lastMsg=String(m||''); };
+        byId('mTipo').value='cambio_aceite'; byId('mKm').value='12000'; byId('mProx').value=''; autoProximoKm();
+        tlog('autoProximoKm suma 5000 (12000→17000)', byId('mProx').value==='17000');
+        byId('mTipo').value='llantas'; byId('mKm').value='100'; byId('mProx').value=''; lastMsg=''; autoProximoKm();
+        tlog('autoProximoKm alerta cuando tipo ≠ cambio_aceite', lastMsg.toLowerCase().includes('cambio de aceite'));
+        byId('mTipo').value='cambio_aceite'; byId('mKm').value=''; lastMsg=''; autoProximoKm();
+        tlog('autoProximoKm alerta si km vacío', lastMsg.toLowerCase().includes('km'));
+        window.alert = old;
+      }
+      if(kind==='bit'){
+        byId('bVeh').selectedIndex=0; byId('fltBitPlaca').value=''; resetBitacoraForm();
+        if(Vehiculos.length){ byId('bVeh').value = String(Vehiculos[0].id); const placa = Vehiculos[0].placa; const flt = byId('fltBitPlaca'); flt.value = placa; tlog('Filtro Bitácora se puede fijar por placa', flt.value===placa); resetBitacoraForm(); tlog('resetBitacoraForm limpia campos', !byId('bCond').value && !byId('bKm').value && byId('bNivel').value==='lleno'); } else { tlog('No hay vehículos de ejemplo para probar filtro Bitácora', false); }
+      }
+    }catch(err){ tlog('Error en test: '+err.message, false); }
+  }
+
+  // ====== INIT ======
+  window.addEventListener('DOMContentLoaded', ()=>{
+    setTab('dashboard');
+    loadAll().then(()=>{
+      ['bVeh','cVeh','mVeh'].forEach(id=>{ const el=byId(id); if(el){ el.addEventListener('change', refreshHints); }});
+      ['cOdo','cLitros','cFecha'].forEach(id=>{ const el=byId(id); if(el){ el.addEventListener('input', calcKmLEstimado); el.addEventListener('change', calcKmLEstimado); }});
+      refreshHints();
+    });
+  });
+  </script>
+</body>
+</html>
