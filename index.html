@@ -4,10 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gestión de Flota — Google Sheets API (LIVE)</title>
-
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
-</head>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('SW registrado', reg))
+        .catch(err => console.error('Error registrando SW', err));
+    }
+  </script>
   <style>
     :root{ --bg:#f7f8fa;--card:#ffffff;--ink:#111827;--muted:#6b7280;--primary:#0ea5e9;--warn:#f59e0b;--danger:#ef4444;--line:#e5e7eb; }
     *{box-sizing:border-box}
@@ -53,13 +58,6 @@
   </style>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
-  <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js')
-    .then(reg => console.log('SW registrado', reg))
-    .catch(err => console.error('Error registrando SW', err));
-}
-</script>
 <body>
   <header>
     <div class="topbar">
@@ -265,8 +263,10 @@ if ('serviceWorker' in navigator) {
   const semaforo = (d)=> d<=7? '<span class="pill dangerP">≤7d</span>' : (d<=30? '<span class="pill warnP">≤30d</span>' : '<span class="pill ok">OK</span>');
 
   function setTab(name){
+    // guarda la pestaña activa y activa la vista
+    localStorage.setItem('tab', name);
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    const btn = document.querySelector(`.tab[data-tab="${name}"]`);
+    const btn = document.querySelector(`.tab[data-tab="${name"]`);
     if(btn) btn.classList.add('active');
     document.querySelectorAll('.tabpanel').forEach(s=>s.classList.add('hidden'));
     const sec = byId('tab-'+name);
@@ -632,7 +632,7 @@ if ('serviceWorker' in navigator) {
       if(kind==='ui'){ fillVehSelects(); const m = byId('mVeh'); tlog('Select mVeh existe', !!m); tlog('Select mVeh poblado (si hay vehículos)', m && m.options.length>=0); }
       if(kind==='core'){
         tlog('Función setTab definida', typeof setTab==='function');
-        try{ setTab('dashboard'); tlog('setTab ejecuta sin throw', true); }catch(e){ tlog('setTab lanzó excepción: '+e.message, false); }
+        try{ setTab(localStorage.getItem('tab') || 'dashboard'); tlog('setTab ejecuta sin throw', true); }catch(e){ tlog('setTab lanzó excepción: '+e.message, false); }
         tlog('Librería XLSX cargada', !!window.XLSX);
         tlog('exportReportXLSX existe', typeof exportReportXLSX==='function');
         tlog('refreshHints existe', typeof refreshHints==='function');
@@ -656,13 +656,25 @@ if ('serviceWorker' in navigator) {
 
   // ====== INIT ======
   window.addEventListener('DOMContentLoaded', ()=>{
-    setTab('dashboard');
+    const last = (function(){ try{ return localStorage.getItem('tab') || 'dashboard'; }catch{ return 'dashboard'; } })();
+    setTab(last);
     loadAll().then(()=>{
       ['bVeh','cVeh','mVeh'].forEach(id=>{ const el=byId(id); if(el){ el.addEventListener('change', refreshHints); }});
       ['cOdo','cLitros','cFecha'].forEach(id=>{ const el=byId(id); if(el){ el.addEventListener('input', calcKmLEstimado); el.addEventListener('change', calcKmLEstimado); }});
       refreshHints();
     });
   });
-  </script>
+    loadAll().then(()=>{
+      ['bVeh','cVeh','mVeh'].forEach(id=>{ const el=byId(id); if(el){ el.addEventListener('change', refreshHints); }});
+      ['cOdo','cLitros','cFecha'].forEach(id=>{ const el=byId(id); if(el){ el.addEventListener('input', calcKmLEstimado); el.addEventListener('change', calcKmLEstimado); }});
+      refreshHints();
+    });
+  });
+  // UX extra: Enter en búsqueda ejecuta buscarPlaca
+  (function(){
+    const q = byId('qPlaca');
+    if(q){ q.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); buscarPlaca(); } }); }
+  })();
+</script>
 </body>
 </html>
