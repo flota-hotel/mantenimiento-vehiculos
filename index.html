@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gestión de Flota — Google Sheets API (LIVE)</title>
 
-  <!-- PWA -->
+  <!-- PWA (opcional) -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0ea5e9">
-
-  <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js')
@@ -54,6 +52,7 @@
     .test{font-size:12px;color:#111827}
     .test .pass{color:#059669}
     .test .fail{color:#b91c1c}
+    /* highlight bitácora */
     .flash{transition:background 0.4s}
     .flash td{background:inherit}
     .flash-ret{background:#fff7ed !important}
@@ -61,7 +60,7 @@
     .newtag{display:inline-block;margin-right:6px;font-size:12px}
   </style>
 
-  <!-- XLSX -->
+  <!-- SheetJS para exportaciones a Excel -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -72,14 +71,7 @@
         <input id="qPlaca" type="text" placeholder="Buscar por placa (ej. ABC123)…"/>
         <button class="secondary" onclick="buscarPlaca()">Buscar</button>
       </div>
-      <div>Rol:
-        <select id="rol" onchange="render()">
-          <option value="admin">Administrador</option>
-          <option value="mecanico">Mecánico/Operaciones</option>
-          <option value="recepcion">Recepción/Conductor</option>
-          <option value="lectura">Solo lectura</option>
-        </select>
-      </div>
+      <div>Rol: <select id="rol" onchange="render()"><option value="admin">Administrador</option><option value="mecanico">Mecánico/Operaciones</option><option value="recepcion">Recepción/Conductor</option><option value="lectura">Solo lectura</option></select></div>
     </div>
     <div class="tabs">
       <button class="tab active" data-tab="dashboard" onclick="setTab('dashboard')">Dashboard</button>
@@ -93,7 +85,6 @@
   </header>
 
   <main class="container">
-    <!-- Dashboard -->
     <section id="tab-dashboard" class="tabpanel">
       <div class="grid kpis">
         <div class="card"><h3>Vehículos activos</h3><div class="big" id="kpiVeh"></div></div>
@@ -104,10 +95,7 @@
         <div class="card"><h3>Gasto combustible mes</h3><div class="big" id="kpiFuelMes"></div></div>
       </div>
       <div class="card" style="margin-top:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <strong>Alertas</strong>
-          <input id="fltAlertPlaca" type="text" placeholder="Filtrar por placa…" oninput="renderAlertas()"/>
-        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><strong>Alertas</strong><input id="fltAlertPlaca" type="text" placeholder="Filtrar por placa…" oninput="renderAlertas()"/></div>
         <table><thead><tr><th>Tipo</th><th>Placa</th><th>Días/Km</th><th>Estado</th></tr></thead><tbody id="tblAlertas"></tbody></table>
       </div>
       <div class="card" style="margin-top:16px">
@@ -125,7 +113,6 @@
       </div>
     </section>
 
-    <!-- Vehículos -->
     <section id="tab-vehiculos" class="tabpanel hidden">
       <form class="card" onsubmit="guardarVehiculo(event)" style="margin-bottom:12px">
         <h3 style="margin:0 0 8px 0;color:var(--ink)">+ Vehículo</h3>
@@ -148,10 +135,7 @@
         <div style="margin-top:12px"><button>Guardar</button></div>
       </form>
       <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="display:flex;gap:8px">
-          <select id="fltVehPlaca" onchange="renderVehiculos()"><option value="">Todas las placas</option></select>
-          <select id="fltVehEstado" onchange="renderVehiculos()"><option value="">Todos</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select>
-        </div>
+        <div style="display:flex;gap:8px"><select id="fltVehPlaca" onchange="renderVehiculos()"><option value="">Todas las placas</option></select><select id="fltVehEstado" onchange="renderVehiculos()"><option value="">Todos</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
         <div><button class="secondary" onclick="exportarVehiculo()">Exportar vehículo (Excel)</button></div>
       </div>
       <div class="card">
@@ -159,7 +143,6 @@
       </div>
     </section>
 
-    <!-- Pólizas / RTV -->
     <section id="tab-polizas" class="tabpanel hidden">
       <div class="card" style="margin-bottom:12px">
         <h3 style="margin:0 0 8px 0;color:var(--ink)">+ Póliza / + RTV</h3>
@@ -178,21 +161,16 @@
       </div>
       <div class="row">
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Pólizas</strong>
-            <select id="fltPolVencer" onchange="renderPolizas()"><option value="">Todas</option><option value="30">Solo ≤30 días</option><option value="7">Solo ≤7 días</option></select>
-          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Pólizas</strong><select id="fltPolVencer" onchange="renderPolizas()"><option value="">Todas</option><option value="30">Solo ≤30 días</option><option value="7">Solo ≤7 días</option></select></div>
           <table><thead><tr><th>Placa</th><th>Aseguradora</th><th>N° Póliza</th><th>Vence</th><th>Semáforo</th></tr></thead><tbody id="tblPol"></tbody></table>
         </div>
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center"><strong>RTV</strong>
-            <select id="fltRtvVencer" onchange="renderRtv()"><option value="">Todas</option><option value="30">Solo ≤30 días</option><option value="7">Solo ≤7 días</option></select>
-          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>RTV</strong><select id="fltRtvVencer" onchange="renderRtv()"><option value="">Todas</option><option value="30">Solo ≤30 días</option><option value="7">Solo ≤7 días</option></select></div>
           <table><thead><tr><th>Placa</th><th>N° Cita</th><th>Vence</th><th>Semáforo</th></tr></thead><tbody id="tblRtv"></tbody></table>
         </div>
       </div>
     </section>
 
-    <!-- Mantenimientos -->
     <section id="tab-mantenimientos" class="tabpanel hidden">
       <div class="row">
         <form class="card" onsubmit="guardarMantenimiento(event)">
@@ -205,19 +183,13 @@
           <div style="margin-top:12px;display:flex;gap:8px"><button>Guardar</button><button type="button" class="secondary" onclick="autoProximoKm()">Sugerir próximo (+5,000)</button></div>
         </form>
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Histórico</strong>
-            <div style="display:flex;gap:8px">
-              <select id="fltMantPlaca" onchange="renderMant()"><option value="">Todas las placas</option></select>
-              <select id="fltMantTipo" onchange="renderMant()"><option value="">Todos</option><option value="cambio_aceite">Cambio de aceite</option><option value="llantas">Llantas</option><option value="frenos">Frenos</option><option value="bateria">Batería</option><option value="alineacion">Alineación</option><option value="otro">Otro</option></select>
-            </div>
-          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Histórico</strong><div style="display:flex;gap:8px"><select id="fltMantPlaca" onchange="renderMant()"><option value="">Todas las placas</option></select><select id="fltMantTipo" onchange="renderMant()"><option value="">Todos</option><option value="cambio_aceite">Cambio de aceite</option><option value="llantas">Llantas</option><option value="frenos">Frenos</option><option value="bateria">Batería</option><option value="alineacion">Alineación</option><option value="otro">Otro</option></select></div></div>
           <table><thead><tr><th>Placa</th><th>Fecha</th><th>Tipo</th><th>Costo</th><th>Km</th><th>Próx.</th><th>Obs</th></tr></thead><tbody id="tblMant"></tbody></table>
           <div style="margin-top:8px"><span class="tag" id="sumMant"></span></div>
         </div>
       </div>
     </section>
 
-    <!-- Combustible -->
     <section id="tab-combustible" class="tabpanel hidden">
       <div class="row">
         <form class="card" onsubmit="guardarCombustible(event)">
@@ -230,15 +202,12 @@
           <div style="margin-top:12px"><button>Guardar</button></div>
         </form>
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Registros</strong>
-            <select id="fltFuelPlaca" onchange="renderFuel()"><option value="">Todas las placas</option></select>
-          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Registros</strong><select id="fltFuelPlaca" onchange="renderFuel()"><option value="">Todas las placas</option></select></div>
           <table><thead><tr><th>Placa</th><th>Fecha</th><th>Litros</th><th>₡/L</th><th>Costo</th><th>Odómetro</th><th>Km/L</th></tr></thead><tbody id="tblFuel"></tbody></table>
         </div>
       </div>
     </section>
 
-    <!-- Bitácora -->
     <section id="tab-bitacora" class="tabpanel hidden">
       <div class="row">
         <form class="card" onsubmit="guardarBitacora(event)">
@@ -252,15 +221,12 @@
           <div style="margin-top:12px"><button>Guardar</button></div>
         </form>
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Histórico</strong>
-            <select id="fltBitPlaca" onchange="renderBit()"><option value="">Todas las placas</option></select>
-          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><strong>Histórico</strong><select id="fltBitPlaca" onchange="renderBit()"><option value="">Todas las placas</option></select></div>
           <table><thead><tr><th>Placa</th><th>Acción</th><th>Conductor</th><th>Fecha</th><th>Km</th><th>Nivel</th><th>Chequeos</th><th>Obs</th></tr></thead><tbody id="tblBit"></tbody></table>
         </div>
       </div>
     </section>
 
-    <!-- Reportes -->
     <section id="tab-reportes" class="tabpanel hidden">
       <div class="card">
         <h3>Reportes</h3>
@@ -286,9 +252,9 @@
   <div class="footer">Conectado a tu Google Sheets vía Apps Script — URL ya integrada.</div>
 
   <script>
-  // ====== API ======
+  // ====== API: integrada con tu URL ======
   const API = "https://script.google.com/macros/s/AKfycbw-rp2SfA6Exw1Yl6mSm7skgnnyhQ18eTHAB-asVsr1vMagT49N0haWR5KZ-YUGZD_a/exec";
-  const API_KEY = "";
+  const API_KEY = ""; // si activas API key, colócala aquí
 
   // ====== ESTADO ======
   let Vehiculos=[], Polizas=[], RTV=[], Mantenimientos=[], Combustible=[], Bitacora=[], Alertas=[];
@@ -326,7 +292,12 @@
     if(action) body.action = action;
     if(API_KEY) body.api_key = API_KEY;
     const payload = 'payload=' + encodeURIComponent(JSON.stringify(body));
-    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: payload, cache: 'no-store' });
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: payload,
+      cache: 'no-store'
+    });
     const j = await r.json();
     if(!j.ok) throw new Error(j.error||'POST error');
     return j.data?.inserted || j.data;
@@ -336,12 +307,16 @@
   async function loadAll(){
     try{
       [Vehiculos, Polizas, RTV, Mantenimientos, Combustible, Bitacora, Alertas] = await Promise.all([
-        apiGet('Vehiculos'), apiGet('Polizas'), apiGet('RTV'), apiGet('Mantenimientos'), apiGet('Combustible'), apiGet('Bitacora'), apiGet('Alertas')
+        apiGet('Vehiculos'), apiGet('Polizas'), apiGet('RTV'), apiGet('Mantenimientos'),
+        apiGet('Combustible'), apiGet('Bitacora'), apiGet('Alertas')
       ]);
       fillVehSelects();
       fillPlacaFilters();
       render();
-    }catch(e){ alert('Error cargando datos: '+e.message); }
+    }catch(e){
+      alert('Error cargando datos: '+e.message);
+      console.error(e);
+    }
   }
 
   // ====== RENDER ======
@@ -357,7 +332,10 @@
     const gastoMes = Combustible.filter(f=> new Date(f.fecha)>=month)
       .reduce((a,f)=> a + Number(f.litros)*Number(f.precio_por_litro), 0);
     byId('kpiFuelMes').textContent = fmt(gastoMes);
-    const mantMes = Mantenimientos.filter(m=> new Date(m.fecha).getMonth()===new Date().getMonth() && new Date(m.fecha).getFullYear()===new Date().getFullYear()).length;
+    const mantMes = Mantenimientos.filter(m=> {
+      const d=new Date(m.fecha); const n=new Date();
+      return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();
+    }).length;
     byId('kpiMantMes').textContent = mantMes;
   }
   function renderAlertas(){
@@ -605,6 +583,23 @@
     XLSX.utils.book_append_sheet(wb, ws2, 'Combustible');
     XLSX.writeFile(wb, `ficha_${placa}.xlsx`);
   }
+  function exportMantXLSX(){
+    const a='2025-01-01'; const b=today(); const p='';
+    const data = Mantenimientos.filter(x=> x.fecha>=a && x.fecha<=b && (!p || (vehById(x.vehiculo_id)?.placa||'')===p)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Tipo:x.tipo, Costo:Number(x.costo)||0, Km_actual:x.km_actual||'', Proximo_km:x.proximo_km||'', Obs:x.observaciones||''}));
+    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:18},{wch:12},{wch:12},{wch:12},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Mantenimientos'); XLSX.writeFile(wb, 'reporte_mantenimientos.xlsx');
+  }
+  function exportFuelXLSX(){
+    const a='2025-01-01'; const b=today(); const p='';
+    const data = Combustible.filter(x=> x.fecha>=a && x.fecha<=b && (!p || (vehById(x.vehiculo_id)?.placa||'')===p)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Litros:Number(x.litros)||0, Precio_por_litro:Number(x.precio_por_litro)||0, Costo:(Number(x.litros)*Number(x.precio_por_litro))||0, Odometro:Number(x.odometro_km)||0}));
+    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:10},{wch:16},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Combustible'); XLSX.writeFile(wb, 'reporte_combustible.xlsx');
+  }
+  function exportAlertXLSX(){
+    const data = (Alertas||[]).map(a=>({Tipo:a.tipo, Placa:vehById(a.vehiculo_id)?.placa||'', Dias:a.dias_restantes||'', Km:a.km_restantes||'', Estado:a.estado}));
+    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:22},{wch:12},{wch:8},{wch:10},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Alertas'); XLSX.writeFile(wb, 'reporte_alertas.xlsx');
+  }
   function exportReportXLSX(){
     const tipo = byId('repTipo').value;
     const placa = byId('repPlaca').value||'';
@@ -682,15 +677,12 @@
     loadAll().then(()=>{
       ['bVeh','cVeh','mVeh'].forEach(id=>{ const el=byId(id); if(el){ el.addEventListener('change', refreshHints); }});
       ['cOdo','cLitros','cFecha'].forEach(id=>{ const el=byId(id); if(el){ el.addEventListener('input', calcKmLEstimado); el.addEventListener('change', calcKmLEstimado); }});
+      // UX: Enter en buscador = buscar
+      const q = byId('qPlaca');
+      if(q){ q.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); buscarPlaca(); } }); }
       refreshHints();
     });
   });
-
-  // Enter para buscar
-  (function(){
-    const q = byId('qPlaca');
-    if(q){ q.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); buscarPlaca(); } }); }
-  })();
   </script>
 </body>
 </html>
