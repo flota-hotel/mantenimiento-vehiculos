@@ -1308,10 +1308,20 @@
   // ====== CARGA INICIAL ======
   async function loadAll(){
     try{
-      [Vehiculos, Polizas, RTV, Mantenimientos, Combustible, Bitacora, Alertas, Revisiones] = await Promise.all([
+      // Cargar tablas principales que ya existen
+      [Vehiculos, Polizas, RTV, Mantenimientos, Combustible, Bitacora, Alertas] = await Promise.all([
         apiGet('Vehiculos'), apiGet('Polizas'), apiGet('RTV'), apiGet('Mantenimientos'),
-        apiGet('Combustible'), apiGet('Bitacora'), apiGet('Alertas'), apiGet('Revisiones')
+        apiGet('Combustible'), apiGet('Bitacora'), apiGet('Alertas')
       ]);
+      
+      // Intentar cargar Revisiones, si no existe crear tabla vacía
+      try {
+        Revisiones = await apiGet('Revisiones');
+      } catch(e) {
+        console.log('Tabla Revisiones no existe, creando array vacío');
+        Revisiones = [];
+      }
+      
       fillVehSelects();
       fillPlacaFilters();
       render();
@@ -1396,18 +1406,22 @@
     const dueno=byId('fltVehDueno')?.value||'';
     
     const rows = Vehiculos
-      .filter(v=> (!q || (v.placa||'')===q) && (!est || v.estado===est) && (!dueno || v.dueno===dueno))
+      .filter(v=> (!q || (v.placa||'')===q) && (!est || v.estado===est) && (!dueno || (v.dueno||'hotel')===dueno))
       .map(v=>{
         const estadoColor = v.estado === 'activo' ? 'ok' : (v.estado === 'mantenimiento' ? 'warnP' : 'dangerP');
-        const duenoIcon = v.dueno === 'hotel' ? '🏨' : (v.dueno === 'arrendamiento' ? '📝' : '💼');
+        
+        // Manejar campos que pueden no existir en datos antiguos
+        const duenoValue = v.dueno || 'hotel';
+        const duenoIcon = duenoValue === 'hotel' ? '🏨' : (duenoValue === 'arrendamiento' ? '📝' : '💼');
+        const aseguradoraValue = v.aseguradora || '-';
         
         return `<tr>
           <td><strong>${v.placa}</strong></td>
           <td>${v.marca} ${v.modelo}</td>
           <td>${v.anio}</td>
           <td>${v.tipo}</td>
-          <td>${duenoIcon} ${v.dueno || 'hotel'}</td>
-          <td>${v.aseguradora || '-'}</td>
+          <td>${duenoIcon} ${duenoValue}</td>
+          <td>${aseguradoraValue}</td>
           <td><span class="pill ${estadoColor}">${v.estado}</span></td>
           <td>
             <button class="action-btn edit-btn" onclick="editarVehiculo('${v.id}')" title="Editar">✏️</button>
@@ -1644,18 +1658,21 @@
       const year=new Date().getFullYear();
       if(anio<1990||anio>year+1) return alert('Año fuera de rango');
       
+      // Objeto base con campos originales
       const obj = { 
         placa: (byId('vPlaca').value||'').trim().toUpperCase(), 
         marca: byId('vMarca').value||'', 
         modelo: byId('vModelo').value||'', 
         anio, 
         tipo: byId('vTipo').value||'otro', 
-        estado: byId('vEstado').value||'activo',
-        dueno: byId('vDueno').value||'hotel',
-        numero_poliza: byId('vPoliza').value||'',
-        aseguradora: byId('vAseguradora').value||'',
-        color: byId('vColor').value||''
+        estado: byId('vEstado').value||'activo'
       };
+      
+      // Agregar campos nuevos solo si existen en el formulario
+      if(byId('vDueno')) obj.dueno = byId('vDueno').value||'hotel';
+      if(byId('vPoliza')) obj.numero_poliza = byId('vPoliza').value||'';
+      if(byId('vAseguradora')) obj.aseguradora = byId('vAseguradora').value||'';
+      if(byId('vColor')) obj.color = byId('vColor').value||'';
       
       await apiPost('Vehiculos', obj);
       Vehiculos = await apiGet('Vehiculos');
@@ -1666,7 +1683,31 @@
       limpiarFormVehiculo();
       alert('✅ Vehículo creado exitosamente');
     }catch(e2){ 
-      alert('❌ Error: '+e2.message); 
+      // Si el error es por campos nuevos, intentar solo con campos originales
+      if(e2.message.includes('Invalid column') || e2.message.includes('columna')) {
+        try {
+          const objBasico = { 
+            placa: (byId('vPlaca').value||'').trim().toUpperCase(), 
+            marca: byId('vMarca').value||'', 
+            modelo: byId('vModelo').value||'', 
+            anio: Number(byId('vAnio').value), 
+            tipo: byId('vTipo').value||'otro', 
+            estado: byId('vEstado').value||'activo'
+          };
+          await apiPost('Vehiculos', objBasico);
+          Vehiculos = await apiGet('Vehiculos');
+          fillVehSelects(); 
+          fillPlacaFilters(); 
+          renderVehiculos(); 
+          renderKpis();
+          limpiarFormVehiculo();
+          alert('✅ Vehículo creado exitosamente (algunos campos nuevos requieren configuración en Google Sheets)');
+        } catch(e3) {
+          alert('❌ Error: '+e3.message);
+        }
+      } else {
+        alert('❌ Error: '+e2.message); 
+      }
     }
   }
   
@@ -1815,12 +1856,22 @@
     
     try {
       await apiPost('Revisiones', obj);
-      Revisiones = await apiGet('Revisiones');
+      try {
+        Revisiones = await apiGet('Revisiones');
+      } catch(e3) {
+        // Si falla obtener después del post, mantener el array actual
+        console.log('No se pudo obtener las revisiones después del guardado');
+      }
       renderRevisiones();
       limpiarFormRevision();
       alert('✅ Revisión guardada exitosamente');
     } catch(e2) {
-      alert('❌ Error: ' + e2.message);
+      // Verificar si el error es por tabla no existente
+      if (e2.message.includes('Tabla inválida') || e2.message.includes('table')) {
+        alert('⚠️ La funcionalidad de Revisiones requiere configuración adicional en Google Sheets. Por ahora puedes usar las demás funciones del sistema.');
+      } else {
+        alert('❌ Error: ' + e2.message);
+      }
     }
   }
   
