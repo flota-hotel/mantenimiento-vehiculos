@@ -129,12 +129,12 @@
     .export-btn:hover{background:#059669}
     
     /* Modal styles */
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000}
-    .modal-content{background:white;padding:24px;border-radius:16px;max-width:800px;width:90%;max-height:90%;overflow-y:auto}
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer}
+    .modal-content{background:white;padding:24px;border-radius:16px;max-width:800px;width:90%;max-height:90%;overflow-y:auto;cursor:default}
     .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
     .modal-title{font-size:20px;font-weight:700;color:var(--ink)}
-    .close-btn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%}
-    .close-btn:hover{background:var(--line);color:var(--ink)}
+    .close-btn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all 0.2s}
+    .close-btn:hover{background:var(--line);color:var(--ink);transform:scale(1.1)}
     
     /* Form improvements */
     .form-group{margin-bottom:20px}
@@ -207,6 +207,7 @@
       </div>
       <div class="user-info">
         <span>👤 <span id="currentUserRole"></span></span>
+        <button class="secondary" onclick="cerrarTodosLosModales()" title="Cerrar ventanas abiertas">✖️ Cerrar Modales</button>
         <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
       </div>
     </div>
@@ -1011,7 +1012,7 @@
           </div>
           <div style="margin-top:20px">
             <button type="submit" class="success">💾 Actualizar</button>
-            <button type="button" class="secondary" onclick="cerrarModal('modalEditVehiculo')">❌ Cancelar</button>
+            <button type="button" class="secondary" onclick="cerrarModal('modalEditVehiculo'); return false;">❌ Cancelar</button>
           </div>
         </form>
       </div>
@@ -1073,7 +1074,7 @@
           </div>
           <div style="margin-top:20px">
             <button type="submit" class="success">💾 Actualizar</button>
-            <button type="button" class="secondary" onclick="cerrarModal('modalEditMantenimiento')">❌ Cancelar</button>
+            <button type="button" class="secondary" onclick="cerrarModal('modalEditMantenimiento'); return false;">❌ Cancelar</button>
           </div>
         </form>
       </div>
@@ -1120,7 +1121,7 @@
           </div>
           <div style="margin-top:20px">
             <button type="submit" class="success">💾 Actualizar</button>
-            <button type="button" class="secondary" onclick="cerrarModal('modalEditCombustible')">❌ Cancelar</button>
+            <button type="button" class="secondary" onclick="cerrarModal('modalEditCombustible'); return false;">❌ Cancelar</button>
           </div>
         </form>
       </div>
@@ -2136,7 +2137,21 @@
   }
   
   function cerrarModal(modalId) {
-    byId(modalId).classList.add('hidden');
+    const modal = byId(modalId);
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  }
+  
+  // Función para cerrar todos los modales
+  function cerrarTodosLosModales() {
+    const modales = ['modalEditVehiculo', 'modalEditMantenimiento', 'modalEditCombustible', 'reportePreview'];
+    modales.forEach(modalId => {
+      const modal = byId(modalId);
+      if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+      }
+    });
   }
   
   // Funciones de eliminación (solo para admin)
@@ -2733,10 +2748,27 @@
         }); 
       }
       
-      // Cerrar modales al hacer click fuera
+      // Cerrar modales al hacer click fuera o con ESC
       document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
           e.target.classList.add('hidden');
+        }
+      });
+      
+      // Cerrar modales con ESC
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          cerrarTodosLosModales();
+        }
+      });
+      
+      // Asegurar que los botones de cerrar funcionen
+      document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('close-btn') || e.target.textContent === '×') {
+          const modal = e.target.closest('.modal');
+          if (modal) {
+            modal.classList.add('hidden');
+          }
         }
       });
       
