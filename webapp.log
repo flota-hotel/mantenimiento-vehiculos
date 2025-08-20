@@ -55,3 +55,14 @@ Server running at http://0.0.0.0:8080/
 20/Aug/2025 22:11:13 - "GET /icons/icon-192.png HTTP/1.1" 404 -
 20/Aug/2025 22:11:14 - code 404, message File not found
 20/Aug/2025 22:11:14 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+Server running at http://0.0.0.0:8080/
+20/Aug/2025 22:14:06 - "GET / HTTP/1.1" 200 -
+20/Aug/2025 22:14:06 - "GET /sw.js HTTP/1.1" 304 -
+20/Aug/2025 22:14:06 - "GET /index.html HTTP/1.1" 200 -
+20/Aug/2025 22:14:06 - "GET / HTTP/1.1" 200 -
+20/Aug/2025 22:14:06 - code 404, message File not found
+20/Aug/2025 22:14:06 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+20/Aug/2025 22:14:06 - code 404, message File not found
+20/Aug/2025 22:14:06 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+20/Aug/2025 22:14:06 - code 404, message File not found
+20/Aug/2025 22:14:06 - "GET /icons/icon-192.png HTTP/1.1" 404 -

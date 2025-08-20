@@ -8,3 +8,7 @@
 2025-08-20 22:05:45,805 WARN stopped: webapp (terminated by SIGTERM)
 2025-08-20 22:05:45,808 INFO spawned: 'webapp' with pid 4072
 2025-08-20 22:05:46,891 INFO success: webapp entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-20 22:13:47,479 INFO waiting for webapp to stop
+2025-08-20 22:13:47,480 WARN stopped: webapp (terminated by SIGTERM)
+2025-08-20 22:13:47,485 INFO spawned: 'webapp' with pid 4642
+2025-08-20 22:13:48,567 INFO success: webapp entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)

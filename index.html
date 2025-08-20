@@ -104,7 +104,12 @@
     .warnP{background:#f59e0b1a;color:#7c2d12;border:1px solid #f59e0b40}
     .dangerP{background:#ef44441a;color:#7f1d1d;border:1px solid #ef444440}
     
-    .hidden{display:none}
+    .hidden{display:none !important}
+    
+    /* Asegurar que los modales estén ocultos por defecto */
+    .modal.hidden{visibility:hidden;opacity:0}
+    .modal{visibility:hidden;opacity:0;transition:opacity 0.3s ease, visibility 0.3s ease}
+    .modal:not(.hidden){visibility:visible;opacity:1}
     .sticky-actions{position:fixed;right:24px;bottom:24px;display:flex;flex-direction:column;gap:12px;z-index:10}
     .footer{padding:24px;color:var(--muted);font-size:12px;text-align:center;background:var(--card);margin-top:40px;border-top:1px solid var(--line)}
     .tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:white}
@@ -1188,9 +1193,15 @@
         permissions: ROLES[selectedRole].permissions
       };
       
+      // Cerrar todos los modales antes de mostrar la app
+      cerrarTodosLosModales();
+      
       // Ocultar login y mostrar app
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainApp').classList.add('logged-in');
+      
+      // Asegurar que el dashboard sea la pestaña activa
+      setTab('dashboard');
       
       // Actualizar UI según rol
       updateUIForRole();
@@ -2148,10 +2159,40 @@
     const modales = ['modalEditVehiculo', 'modalEditMantenimiento', 'modalEditCombustible', 'reportePreview'];
     modales.forEach(modalId => {
       const modal = byId(modalId);
-      if (modal && !modal.classList.contains('hidden')) {
+      if (modal) {
         modal.classList.add('hidden');
+        modal.style.display = 'none';
       }
     });
+    
+    // También cerrar cualquier elemento con clase 'modal'
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+    });
+  }
+  
+  // Función para inicializar la aplicación correctamente
+  function inicializarApp() {
+    // Asegurarse de que todos los modales estén cerrados
+    cerrarTodosLosModales();
+    
+    // Resetear cualquier estado de la interfaz
+    const loginScreen = byId('loginScreen');
+    const mainApp = byId('mainApp');
+    
+    if (loginScreen) loginScreen.style.display = 'flex';
+    if (mainApp) mainApp.classList.remove('logged-in');
+    
+    // Limpiar formularios si existen
+    try {
+      limpiarFormVehiculo();
+    } catch(e) {}
+    
+    // Asegurar que el dashboard sea la pestaña por defecto
+    setTimeout(() => {
+      setTab('dashboard');
+    }, 100);
   }
   
   // Funciones de eliminación (solo para admin)
@@ -2701,9 +2742,8 @@
 
   // ====== INIT ======
   window.addEventListener('DOMContentLoaded', ()=>{
-    // Mostrar pantalla de login primero
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('mainApp').classList.remove('logged-in');
+    // Inicializar la aplicación correctamente
+    inicializarApp();
     
     // Event listeners para el login
     document.getElementById('loginPassword').addEventListener('keydown', (e) => {
