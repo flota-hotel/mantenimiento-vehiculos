@@ -1371,20 +1371,23 @@
   }
 
   function renderKpis(){
-    byId('kpiVeh').textContent = Vehiculos.filter(v=>v.estado==='activo').length;
+    // Total de vehículos (todos son activos por defecto en el nuevo sistema)
+    if(byId('kpiVeh')) byId('kpiVeh').textContent = Vehiculos.length;
     
-    const p30 = Polizas.filter(p=> diasRestantes(p.vencimiento_poliza)<=30 && diasRestantes(p.vencimiento_poliza)>=0).length;
-    const p7 = Polizas.filter(p=> diasRestantes(p.vencimiento_poliza)<=7 && diasRestantes(p.vencimiento_poliza)>=0).length;
-    const r30 = RTV.filter(r=> diasRestantes(r.vencimiento_rtv)<=30 && diasRestantes(r.vencimiento_rtv)>=0).length;
+    // Pólizas por vencer (usar fecha_vencimiento del nuevo backend)
+    const p30 = Polizas.filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento)<=30 && diasRestantes(p.fecha_vencimiento)>=0).length;
+    const p7 = Polizas.filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento)<=7 && diasRestantes(p.fecha_vencimiento)>=0).length;
+    const r30 = 0; // RTV no implementado en el nuevo backend
     
-    byId('kpiPol30').textContent=p30; 
-    byId('kpiPol7').textContent=p7; 
-    byId('kpiRtv30').textContent=r30;
+    if(byId('kpiPol30')) byId('kpiPol30').textContent=p30; 
+    if(byId('kpiPol7')) byId('kpiPol7').textContent=p7; 
+    if(byId('kpiRtv30')) byId('kpiRtv30').textContent=r30;
     
+    // Gasto en combustible del mes (usar nuevo formato)
     const month=new Date(); month.setDate(1);
     const gastoMes = Combustible.filter(f=> new Date(f.fecha)>=month)
-      .reduce((a,f)=> a + Number(f.litros)*Number(f.precio_por_litro), 0);
-    byId('kpiFuelMes').textContent = fmt(gastoMes);
+      .reduce((a,f)=> a + Number(f.costo), 0); // Usar costo directamente del backend
+    if(byId('kpiFuelMes')) byId('kpiFuelMes').textContent = fmt(gastoMes);
     
     const mantMes = Mantenimientos.filter(m=> {
       const d=new Date(m.fecha); const n=new Date();
@@ -1434,25 +1437,27 @@
     const rows = Vehiculos
       .filter(v=> {
         const matchPlaca = !q || (v.placa||'').includes(q);
-        const matchEstado = !est || v.estado===est;
-        const matchDueno = !dueno || (v.dueno||'').toLowerCase().includes(dueno);
+        const matchEstado = !est || est === 'activo'; // Por ahora todos los vehículos son activos
+        const matchDueno = !dueno || (v.propietario||v.dueno||'').toLowerCase().includes(dueno);
         return matchPlaca && matchEstado && matchDueno;
       })
       .map(v=>{
-        const estadoColor = v.estado === 'activo' ? 'ok' : (v.estado === 'mantenimiento' ? 'warnP' : 'dangerP');
-        
-        // Manejar campos que pueden no existir en datos antiguos
-        const duenoValue = v.dueno || 'Hotel';
-        const aseguradoraValue = v.aseguradora || '-';
+        // Mapear campos del backend al frontend correctamente
+        const ano = v.ano || v.anio || '-';
+        const tipo = 'Vehículo'; // Campo por defecto ya que el backend no tiene tipo
+        const estado = 'Activo'; // Campo por defecto ya que el backend no tiene estado
+        const estadoColor = 'ok'; // Color por defecto para estado activo
+        const duenoValue = v.propietario || v.dueno || 'Hotel';
+        const aseguradoraValue = v.seguro || v.aseguradora || '-';
         
         return `<tr>
           <td><strong>${v.placa}</strong></td>
           <td>${v.marca} ${v.modelo}</td>
-          <td>${v.anio}</td>
-          <td>${v.tipo}</td>
+          <td>${ano}</td>
+          <td>${tipo}</td>
           <td>👤 ${duenoValue}</td>
           <td>${aseguradoraValue}</td>
-          <td><span class="pill ${estadoColor}">${v.estado}</span></td>
+          <td><span class="pill ${estadoColor}">${estado}</span></td>
           <td>
             <button class="action-btn edit-btn" onclick="editarVehiculo('${v.id}')" title="Editar">✏️</button>
             <button class="action-btn export-btn" onclick="exportFichaExcel('${v.placa}')" title="Exportar">📊</button>
@@ -2370,25 +2375,25 @@
       fechaLimite.setMonth(fechaLimite.getMonth() - parseInt(periodo));
     }
     
-    // Filtrar datos por vehículo y período
+    // Filtrar datos por vehículo y período (usando placa en lugar de vehiculo_id)
     const mantVehiculo = Mantenimientos.filter(m => 
-      Number(m.vehiculo_id) === Number(vehiculoId) && 
+      m.placa === vehiculo.placa && 
       new Date(m.fecha) >= fechaLimite
     );
     
     const fuelVehiculo = Combustible.filter(f => 
-      Number(f.vehiculo_id) === Number(vehiculoId) && 
+      f.placa === vehiculo.placa && 
       new Date(f.fecha) >= fechaLimite
     );
     
     const revVehiculo = (Revisiones || []).filter(r => 
-      Number(r.vehiculo_id) === Number(vehiculoId) && 
-      new Date(r.fecha_hora) >= fechaLimite
+      r.placa === vehiculo.placa && 
+      new Date(r.fecha) >= fechaLimite
     );
     
-    // Información básica
-    const poliza = Polizas.find(p => Number(p.vehiculo_id) === Number(vehiculoId));
-    const rtv = RTV.find(r => Number(r.vehiculo_id) === Number(vehiculoId));
+    // Información básica (usar placa en lugar de vehiculo_id)
+    const poliza = Polizas.find(p => p.placa === vehiculo.placa);
+    const rtv = []; // RTV no implementado en el nuevo backend
     
     let infoBasica = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -2396,31 +2401,31 @@
           <strong>Placa:</strong> ${vehiculo.placa}<br>
           <strong>Marca:</strong> ${vehiculo.marca}<br>
           <strong>Modelo:</strong> ${vehiculo.modelo}<br>
-          <strong>Año:</strong> ${vehiculo.anio}<br>
-          <strong>Tipo:</strong> ${vehiculo.tipo}<br>
+          <strong>Año:</strong> ${vehiculo.ano || vehiculo.anio}<br>
+          <strong>Tipo:</strong> Vehículo<br>
           <strong>Color:</strong> ${vehiculo.color || 'No especificado'}
         </div>
         <div>
-          <strong>Dueño:</strong> ${vehiculo.dueno || 'Hotel'}<br>
-          <strong>Estado:</strong> <span class="pill ${vehiculo.estado === 'activo' ? 'ok' : 'warnP'}">${vehiculo.estado}</span><br>
-          <strong>Aseguradora:</strong> ${vehiculo.aseguradora || 'No especificada'}<br>
-          <strong>Póliza:</strong> ${vehiculo.numero_poliza || 'No especificada'}<br>
-          <strong>Vence Póliza:</strong> ${poliza ? poliza.vencimiento_poliza : 'No registrada'}<br>
-          <strong>Vence RTV:</strong> ${rtv ? rtv.vencimiento_rtv : 'No registrada'}
+          <strong>Propietario:</strong> ${vehiculo.propietario || vehiculo.dueno || 'Hotel'}<br>
+          <strong>Estado:</strong> <span class="pill ok">Activo</span><br>
+          <strong>Aseguradora:</strong> ${vehiculo.seguro || vehiculo.aseguradora || 'No especificada'}<br>
+          <strong>Póliza:</strong> ${vehiculo.poliza || vehiculo.numero_poliza || 'No especificada'}<br>
+          <strong>Vence Póliza:</strong> ${poliza ? poliza.fecha_vencimiento : 'No registrada'}<br>
+          <strong>Vence RTV:</strong> No registrada
         </div>
       </div>
     `;
     
     // Estadísticas de rendimiento
     const totalKm = fuelVehiculo.length > 0 ? 
-      Math.max(...fuelVehiculo.map(f => Number(f.odometro_km))) - 
-      Math.min(...fuelVehiculo.map(f => Number(f.odometro_km))) : 0;
+      Math.max(...fuelVehiculo.map(f => Number(f.kilometraje || 0))) - 
+      Math.min(...fuelVehiculo.map(f => Number(f.kilometraje || 0))) : 0;
     
     const totalLitros = fuelVehiculo.reduce((a, f) => a + Number(f.litros), 0);
     const promedioKmL = totalLitros > 0 ? (totalKm / totalLitros).toFixed(1) : '0';
     
     const ultimaRevision = revVehiculo.length > 0 ? 
-      revVehiculo.sort((a, b) => new Date(b.fecha_hora) - new Date(a.fecha_hora))[0] : null;
+      revVehiculo.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0] : null;
     
     let estadisticas = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -2432,15 +2437,15 @@
         </div>
         <div>
           <strong>Revisiones:</strong> ${revVehiculo.length}<br>
-          <strong>Última Revisión:</strong> ${ultimaRevision ? new Date(ultimaRevision.fecha_hora).toLocaleDateString() : 'No registrada'}<br>
-          <strong>Odómetro Actual:</strong> ${fuelVehiculo.length > 0 ? Math.max(...fuelVehiculo.map(f => Number(f.odometro_km))).toLocaleString() : 'No disponible'} km
+          <strong>Última Revisión:</strong> ${ultimaRevision ? new Date(ultimaRevision.fecha).toLocaleDateString() : 'No registrada'}<br>
+          <strong>Odómetro Actual:</strong> ${fuelVehiculo.length > 0 ? Math.max(...fuelVehiculo.map(f => Number(f.kilometraje || 0))).toLocaleString() : 'No disponible'} km
         </div>
       </div>
     `;
     
-    // Análisis de costos
+    // Análisis de costos (usar campos correctos del nuevo backend)
     const totalMant = mantVehiculo.reduce((a, m) => a + Number(m.costo || 0), 0);
-    const totalComb = fuelVehiculo.reduce((a, f) => a + (Number(f.litros) * Number(f.precio_por_litro)), 0);
+    const totalComb = fuelVehiculo.reduce((a, f) => a + Number(f.costo || 0), 0); // Usar costo directo
     const promedioMantMensual = mantVehiculo.length > 0 ? (totalMant / parseInt(periodo === 'all' ? 12 : periodo)) : 0;
     
     let costos = `
