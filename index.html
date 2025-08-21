@@ -103,7 +103,7 @@
     button.success{background:var(--success)}
     button.success:hover{background:#059669}
     
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:16px 24px;background:rgba(255,255,255,0.5);backdrop-filter:blur(10px);position:relative}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:16px 24px;background:rgba(255,255,255,0.5);backdrop-filter:blur(10px);position:relative;transition:all 0.3s ease}
     .tab{padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;user-select:none;-webkit-tap-highlight-color:transparent}
     .tab:hover{background:var(--primary);color:#fff;border-color:transparent;transform:translateY(-1px)}
     .tab.active{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow)}
@@ -154,6 +154,135 @@
     .dangerP{background:#ef44441a;color:#7f1d1d;border:1px solid #ef444440}
     
     .hidden{display:none !important}
+    .mobile-only{display:none}
+    
+    /* Estilos para modo compacto móvil */
+    .mobile-compact .tabs {
+      display: none !important;
+    }
+    .mobile-compact .mobile-nav {
+      display: block !important;
+    }
+    .mobile-nav {
+      display: none;
+      background: white;
+      border-top: 1px solid var(--line);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 8px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+    }
+    .mobile-nav-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      max-width: 100%;
+    }
+    .mobile-nav-item {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-height: 60px;
+      justify-content: center;
+    }
+    .mobile-nav-item:hover, .mobile-nav-item.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .mobile-nav-item .nav-icon {
+      font-size: 16px;
+      display: block;
+    }
+    .mobile-nav-item .nav-text {
+      font-size: 9px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    
+    /* Ajustes para modo compacto */
+    .mobile-compact .container {
+      padding-bottom: 90px; /* Espacio para la nav bottom */
+    }
+    .mobile-compact .sticky-actions {
+      display: none; /* Ocultar botones flotantes */
+    }
+    .mobile-compact .topbar {
+      padding: 8px 12px; /* Header más compacto */
+    }
+    .mobile-compact .brand {
+      font-size: 14px; /* Logo más pequeño */
+    }
+    .mobile-compact .user-info {
+      gap: 6px;
+      font-size: 11px;
+    }
+    .mobile-compact .search {
+      order: 0; /* Búsqueda arriba */
+    }
+    .mobile-compact .search input {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    
+    /* Mejorar cards en modo compacto */
+    .mobile-compact .card {
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    .mobile-compact .card h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .mobile-compact .big {
+      font-size: 20px;
+    }
+    
+    /* KPIs más compactos */
+    .mobile-compact .kpis {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .mobile-compact .kpis .card {
+      padding: 8px;
+      min-height: 80px;
+    }
+    
+    /* Navegación móvil mejorada */
+    .mobile-nav {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 2px solid var(--primary);
+    }
+    .mobile-nav-item {
+      background: transparent;
+      border: none;
+      transition: all 0.3s ease;
+    }
+    .mobile-nav-item:hover, .mobile-nav-item.active {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(30, 64, 175, 0.3);
+    }
+    .mobile-nav-item .nav-icon {
+      transition: transform 0.3s ease;
+    }
+    .mobile-nav-item:hover .nav-icon, .mobile-nav-item.active .nav-icon {
+      transform: scale(1.2);
+    }
     
     /* Asegurar que los modales estén ocultos por defecto */
     .modal.hidden{visibility:hidden;opacity:0}
@@ -242,6 +371,11 @@
         gap: 8px; 
         font-size: 12px;
         text-align: center;
+      }
+      
+      /* Mostrar botón móvil */
+      .mobile-only {
+        display: inline-flex !important;
       }
       
       /* Tabs más grandes para móvil */
@@ -520,6 +654,7 @@
       </div>
       <div class="user-info">
         <span>👤 <span id="currentUserRole"></span></span>
+        <button id="mobileToggle" class="secondary mobile-only" onclick="toggleMobileCompactMode()" title="Modo Compacto Móvil">📱 Compacto</button>
         <button class="secondary" onclick="cerrarTodosLosModales()" title="Cerrar ventanas abiertas">✖️ Cerrar Modales</button>
         <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
       </div>
@@ -1786,6 +1921,13 @@
     </div>
   </main>
 
+  <!-- Navegación móvil compacta -->
+  <div class="mobile-nav" id="mobileNav">
+    <div class="mobile-nav-grid" id="mobileNavGrid">
+      <!-- Se llenará dinámicamente con JavaScript -->
+    </div>
+  </div>
+
   <div class="footer">
     Sistema de Gestión Vehicular - Hotel © 2024 | Conectado a Google Sheets vía Apps Script
   </div>
@@ -1940,6 +2082,11 @@
     const currentTab = document.querySelector('.tab.active');
     if (currentTab && currentTab.dataset.roles && !currentTab.dataset.roles.split(',').includes(currentUser.role)) {
       setTab('dashboard');
+    }
+    
+    // Actualizar navegación móvil si está activa
+    if (mobileCompactMode) {
+      setupMobileNavigation();
     }
   }
   
@@ -5559,6 +5706,171 @@
   }
   
   let lastTouchEnd = 0;
+  let mobileCompactMode = false;
+  
+  // ===== MODO COMPACTO MÓVIL =====
+  function toggleMobileCompactMode() {
+    mobileCompactMode = !mobileCompactMode;
+    const body = document.body;
+    const toggleBtn = byId('mobileToggle');
+    
+    if (mobileCompactMode) {
+      body.classList.add('mobile-compact');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = '📋 Normal';
+        toggleBtn.title = 'Cambiar a vista normal';
+      }
+      setupMobileNavigation();
+      showMobileNotification('✅ Modo compacto activado - Navegación en la parte inferior', 2000);
+      // Guardar preferencia
+      try { localStorage.setItem('mobileCompactMode', 'true'); } catch {}
+    } else {
+      body.classList.remove('mobile-compact');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = '📱 Compacto';
+        toggleBtn.title = 'Activar modo compacto móvil';
+      }
+      showMobileNotification('✅ Vista normal activada - Navegación en pestañas superiores', 2000);
+      // Guardar preferencia
+      try { localStorage.setItem('mobileCompactMode', 'false'); } catch {}
+    }
+  }
+  
+  function showMobileNotification(message, duration = 3000) {
+    // Crear o actualizar notificación
+    let notification = byId('mobileNotification');
+    if (!notification) {
+      notification = document.createElement('div');
+      notification.id = 'mobileNotification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--success);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 10000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        text-align: center;
+        max-width: 90%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      `;
+      document.body.appendChild(notification);
+    }
+    
+    notification.textContent = message;
+    notification.style.opacity = '1';
+    
+    setTimeout(() => {
+      if (notification) {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          if (notification && notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }
+    }, duration);
+  }
+  
+  function setupMobileNavigation() {
+    const navGrid = byId('mobileNavGrid');
+    if (!navGrid || !currentUser) return;
+    
+    // Definir navegación según rol
+    const navItems = [];
+    
+    if (hasPermission('dashboard')) {
+      navItems.push({ tab: 'dashboard', icon: '📊', text: 'Dashboard' });
+    }
+    if (hasPermission('vehiculos')) {
+      navItems.push({ tab: 'vehiculos', icon: '🚗', text: 'Vehículos' });
+    }
+    if (hasPermission('mantenimientos')) {
+      navItems.push({ tab: 'mantenimientos', icon: '🔧', text: 'Mantenim.' });
+    }
+    if (hasPermission('combustible')) {
+      navItems.push({ tab: 'combustible', icon: '⛽', text: 'Combustible' });
+    }
+    if (hasPermission('polizas')) {
+      navItems.push({ tab: 'polizas', icon: '🛡️', text: 'Pólizas' });
+    }
+    if (hasPermission('ficha-tecnica')) {
+      navItems.push({ tab: 'ficha-tecnica', icon: '📋', text: 'Ficha Téc.' });
+    }
+    if (hasPermission('revision')) {
+      navItems.push({ tab: 'revision', icon: '🔍', text: 'Revisión' });
+    }
+    if (hasPermission('reportes')) {
+      navItems.push({ tab: 'reportes', icon: '📈', text: 'Reportes' });
+    }
+    
+    // Crear elementos de navegación (máximo 8 items, dividir en páginas si es necesario)
+    navGrid.innerHTML = '';
+    const maxItems = 8;
+    const itemsToShow = navItems.slice(0, maxItems);
+    
+    itemsToShow.forEach(item => {
+      const navItem = document.createElement('div');
+      navItem.className = 'mobile-nav-item';
+      navItem.setAttribute('data-tab', item.tab);
+      navItem.innerHTML = `
+        <span class="nav-icon">${item.icon}</span>
+        <span class="nav-text">${item.text}</span>
+      `;
+      
+      navItem.addEventListener('click', () => {
+        // Remover active de todos
+        document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+        // Agregar active al seleccionado
+        navItem.classList.add('active');
+        // Cambiar tab
+        setTab(item.tab);
+      });
+      
+      navGrid.appendChild(navItem);
+    });
+    
+    // Marcar la pestaña activa
+    updateMobileNavActive();
+  }
+  
+  function updateMobileNavActive() {
+    const activeTab = document.querySelector('.tab.active');
+    const activeTabName = activeTab ? activeTab.getAttribute('data-tab') : 'dashboard';
+    
+    document.querySelectorAll('.mobile-nav-item').forEach(item => {
+      item.classList.remove('active');
+      if (item.getAttribute('data-tab') === activeTabName) {
+        item.classList.add('active');
+      }
+    });
+  }
+  
+  // Modificar setTab para actualizar navegación móvil
+  const originalSetTab = setTab;
+  setTab = function(name) {
+    originalSetTab(name);
+    if (mobileCompactMode) {
+      updateMobileNavActive();
+    }
+  };
+  
+  // Cargar preferencia de modo compacto al iniciar
+  document.addEventListener('DOMContentLoaded', function() {
+    // Cargar preferencia guardada
+    try {
+      const savedMode = localStorage.getItem('mobileCompactMode');
+      if (savedMode === 'true' && window.innerWidth <= 768) {
+        setTimeout(() => toggleMobileCompactMode(), 500);
+      }
+    } catch {}
+  });
   
   </script>
 </body>

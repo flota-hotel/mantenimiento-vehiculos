@@ -363,3 +363,36 @@ Servidor corriendo en puerto 3000
 21/Aug/2025 19:46:19 - "GET /icons/icon-512.png HTTP/1.1" 404 -
 21/Aug/2025 19:46:19 - code 404, message File not found
 21/Aug/2025 19:46:19 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 19:57:47 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 19:57:47 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 19:57:47 - "GET /index.html HTTP/1.1" 200 -
+21/Aug/2025 19:57:47 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 19:57:47 - code 404, message File not found
+21/Aug/2025 19:57:47 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 19:57:47 - code 404, message File not found
+21/Aug/2025 19:57:47 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+21/Aug/2025 19:57:47 - code 404, message File not found
+21/Aug/2025 19:57:47 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 19:58:08 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 19:58:08 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 19:58:08 - code 404, message File not found
+21/Aug/2025 19:58:08 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 19:58:08 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 19:58:08 - "GET /index.html HTTP/1.1" 304 -
+21/Aug/2025 19:58:09 - code 404, message File not found
+21/Aug/2025 19:58:09 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 19:58:09 - code 404, message File not found
+21/Aug/2025 19:58:09 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+21/Aug/2025 19:59:06 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 19:59:07 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 19:59:07 - "GET /index.html HTTP/1.1" 200 -
+21/Aug/2025 19:59:07 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 19:59:07 - "GET /manifest.webmanifest HTTP/1.1" 304 -
+21/Aug/2025 19:59:07 - code 404, message File not found
+21/Aug/2025 19:59:07 - "GET /favicon.ico HTTP/1.1" 404 -
+21/Aug/2025 19:59:07 - code 404, message File not found
+21/Aug/2025 19:59:07 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 19:59:07 - code 404, message File not found
+21/Aug/2025 19:59:07 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+21/Aug/2025 19:59:08 - code 404, message File not found
+21/Aug/2025 19:59:08 - "GET /icons/icon-192.png HTTP/1.1" 404 -
