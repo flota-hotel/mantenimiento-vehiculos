@@ -479,6 +479,34 @@ async def update_combustible(combustible_id: int, combustible: CombustibleCreate
         logger.error(f"Error al actualizar registro de combustible: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/combustible/last-odometer/{placa}")
+async def get_last_odometer(placa: str):
+    """Obtener el último kilometraje registrado para una placa específica"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Buscar el último registro de combustible con kilometraje para esta placa
+        cursor.execute('''
+            SELECT kilometraje 
+            FROM combustible 
+            WHERE placa = ? AND kilometraje IS NOT NULL 
+            ORDER BY fecha DESC, id DESC 
+            LIMIT 1
+        ''', (placa.upper(),))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result and result[0] is not None:
+            return {"success": True, "data": {"kilometraje": result[0]}}
+        else:
+            return {"success": True, "data": {"kilometraje": 0}}
+            
+    except Exception as e:
+        logger.error(f"Error al obtener último odómetro: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ================================
 # ENDPOINTS REVISIONES
 # ================================

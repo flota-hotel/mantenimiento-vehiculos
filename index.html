@@ -551,7 +551,7 @@
       <div class="row">
         <form class="card" onsubmit="guardarCombustible(event)">
           <h3 style="margin-bottom:8px;color:var(--ink)">+ Carga de combustible</h3>
-          <div class="row"><div><label>Vehículo</label><select id="cVeh"></select></div><div><label>Fecha</label><input id="cFecha" type="date" required/></div></div>
+          <div class="row"><div><label>Vehículo</label><select id="cVeh" onchange="updatePreviousOdometer()"></select></div><div><label>Fecha</label><input id="cFecha" type="date" required/></div></div>
           <div class="row"><div><label>Litros</label><input id="cLitros" type="number" step="0.01" min="0.01" required oninput="calcCosto();calcKmLEstimado()"/></div><div><label>₡/Litro</label><input id="cPPL" type="number" step="0.01" min="0" required oninput="calcCosto();calcKmLEstimado()"/></div></div>
           <div class="row"><div><label>Odómetro km</label><input id="cOdo" type="number" min="0" required oninput="calcCosto();calcKmLEstimado()"/></div><div><label>Proveedor</label><input id="cProv" type="text"/></div></div>
           <div class="row"><div><label>Odómetro anterior</label><input id="cOdoPrev" type="number" readonly/></div><div><label>Km/L estimado</label><input id="cKmLEst" type="number" step="0.01" readonly/></div></div>
@@ -1735,15 +1735,38 @@
   }
   async function guardarPoliza(e){
     if(e&&e.preventDefault) e.preventDefault();
-    const rol=byId('rol').value; if(rol!=='admin') return alert('Solo admin puede crear pólizas');
+    if(!hasPermission('polizas')) return alert('Sin permisos para crear pólizas');
+    
+    // Obtener placa del vehículo seleccionado
+    const vehiculoId = byId('pVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    const placa = vehiculo ? vehiculo.placa : '';
+    
+    if(!placa) return alert('Debe seleccionar un vehículo válido');
+    
+    const obj = { 
+      numero_poliza: byId('pNum').value || '',
+      placa: placa,
+      aseguradora: byId('pAseg').value || '',
+      fecha_inicio: byId('pFechaIni').value || '',
+      fecha_vencimiento: byId('pFechaVenc').value || '',
+      tipo_cobertura: byId('pTipo').value || 'Básica',
+      estado: 'Activa'
+    };
+    
+    if(!obj.numero_poliza) return alert('Número de póliza requerido');
+    if(!obj.fecha_vencimiento) return alert('Fecha de vencimiento requerida');
+    
     try{
-      const obj={ vehiculo_id:Number(byId('pVeh').value), aseguradora:byId('pAseg').value||'', numero_poliza:byId('pNum').value||'', vencimiento_poliza:byId('pVence').value||'' };
-      if(!obj.vencimiento_poliza) return alert('Vencimiento requerido');
-      await apiPost('Polizas', obj);
-      Polizas = await apiGet('Polizas');
-      renderPolizas(); renderKpis();
-      alert('Póliza guardada');
-    }catch(e2){ alert('Error: '+e2.message); }
+      await apiPost('polizas', obj);
+      Polizas = await apiGet('polizas');
+      renderPolizas(); 
+      renderKpis();
+      clearPolicyForm(); // Limpiar formulario después de guardar
+      alert('✅ Póliza guardada exitosamente');
+    }catch(e2){ 
+      alert('❌ Error: '+e2.message); 
+    }
   }
   async function guardarRTV(e){
     if(e&&e.preventDefault) e.preventDefault();
@@ -1791,6 +1814,7 @@
       renderMant(); 
       renderKpis(); 
       refreshHints(); 
+      clearMaintenanceForm(); // Limpiar formulario después de guardar
       alert('✅ Mantenimiento guardado exitosamente'); 
     }catch(e2){ 
       alert('❌ Error: '+e2.message); 
@@ -1821,6 +1845,7 @@
       renderFuel(); 
       renderKpis(); 
       refreshHints(); 
+      clearFuelForm(); // Limpiar formulario después de guardar
       alert('✅ Carga de combustible guardada exitosamente'); 
     }catch(e2){ 
       alert('❌ Error: '+e2.message); 
@@ -1978,17 +2003,33 @@
     const rec = (Bitacora||[]).filter(b=> Number(b.vehiculo_id)===Number(vid)).sort((a,b)=> new Date(b.fecha_hora)-new Date(a.fecha_hora))[0];
     return rec? (Number(rec.km)||'') : '';
   }
-  function getLastFuelOdo(vid){
-    const rec = (Combustible||[]).filter(c=> Number(c.vehiculo_id)===Number(vid)).sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
-    return rec? (Number(rec.odometro_km)||'') : '';
+  async function getLastFuelOdo(vehiculoId){
+    try {
+      // Encontrar la placa del vehículo
+      const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+      if (!vehiculo) return 0;
+      
+      const placa = vehiculo.placa;
+      
+      // Llamar al endpoint del backend para obtener el último odómetro
+      const response = await fetch(`${API}/combustible/last-odometer/${placa}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.success ? data.data.kilometraje : 0;
+      }
+      return 0;
+    } catch (error) {
+      console.error('Error al obtener último odómetro:', error);
+      return 0;
+    }
   }
   function getLastOilKm(vid){
     const rec = (Mantenimientos||[]).filter(m=> Number(m.vehiculo_id)===Number(vid) && m.tipo==='cambio_aceite').sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
     return rec? (Number(rec.km_actual)||'') : '';
   }
-  function refreshHints(){
+  async function refreshHints(){
     const bSel = byId('bVeh'); if(bSel && bSel.value){ const v = getLastBitKm(bSel.value); const el=byId('bKmPrev'); if(el) el.value = v; }
-    const cSel = byId('cVeh'); if(cSel && cSel.value){ const v = getLastFuelOdo(cSel.value); const el=byId('cOdoPrev'); if(el) el.value = v; }
+    const cSel = byId('cVeh'); if(cSel && cSel.value){ const v = await getLastFuelOdo(cSel.value); const el=byId('cOdoPrev'); if(el) el.value = v; }
     const mSel = byId('mVeh'); if(mSel && mSel.value){ const v = getLastOilKm(mSel.value); const el=byId('mKmPrevAceite'); if(el) el.value = v; }
     calcKmLEstimado();
   }
@@ -2000,6 +2041,78 @@
     const dist = odo - prev;
     const val = (litros>0 && dist>0)? (dist/litros).toFixed(2): '';
     if(byId('cKmLEst')) byId('cKmLEst').value = val;
+  }
+  
+  // Función para actualizar el odómetro anterior cuando se selecciona un vehículo
+  async function updatePreviousOdometer() {
+    const vehiculoId = byId('cVeh').value;
+    if (vehiculoId) {
+      const lastOdometer = await getLastFuelOdo(vehiculoId);
+      const el = byId('cOdoPrev');
+      if (el) {
+        el.value = lastOdometer;
+        calcKmLEstimado(); // Recalcular km/L estimado
+      }
+    } else {
+      // Si no hay vehículo seleccionado, limpiar el campo
+      const el = byId('cOdoPrev');
+      if (el) el.value = '';
+    }
+  }
+  
+  // Función para limpiar formularios después de guardar
+  function clearFuelForm() {
+    ['cVeh', 'cFecha', 'cLitros', 'cPPL', 'cOdo', 'cProv', 'cOdoPrev', 'cKmLEst', 'cCosto'].forEach(id => {
+      const el = byId(id);
+      if (el) {
+        if (el.tagName === 'SELECT') {
+          el.value = '';
+        } else {
+          el.value = '';
+        }
+      }
+    });
+  }
+  
+  function clearMaintenanceForm() {
+    ['mVeh', 'mTipo', 'mFecha', 'mCosto', 'mKm', 'mProx', 'mObs'].forEach(id => {
+      const el = byId(id);
+      if (el) {
+        if (el.tagName === 'SELECT') {
+          el.value = '';
+        } else {
+          el.value = '';
+        }
+      }
+    });
+  }
+  
+  function clearInspectionForm() {
+    ['rVeh', 'rFecha', 'rInsp', 'rMotor', 'rFreno', 'rLuces', 'rLlantas', 'rCarroc', 'rObs', 'rAprobado'].forEach(id => {
+      const el = byId(id);
+      if (el) {
+        if (el.tagName === 'SELECT') {
+          el.value = '';
+        } else if (el.type === 'checkbox') {
+          el.checked = false;
+        } else {
+          el.value = '';
+        }
+      }
+    });
+  }
+  
+  function clearPolicyForm() {
+    ['pVeh', 'pNum', 'pAseg', 'pFechaIni', 'pFechaVenc', 'pTipo'].forEach(id => {
+      const el = byId(id);
+      if (el) {
+        if (el.tagName === 'SELECT') {
+          el.value = '';
+        } else {
+          el.value = '';
+        }
+      }
+    });
   }
   function buscarPlaca(){ const v=byId('qPlaca').value.trim().toUpperCase(); if(!v) return; const sel = byId('fltVehPlaca'); if(sel){ sel.value=v; } setTab('vehiculos'); renderVehiculos(); }
   function exportarVehiculo(){ const placa = byId('fltVehPlaca').value; if(!placa) return alert('Seleccione una placa en el filtro'); exportFichaExcel(placa); }
