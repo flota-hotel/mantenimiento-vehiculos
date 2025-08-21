@@ -1342,9 +1342,9 @@
       Combustible = await apiGet('combustible');
       Revisiones = await apiGet('revisiones');
       Polizas = await apiGet('polizas');
+      RTV = await apiGet('rtv');
       
       // Inicializar arrays vacíos para compatibilidad con el frontend
-      RTV = [];
       Bitacora = [];
       Alertas = [];
       
@@ -1377,7 +1377,7 @@
     // Pólizas por vencer (usar fecha_vencimiento del nuevo backend)
     const p30 = Polizas.filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento)<=30 && diasRestantes(p.fecha_vencimiento)>=0).length;
     const p7 = Polizas.filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento)<=7 && diasRestantes(p.fecha_vencimiento)>=0).length;
-    const r30 = 0; // RTV no implementado en el nuevo backend
+    const r30 = RTV.filter(r=> r.fecha_vencimiento && diasRestantes(r.fecha_vencimiento)<=30 && diasRestantes(r.fecha_vencimiento)>=0).length;
     
     if(byId('kpiPol30')) byId('kpiPol30').textContent=p30; 
     if(byId('kpiPol7')) byId('kpiPol7').textContent=p7; 
@@ -1481,10 +1481,10 @@
   function renderRtv(){
     const mode=byId('fltRtvVencer').value;
     const rows = RTV.map(r=>{
-      const d=diasRestantes(r.vencimiento_rtv);
+      const d=diasRestantes(r.fecha_vencimiento);
       if(mode==='30' && d>30) return '';
       if(mode==='7' && d>7) return '';
-      return `<tr><td>${vehById(r.vehiculo_id)?.placa||''}</td><td>${r.numero_cita||'-'}</td><td>${r.vencimiento_rtv}</td><td>${semaforo(d)}</td></tr>`;
+      return `<tr><td>${r.placa||'-'}</td><td>${r.numero_cita||'-'}</td><td>${r.fecha_vencimiento}</td><td>${semaforo(d)}</td></tr>`;
     }).join('');
     byId('tblRtv').innerHTML = rows || '<tr><td colspan="4">Sin datos</td></tr>';
   }
@@ -1748,9 +1748,9 @@
       numero_poliza: byId('pNum').value || '',
       placa: placa,
       aseguradora: byId('pAseg').value || '',
-      fecha_inicio: byId('pFechaIni').value || '',
-      fecha_vencimiento: byId('pFechaVenc').value || '',
-      tipo_cobertura: byId('pTipo').value || 'Básica',
+      fecha_inicio: new Date().toISOString().split('T')[0], // Usar fecha actual como inicio
+      fecha_vencimiento: byId('pVence').value || '', // Usar el campo correcto del formulario
+      tipo_cobertura: 'Básica',
       estado: 'Activa'
     };
     
@@ -1770,15 +1770,36 @@
   }
   async function guardarRTV(e){
     if(e&&e.preventDefault) e.preventDefault();
-    const rol=byId('rol').value; if(rol!=='admin') return alert('Solo admin puede crear RTV');
+    if(!hasPermission('polizas')) return alert('Sin permisos para crear RTV');
+    
+    // Obtener placa del vehículo seleccionado
+    const vehiculoId = byId('rVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    const placa = vehiculo ? vehiculo.placa : '';
+    
+    if(!placa) return alert('Debe seleccionar un vehículo válido');
+    
+    const obj = { 
+      numero_cita: byId('rCita').value || '',
+      placa: placa,
+      fecha_vencimiento: byId('rVence').value || '',
+      estado: 'Vigente',
+      observaciones: ''
+    };
+    
+    if(!obj.numero_cita) return alert('Número de cita requerido');
+    if(!obj.fecha_vencimiento) return alert('Fecha de vencimiento RTV requerida');
+    
     try{
-      const obj={ vehiculo_id:Number(byId('rVeh').value), numero_cita:byId('rCita').value||'', vencimiento_rtv:byId('rVence').value||'' };
-      if(!obj.vencimiento_rtv) return alert('Vencimiento RTV requerido');
-      await apiPost('RTV', obj);
-      RTV = await apiGet('RTV');
-      renderRtv(); renderKpis();
-      alert('RTV guardada');
-    }catch(e2){ alert('Error: '+e2.message); }
+      await apiPost('rtv', obj);
+      RTV = await apiGet('rtv');
+      renderRtv(); 
+      renderKpis();
+      clearRTVForm(); // Limpiar formulario después de guardar
+      alert('✅ RTV guardado exitosamente');
+    }catch(e2){ 
+      alert('❌ Error: '+e2.message); 
+    }
   }
   async function guardarMantenimiento(e){
     e.preventDefault();
@@ -2103,7 +2124,20 @@
   }
   
   function clearPolicyForm() {
-    ['pVeh', 'pNum', 'pAseg', 'pFechaIni', 'pFechaVenc', 'pTipo'].forEach(id => {
+    ['pVeh', 'pNum', 'pAseg', 'pVence'].forEach(id => {
+      const el = byId(id);
+      if (el) {
+        if (el.tagName === 'SELECT') {
+          el.value = '';
+        } else {
+          el.value = '';
+        }
+      }
+    });
+  }
+  
+  function clearRTVForm() {
+    ['rVeh', 'rCita', 'rVence'].forEach(id => {
       const el = byId(id);
       if (el) {
         if (el.tagName === 'SELECT') {

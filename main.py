@@ -121,6 +121,20 @@ def init_database():
         )
     ''')
     
+    # Tabla RTV (Revisión Técnica Vehicular)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rtv (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_cita TEXT NOT NULL,
+            placa TEXT NOT NULL,
+            fecha_vencimiento DATE NOT NULL,
+            estado TEXT NOT NULL DEFAULT 'Vigente',
+            observaciones TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (placa) REFERENCES vehiculos (placa)
+        )
+    ''')
+    
     conn.commit()
     conn.close()
     logger.info("Base de datos inicializada correctamente")
@@ -181,6 +195,13 @@ class PolizaCreate(BaseModel):
     fecha_vencimiento: str
     tipo_cobertura: str
     estado: Optional[str] = "Activa"
+
+class RTVCreate(BaseModel):
+    numero_cita: str
+    placa: str
+    fecha_vencimiento: str
+    estado: Optional[str] = "Vigente"
+    observaciones: Optional[str] = None
 
 # Utilidades de base de datos
 def get_db_connection():
@@ -629,6 +650,64 @@ async def delete_poliza(poliza_id: int):
         return {"success": True, "message": "Póliza eliminada exitosamente"}
     except Exception as e:
         logger.error(f"Error al eliminar póliza: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================================
+# ENDPOINTS RTV (Revisión Técnica Vehicular)
+# ================================
+
+@app.get("/rtv")
+async def get_rtv():
+    """Obtener todos los registros de RTV"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM rtv ORDER BY fecha_vencimiento DESC")
+        rtv = [dict_from_row(row) for row in cursor.fetchall()]
+        conn.close()
+        return {"success": True, "data": rtv}
+    except Exception as e:
+        logger.error(f"Error al obtener RTV: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/rtv")
+async def create_rtv(rtv: RTVCreate):
+    """Crear un nuevo registro de RTV"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO rtv (numero_cita, placa, fecha_vencimiento, estado, observaciones)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (rtv.numero_cita, rtv.placa, rtv.fecha_vencimiento, rtv.estado, rtv.observaciones))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "RTV creado exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al crear RTV: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/rtv/{rtv_id}")
+async def delete_rtv(rtv_id: int):
+    """Eliminar un registro de RTV"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM rtv WHERE id = ?", (rtv_id,))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="RTV no encontrado")
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "RTV eliminado exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al eliminar RTV: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ================================
