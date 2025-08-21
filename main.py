@@ -131,8 +131,8 @@ class VehiculoCreate(BaseModel):
     marca: str
     modelo: str
     ano: int
-    color: str
-    propietario: str
+    color: Optional[str] = ""
+    propietario: Optional[str] = "Hotel"
     poliza: Optional[str] = None
     seguro: Optional[str] = None
 
@@ -230,11 +230,19 @@ async def create_vehiculo(vehiculo: VehiculoCreate):
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Limpiar y validar datos
+        placa = vehiculo.placa.strip().upper() if vehiculo.placa else ""
+        if not placa:
+            raise HTTPException(status_code=400, detail="La placa es requerida")
+            
+        color = vehiculo.color or "No especificado"
+        propietario = vehiculo.propietario or "Hotel"
+        
         cursor.execute('''
             INSERT INTO vehiculos (placa, marca, modelo, ano, color, propietario, poliza, seguro)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (vehiculo.placa, vehiculo.marca, vehiculo.modelo, vehiculo.ano, 
-              vehiculo.color, vehiculo.propietario, vehiculo.poliza, vehiculo.seguro))
+        ''', (placa, vehiculo.marca, vehiculo.modelo, vehiculo.ano, 
+              color, propietario, vehiculo.poliza, vehiculo.seguro))
         
         conn.commit()
         conn.close()

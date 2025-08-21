@@ -1680,20 +1680,29 @@
     if(!hasPermission('vehiculos')) return alert('Sin permisos para crear vehículos');
     
     try{
-      const ano=Number(byId('vAnio').value); 
+      // Validaciones básicas
+      const placa = (byId('vPlaca').value||'').trim().toUpperCase();
+      const marca = (byId('vMarca').value||'').trim();
+      const modelo = (byId('vModelo').value||'').trim();
+      const ano = Number(byId('vAnio').value);
+      
+      if(!placa) return alert('La placa es requerida');
+      if(!marca) return alert('La marca es requerida');
+      if(!modelo) return alert('El modelo es requerido');
+      
       const year=new Date().getFullYear();
-      if(ano<1990||ano>year+1) return alert('Año fuera de rango');
+      if(isNaN(ano) || ano<1990||ano>year+1) return alert('Año fuera de rango válido (1990-'+(year+1)+')');
       
       // Objeto para FastAPI backend
       const obj = { 
-        placa: (byId('vPlaca').value||'').trim().toUpperCase(), 
-        marca: byId('vMarca').value||'', 
-        modelo: byId('vModelo').value||'', 
+        placa: placa, 
+        marca: marca, 
+        modelo: modelo, 
         ano: ano,
-        color: byId('vColor').value||'',
-        propietario: byId('vDueno').value||'hotel',
-        poliza: byId('vPoliza').value||'',
-        seguro: byId('vAseguradora').value||''
+        color: byId('vColor').value||'No especificado',
+        propietario: byId('vDueno').value||'Hotel',
+        poliza: byId('vPoliza').value||null,
+        seguro: byId('vAseguradora').value||null
       };
       
       await apiPost('vehiculos', obj);
@@ -1747,17 +1756,27 @@
     e.preventDefault();
     if(!hasPermission('mantenimientos')) return alert('Sin permisos para crear mantenimientos');
     
-    // Obtener placa del vehículo seleccionado
+    // Validaciones
     const vehiculoId = byId('mVeh').value;
+    const fecha = byId('mFecha').value;
+    const costo = Number(byId('mCosto').value||0);
+    
+    if(!vehiculoId) return alert('Debe seleccionar un vehículo');
+    if(!fecha) return alert('La fecha es requerida');
+    if(costo < 0) return alert('El costo no puede ser negativo');
+    
+    // Obtener placa del vehículo seleccionado
     const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
     const placa = vehiculo ? vehiculo.placa : '';
     
+    if(!placa) return alert('No se pudo encontrar la placa del vehículo seleccionado');
+    
     const obj = { 
-      fecha: byId('mFecha').value, 
+      fecha: fecha, 
       placa: placa,
-      tipo: byId('mTipo').value,
-      descripcion: byId('mObs').value || byId('mTipo').value,
-      costo: Number(byId('mCosto').value||0), 
+      tipo: byId('mTipo').value || 'otro',
+      descripcion: byId('mObs').value || byId('mTipo').value || 'Mantenimiento',
+      costo: costo, 
       kilometraje: byId('mKm').value? Number(byId('mKm').value): null
     };
     
