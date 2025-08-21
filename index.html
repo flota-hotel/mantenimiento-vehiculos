@@ -1222,6 +1222,116 @@
         </form>
       </div>
     </div>
+
+    <!-- Modal Editar Revisión -->
+    <div id="modalEditRevision" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">✏️ Editar Revisión</h3>
+          <button class="close-btn" onclick="cerrarModal('modalEditRevision')">×</button>
+        </div>
+        <form onsubmit="actualizarRevision(event)">
+          <input type="hidden" id="editRevisionId"/>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Vehículo</label>
+              <select id="editRVeh" required></select>
+            </div>
+            <div class="form-group">
+              <label>Inspector</label>
+              <input id="editRInspector" type="text" required/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Fecha</label>
+              <input id="editRFecha" type="date" required/>
+            </div>
+            <div class="form-group">
+              <label>Aprobado</label>
+              <label class="checkbox-container">
+                <input id="editRAprobado" type="checkbox"/>
+                <span class="checkmark"></span>
+                Revisión aprobada
+              </label>
+            </div>
+          </div>
+          
+          <h4 style="color: var(--primary); margin: 20px 0 10px 0;">🔍 Estados de Componentes</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estado Motor</label>
+              <select id="editRMotor">
+                <option value="">Sin revisar</option>
+                <option value="excelente">Excelente</option>
+                <option value="bueno">Bueno</option>
+                <option value="regular">Regular</option>
+                <option value="malo">Malo</option>
+                <option value="cambiar">Cambiar</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Estado Frenos</label>
+              <select id="editRFrenos">
+                <option value="">Sin revisar</option>
+                <option value="excelente">Excelente</option>
+                <option value="bueno">Bueno</option>
+                <option value="regular">Regular</option>
+                <option value="malo">Malo</option>
+                <option value="cambiar">Cambiar</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estado Luces</label>
+              <select id="editRLuces">
+                <option value="">Sin revisar</option>
+                <option value="excelente">Excelente</option>
+                <option value="bueno">Bueno</option>
+                <option value="regular">Regular</option>
+                <option value="malo">Malo</option>
+                <option value="cambiar">Cambiar</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Estado Llantas</label>
+              <select id="editRLlantas">
+                <option value="">Sin revisar</option>
+                <option value="excelente">Excelente</option>
+                <option value="bueno">Bueno</option>
+                <option value="regular">Regular</option>
+                <option value="cambiar">Cambiar</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estado Carrocería</label>
+              <select id="editRCarroceria">
+                <option value="">Sin revisar</option>
+                <option value="excelente">Excelente</option>
+                <option value="bueno">Bueno</option>
+                <option value="regular">Regular</option>
+                <option value="daños_menores">Daños menores</option>
+                <option value="daños_mayores">Daños mayores</option>
+              </select>
+            </div>
+            <div></div>
+          </div>
+          
+          <div class="form-group">
+            <label>Observaciones</label>
+            <textarea id="editRObs" rows="3" placeholder="Observaciones generales de la revisión..."></textarea>
+          </div>
+          
+          <div style="margin-top:20px">
+            <button type="submit" class="success">💾 Actualizar</button>
+            <button type="button" class="secondary" onclick="cerrarModal('modalEditRevision'); return false;">❌ Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
 
   <div class="footer">
@@ -1475,56 +1585,296 @@
   }
 
   function renderKpis(){
-    // Total de vehículos (todos son activos por defecto en el nuevo sistema)
+    // === KPIs BÁSICOS ===
     if(byId('kpiVeh')) byId('kpiVeh').textContent = Vehiculos.length;
     
-    // Pólizas por vencer (usar fecha_vencimiento del nuevo backend)
+    // === ALERTAS CRITICAS ===
+    const hoy = new Date();
     const p30 = Polizas.filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento)<=30 && diasRestantes(p.fecha_vencimiento)>=0).length;
     const p7 = Polizas.filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento)<=7 && diasRestantes(p.fecha_vencimiento)>=0).length;
     const r30 = RTV.filter(r=> r.fecha_vencimiento && diasRestantes(r.fecha_vencimiento)<=30 && diasRestantes(r.fecha_vencimiento)>=0).length;
+    const r7 = RTV.filter(r=> r.fecha_vencimiento && diasRestantes(r.fecha_vencimiento)<=7 && diasRestantes(r.fecha_vencimiento)>=0).length;
     
     if(byId('kpiPol30')) byId('kpiPol30').textContent=p30; 
     if(byId('kpiPol7')) byId('kpiPol7').textContent=p7; 
     if(byId('kpiRtv30')) byId('kpiRtv30').textContent=r30;
+    if(byId('kpiRtv7')) byId('kpiRtv7').textContent=r7;
     
-    // Gasto en combustible del mes (usar nuevo formato)
+    // === GASTOS DEL MES ===
     const month=new Date(); month.setDate(1);
     const gastoMes = Combustible.filter(f=> new Date(f.fecha)>=month)
-      .reduce((a,f)=> a + Number(f.costo), 0); // Usar costo directamente del backend
+      .reduce((a,f)=> a + Number(f.costo), 0);
+    const gastoMantMes = Mantenimientos.filter(m=> new Date(m.fecha)>=month)
+      .reduce((a,m)=> a + Number(m.costo||0), 0);
+    
     if(byId('kpiFuelMes')) byId('kpiFuelMes').textContent = fmt(gastoMes);
+    if(byId('kpiMantCostoMes')) byId('kpiMantCostoMes').textContent = fmt(gastoMantMes);
+    if(byId('kpiGastoTotal')) byId('kpiGastoTotal').textContent = fmt(gastoMes + gastoMantMes);
     
     const mantMes = Mantenimientos.filter(m=> {
       const d=new Date(m.fecha); const n=new Date();
       return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();
     }).length;
-    byId('kpiMantMes').textContent = mantMes;
+    if(byId('kpiMantMes')) byId('kpiMantMes').textContent = mantMes;
     
-    // Nuevos KPIs
-    // KM/L promedio
+    // === RENDIMIENTO Y EFICIENCIA ===
     const combustibleReciente = Combustible.filter(f=> new Date(f.fecha)>=month);
     let totalKmL = 0, countKmL = 0;
     combustibleReciente.forEach(f => {
-      const prev = Combustible
-        .filter(x=> Number(x.vehiculo_id)===Number(f.vehiculo_id) && new Date(x.fecha) < new Date(f.fecha))
-        .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
-      if (prev) {
-        const dist = Number(f.odometro_km) - Number(prev.odometro_km);
-        if (dist > 0) {
-          const kmL = dist / Number(f.litros);
-          totalKmL += kmL;
-          countKmL++;
-        }
+      if (f._calculatedKmL && f._calculatedKmL > 0) {
+        totalKmL += f._calculatedKmL;
+        countKmL++;
       }
     });
     const avgKmL = countKmL > 0 ? (totalKmL / countKmL).toFixed(1) : '0';
-    byId('kpiKmL').textContent = avgKmL;
+    if(byId('kpiKmL')) byId('kpiKmL').textContent = avgKmL + ' km/L';
     
-    // Costo promedio mantenimiento
-    const mantRecientes = Mantenimientos.filter(m=> new Date(m.fecha)>=month);
-    const costoPromMant = mantRecientes.length > 0 ? 
-      mantRecientes.reduce((a,m)=> a + Number(m.costo||0), 0) / mantRecientes.length : 0;
-    byId('kpiCostoMant').textContent = fmt(costoPromMant);
+    // === PRÓXIMOS CAMBIOS DE ACEITE ===
+    const proximosCambios = [];
+    Vehiculos.forEach(vehiculo => {
+      // Buscar último cambio de aceite
+      const ultimoCambio = Mantenimientos
+        .filter(m => m.placa === vehiculo.placa && m.tipo === 'cambio_aceite' && m.proximo_km)
+        .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+      
+      if (ultimoCambio) {
+        // Buscar km actual (desde combustible más reciente)
+        const ultimoCombustible = Combustible
+          .filter(f => f.placa === vehiculo.placa && f.kilometraje)
+          .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+        
+        if (ultimoCombustible) {
+          const kmActual = Number(ultimoCombustible.kilometraje);
+          const kmProximo = Number(ultimoCambio.proximo_km);
+          const kmRestantes = kmProximo - kmActual;
+          
+          if (kmRestantes <= 1000 && kmRestantes > 0) { // Alerta si quedan menos de 1000km
+            proximosCambios.push({
+              placa: vehiculo.placa,
+              kmRestantes: kmRestantes,
+              urgente: kmRestantes <= 200
+            });
+          }
+        }
+      }
+    });
+    
+    if(byId('kpiCambiosProximos')) {
+      byId('kpiCambiosProximos').textContent = proximosCambios.length;
+      // Agregar color basado en urgencia
+      const elemento = byId('kpiCambiosProximos').parentElement;
+      if (proximosCambios.some(c => c.urgente)) {
+        elemento.style.background = 'var(--danger)';
+        elemento.style.color = 'white';
+      } else if (proximosCambios.length > 0) {
+        elemento.style.background = 'var(--warning)';
+        elemento.style.color = 'white';
+      } else {
+        elemento.style.background = '';
+        elemento.style.color = '';
+      }
+    }
+    
+    // === INDICADORES POR VEHÍCULO ===
+    renderVehiculosDetalle();
+    
+    // === ALERTAS CONSOLIDADAS ===
+    renderAlertasConsolidadas();
   }
+  
+  // === FUNCIONES AUXILIARES PARA DASHBOARD MEJORADO ===
+  function renderVehiculosDetalle() {
+    const contenedor = byId('vehiculosDetalle');
+    if (!contenedor) return;
+    
+    const vehiculosData = Vehiculos.map(vehiculo => {
+      // Datos básicos
+      const poliza = Polizas.find(p => p.placa === vehiculo.placa);
+      const rtv = RTV.find(r => r.placa === vehiculo.placa);
+      
+      // Próximo cambio de aceite
+      const ultimoCambio = Mantenimientos
+        .filter(m => m.placa === vehiculo.placa && m.tipo === 'cambio_aceite' && m.proximo_km)
+        .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+      
+      const ultimoCombustible = Combustible
+        .filter(f => f.placa === vehiculo.placa && f.kilometraje)
+        .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+      
+      let proximoCambio = null;
+      if (ultimoCambio && ultimoCombustible) {
+        const kmActual = Number(ultimoCombustible.kilometraje);
+        const kmProximo = Number(ultimoCambio.proximo_km);
+        proximoCambio = {
+          kmActual,
+          kmProximo,
+          kmRestantes: kmProximo - kmActual,
+          urgente: (kmProximo - kmActual) <= 200,
+          proximo: (kmProximo - kmActual) <= 1000
+        };
+      }
+      
+      // Rendimiento últimos 30 días
+      const hace30Dias = new Date();
+      hace30Dias.setDate(hace30Dias.getDate() - 30);
+      
+      const combustibleReciente = Combustible
+        .filter(f => f.placa === vehiculo.placa && new Date(f.fecha) >= hace30Dias && f._calculatedKmL);
+      
+      const rendimientoPromedio = combustibleReciente.length > 0 ?
+        (combustibleReciente.reduce((a,f) => a + f._calculatedKmL, 0) / combustibleReciente.length).toFixed(1) : 'N/A';
+      
+      // Alertas del vehículo
+      const alertas = [];
+      if (poliza && diasRestantes(poliza.fecha_vencimiento) <= 30) {
+        alertas.push({
+          tipo: 'Póliza',
+          dias: diasRestantes(poliza.fecha_vencimiento),
+          urgente: diasRestantes(poliza.fecha_vencimiento) <= 7
+        });
+      }
+      if (rtv && diasRestantes(rtv.fecha_vencimiento) <= 30) {
+        alertas.push({
+          tipo: 'RTV',
+          dias: diasRestantes(rtv.fecha_vencimiento),
+          urgente: diasRestantes(rtv.fecha_vencimiento) <= 7
+        });
+      }
+      if (proximoCambio && proximoCambio.proximo) {
+        alertas.push({
+          tipo: 'Cambio Aceite',
+          km: proximoCambio.kmRestantes,
+          urgente: proximoCambio.urgente
+        });
+      }
+      
+      return {
+        vehiculo,
+        poliza,
+        rtv,
+        proximoCambio,
+        rendimientoPromedio,
+        alertas
+      };
+    });
+    
+    const html = vehiculosData.map(data => {
+      const v = data.vehiculo;
+      const alertasHtml = data.alertas.map(a => 
+        `<div class="pill ${a.urgente ? 'dangerP' : 'warnP'}" style="font-size: 0.8em; margin: 2px;">
+          ${a.tipo}: ${a.dias !== undefined ? a.dias + 'd' : a.km + 'km'}
+         </div>`
+      ).join('');
+      
+      return `
+        <div class="vehicle-card" style="border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 8px; background: white;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="margin: 0; color: var(--primary);">🚗 ${v.placa}</h4>
+            <span style="font-size: 0.9em; color: var(--text-secondary);">${v.marca} ${v.modelo}</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85em;">
+            <div>
+              <strong>📊 Rendimiento:</strong> ${data.rendimientoPromedio} km/L<br>
+              <strong>🔒 Póliza:</strong> ${data.poliza ? diasRestantes(data.poliza.fecha_vencimiento) + 'd' : 'Sin registro'}<br>
+              <strong>🔍 RTV:</strong> ${data.rtv ? diasRestantes(data.rtv.fecha_vencimiento) + 'd' : 'Sin registro'}
+            </div>
+            <div>
+              <strong>🛫 Próximo cambio:</strong> ${data.proximoCambio ? data.proximoCambio.kmRestantes + 'km' : 'N/A'}<br>
+              <strong>📍 Km actual:</strong> ${data.proximoCambio ? data.proximoCambio.kmActual.toLocaleString() : 'N/A'}<br>
+              <strong>⚠️ Alertas:</strong> ${data.alertas.length}
+            </div>
+          </div>
+          
+          ${data.alertas.length > 0 ? `<div style="margin-top: 8px;">${alertasHtml}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+    
+    contenedor.innerHTML = html;
+  }
+  
+  function renderAlertasConsolidadas() {
+    const contenedor = byId('alertasConsolidadas');
+    if (!contenedor) return;
+    
+    const alertas = [];
+    
+    // Alertas de pólizas
+    Polizas.forEach(poliza => {
+      const dias = diasRestantes(poliza.fecha_vencimiento);
+      if (dias <= 30 && dias >= 0) {
+        alertas.push({
+          tipo: '🔒 Póliza',
+          vehiculo: poliza.placa,
+          descripcion: `Vence en ${dias} días`,
+          urgencia: dias <= 7 ? 'critica' : dias <= 15 ? 'alta' : 'media',
+          fecha: poliza.fecha_vencimiento
+        });
+      }
+    });
+    
+    // Alertas de RTV
+    RTV.forEach(rtv => {
+      const dias = diasRestantes(rtv.fecha_vencimiento);
+      if (dias <= 30 && dias >= 0) {
+        alertas.push({
+          tipo: '🔍 RTV',
+          vehiculo: rtv.placa,
+          descripcion: `Vence en ${dias} días`,
+          urgencia: dias <= 7 ? 'critica' : dias <= 15 ? 'alta' : 'media',
+          fecha: rtv.fecha_vencimiento
+        });
+      }
+    });
+    
+    // Alertas de cambio de aceite
+    Vehiculos.forEach(vehiculo => {
+      const ultimoCambio = Mantenimientos
+        .filter(m => m.placa === vehiculo.placa && m.tipo === 'cambio_aceite' && m.proximo_km)
+        .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+      
+      const ultimoCombustible = Combustible
+        .filter(f => f.placa === vehiculo.placa && f.kilometraje)
+        .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+      
+      if (ultimoCambio && ultimoCombustible) {
+        const kmActual = Number(ultimoCombustible.kilometraje);
+        const kmProximo = Number(ultimoCambio.proximo_km);
+        const kmRestantes = kmProximo - kmActual;
+        
+        if (kmRestantes <= 1000 && kmRestantes > 0) {
+          alertas.push({
+            tipo: '🛫 Cambio Aceite',
+            vehiculo: vehiculo.placa,
+            descripcion: `Faltan ${kmRestantes.toLocaleString()} km`,
+            urgencia: kmRestantes <= 200 ? 'critica' : kmRestantes <= 500 ? 'alta' : 'media',
+            fecha: null
+          });
+        }
+      }
+    });
+    
+    // Ordenar por urgencia
+    const ordenUrgencia = { critica: 1, alta: 2, media: 3 };
+    alertas.sort((a, b) => ordenUrgencia[a.urgencia] - ordenUrgencia[b.urgencia]);
+    
+    const html = alertas.map(alerta => {
+      const colorClass = alerta.urgencia === 'critica' ? 'dangerP' : alerta.urgencia === 'alta' ? 'warnP' : 'ok';
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-left: 4px solid var(${alerta.urgencia === 'critica' ? '--danger' : alerta.urgencia === 'alta' ? '--warning' : '--success'}); margin: 4px 0; background: rgba(0,0,0,0.02);">
+          <div>
+            <strong>${alerta.tipo}</strong> - ${alerta.vehiculo}<br>
+            <span style="font-size: 0.9em; color: var(--text-secondary);">${alerta.descripcion}</span>
+          </div>
+          <span class="pill ${colorClass}" style="font-size: 0.8em;">${alerta.urgencia.toUpperCase()}</span>
+        </div>
+      `;
+    }).join('');
+    
+    contenedor.innerHTML = alertas.length > 0 ? html : '<div style="text-align: center; color: var(--text-secondary); padding: 20px;">✅ No hay alertas pendientes</div>';
+  }
+  
   function renderAlertas(){
     const q=byId('fltAlertPlaca').value?.trim().toUpperCase();
     const rows = (Alertas||[])
@@ -1654,12 +2004,16 @@
     rec = rec.sort((a,b)=> new Date(b.fecha)-new Date(a.fecha));
     
     const rows = rec.map(f=>{
+      // Calcular km/L correctamente
       const prev = Combustible
         .filter(x=> x.placa === f.placa && new Date(x.fecha) < new Date(f.fecha))
         .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
-      const dist = prev? (Number(f.kilometraje)-Number(prev.kilometraje)): null;
-      const kmL = (dist && dist>0)? (dist/Number(f.litros)): null;
-      const precioLitro = f.costo / f.litros;
+      const dist = prev ? (Number(f.kilometraje)-Number(prev.kilometraje)) : null;
+      const kmL = (dist && dist > 0 && Number(f.litros) > 0) ? (dist/Number(f.litros)) : null;
+      const precioLitro = Number(f.costo) / Number(f.litros);
+      
+      // Almacenar km/L calculado en el objeto para uso posterior
+      f._calculatedKmL = kmL;
       
       return `<tr>
         <td><strong>${f.placa||''}</strong></td>
@@ -1677,17 +2031,13 @@
     }).join('');
     byId('tblFuel').innerHTML = rows || '<tr><td colspan="8">Sin registros</td></tr>';
     
-    // Estadísticas
-    const totalCosto = rec.reduce((a,f)=> a + (Number(f.litros)*Number(f.precio_por_litro)), 0);
+    // Estadísticas corregidas
+    const totalCosto = rec.reduce((a,f)=> a + Number(f.costo), 0);
     const totalLitros = rec.reduce((a,f)=> a + Number(f.litros), 0);
     const kmLPromedio = rec.map(f=>{
-      const prev = Combustible
-        .filter(x=> Number(x.vehiculo_id)===Number(f.vehiculo_id) && new Date(x.fecha) < new Date(f.fecha))
-        .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
-      if (!prev) return null;
-      const dist = Number(f.odometro_km) - Number(prev.odometro_km);
-      return dist > 0 ? dist / Number(f.litros) : null;
-    }).filter(x => x !== null);
+      // Usar el km/L ya calculado
+      return f._calculatedKmL;
+    }).filter(x => x !== null && x > 0);
     
     const avgKmL = kmLPromedio.length > 0 ? (kmLPromedio.reduce((a,b)=>a+b,0) / kmLPromedio.length).toFixed(1) : '0';
     
@@ -1749,7 +2099,7 @@
           <td>${tipoIcon} Revisión</td>
           <td>${r.inspector}</td>
           <td>${r.fecha}</td>
-          <td>-</td>
+          <td>${r.kilometraje || '-'}</td>
           <td><span class="pill ${estadoColor}">${estadoGeneral}</span></td>
           <td>
             <button class="action-btn" onclick="verDetalleRevision('${r.id}')" title="Ver detalle">👁️</button>
@@ -2264,26 +2614,26 @@
   function exportarVehiculo(){ const placa = byId('fltVehPlaca').value; if(!placa) return alert('Seleccione una placa en el filtro'); exportFichaExcel(placa); }
   function autoProximoKm(){ const tipo = byId('mTipo').value; if(tipo !== 'cambio_aceite') { alert('Aplica solo a "Cambio de aceite"'); return; } const km = parseInt(byId('mKm').value||'0',10); if(!km || Number.isNaN(km) || km<0){ alert('Ingrese km actual válido'); return; } byId('mProx').value = km + 5000; }
   
-  // Función para mostrar/ocultar campos específicos de cambio de aceite
+  // Función para mostrar/ocultar campos específicos de mantenimiento
   function toggleMaintenanceFields() {
     const tipo = byId('mTipo').value;
     const isOilChange = tipo === 'cambio_aceite';
     
-    // Mostrar/ocultar campos de kilometraje y próximo km
+    // SIEMPRE mostrar campos de kilometraje (para todos los tipos)
     const kmFields = byId('maintenanceKmFields');
-    const oilField = byId('maintenanceOilField');
-    
     if (kmFields) {
-      kmFields.style.display = isOilChange ? 'grid' : 'none';
+      kmFields.style.display = 'grid'; // Siempre visible
     }
     
+    // Solo mostrar campos específicos de aceite cuando es cambio de aceite
+    const oilField = byId('maintenanceOilField');
     if (oilField) {
       oilField.style.display = isOilChange ? 'grid' : 'none';
     }
     
-    // Si no es cambio de aceite, limpiar los campos
+    // Si no es cambio de aceite, limpiar solo los campos específicos de aceite
     if (!isOilChange) {
-      ['mKm', 'mProx', 'mKmPrevAceite'].forEach(id => {
+      ['mProx', 'mKmPrevAceite'].forEach(id => {
         const el = byId(id);
         if (el) el.value = '';
       });
@@ -2431,6 +2781,174 @@
       renderKpis();
       cerrarModal('modalEditMantenimiento');
       alert('✅ Mantenimiento actualizado exitosamente');
+    } catch (e2) {
+      alert('❌ Error: ' + e2.message);
+    }
+  }
+  
+  // ====== FUNCIONES PARA REVISIONES ======
+  function verDetalleRevision(id) {
+    console.log('Viendo detalle de revisión ID:', id);
+    
+    const revision = Revisiones.find(r => r.id == id);
+    if (!revision) {
+      alert('Revisión no encontrada');
+      return;
+    }
+    
+    // Crear contenido del modal con todos los detalles
+    const contenido = `
+      <div style="max-height: 70vh; overflow-y: auto; padding: 20px;">
+        <h3 style="margin-top: 0; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+          🔍 Detalle de Revisión - ${revision.placa}
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+          <div>
+            <strong>📅 Fecha:</strong> ${revision.fecha}<br>
+            <strong>👨‍🔧 Inspector:</strong> ${revision.inspector}<br>
+            <strong>🚗 Vehículo:</strong> ${revision.placa}
+          </div>
+          <div>
+            <strong>✅ Aprobado:</strong> ${revision.aprobado ? '✅ Sí' : '❌ No'}<br>
+            <strong>📝 Observaciones:</strong> ${revision.observaciones || 'Ninguna'}
+          </div>
+        </div>
+        
+        <h4 style="color: var(--secondary); margin: 20px 0 10px 0;">🔍 Estados de Componentes</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <strong>🔥 Motor:</strong> <span class="pill ${getEstadoPill(revision.estado_motor)}">${revision.estado_motor || 'No revisado'}</span><br>
+            <strong>🛑 Frenos:</strong> <span class="pill ${getEstadoPill(revision.estado_frenos)}">${revision.estado_frenos || 'No revisado'}</span><br>
+            <strong>💡 Luces:</strong> <span class="pill ${getEstadoPill(revision.estado_luces)}">${revision.estado_luces || 'No revisado'}</span><br>
+            <strong>🎯 Llantas:</strong> <span class="pill ${getEstadoPill(revision.estado_llantas)}">${revision.estado_llantas || 'No revisado'}</span>
+          </div>
+          <div>
+            <strong>🚗 Carrocería:</strong> <span class="pill ${getEstadoPill(revision.estado_carroceria)}">${revision.estado_carroceria || 'No revisado'}</span><br>
+            <strong>🧠 Interior:</strong> <span class="pill ${getEstadoPill(revision.estado_interior)}">${revision.estado_interior || 'No revisado'}</span><br>
+            <strong>🔋 Batería:</strong> <span class="pill ${getEstadoPill(revision.bateria)}">${revision.bateria || 'No revisado'}</span><br>
+            <strong>🛢️ Sistema Frenos:</strong> <span class="pill ${getEstadoPill(revision.sistema_frenos)}">${revision.sistema_frenos || 'No revisado'}</span>
+          </div>
+        </div>
+        
+        <h4 style="color: var(--secondary); margin: 20px 0 10px 0;">🫢 Fluidos</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <strong>🛫 Aceite Motor:</strong> <span class="pill ${getEstadoPill(revision.aceite_motor)}">${revision.aceite_motor || 'No revisado'}</span><br>
+            <strong>🔴 Líquido Frenos:</strong> <span class="pill ${getEstadoPill(revision.liquido_frenos)}">${revision.liquido_frenos || 'No revisado'}</span>
+          </div>
+          <div>
+            <strong>🧊 Refrigerante:</strong> <span class="pill ${getEstadoPill(revision.coolant)}">${revision.coolant || 'No revisado'}</span>
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: right;">
+          <button class="secondary" onclick="cerrarModal('modalDetalleRevision')">Cerrar</button>
+          <button class="primary" onclick="cerrarModal('modalDetalleRevision'); editarRevision('${revision.id}');">Editar</button>
+        </div>
+      </div>
+    `;
+    
+    // Crear modal dinámico
+    let modal = byId('modalDetalleRevision');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modalDetalleRevision';
+      modal.className = 'modal';
+      modal.innerHTML = '<div class="modal-content"></div>';
+      document.body.appendChild(modal);
+    }
+    
+    modal.querySelector('.modal-content').innerHTML = contenido;
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+  
+  function getEstadoPill(estado) {
+    if (!estado) return 'ok';
+    const estadoLower = estado.toLowerCase();
+    if (estadoLower.includes('excelente') || estadoLower.includes('bueno')) return 'ok';
+    if (estadoLower.includes('regular') || estadoLower.includes('revisar') || estadoLower.includes('bajo')) return 'warnP';
+    if (estadoLower.includes('malo') || estadoLower.includes('cambiar') || estadoLower.includes('urgente') || estadoLower.includes('daños')) return 'dangerP';
+    return 'ok';
+  }
+  
+  function editarRevision(id) {
+    console.log('Editando revisión ID:', id);
+    
+    if (!hasPermission('revisiones')) {
+      alert('Sin permisos para editar revisiones');
+      return;
+    }
+    
+    const revision = Revisiones.find(r => r.id == id);
+    console.log('Revisión encontrada:', revision);
+    
+    if (!revision) {
+      alert('Revisión no encontrada');
+      return;
+    }
+    
+    fillVehSelects();
+    
+    // Llenar campos del modal de edición
+    byId('editRevisionId').value = revision.id;
+    const vehiculo = Vehiculos.find(v => v.placa === revision.placa);
+    byId('editRVeh').value = vehiculo ? vehiculo.id : '';
+    byId('editRFecha').value = revision.fecha;
+    byId('editRInspector').value = revision.inspector;
+    
+    // Estados de componentes
+    byId('editRMotor').value = revision.estado_motor || '';
+    byId('editRFrenos').value = revision.estado_frenos || '';
+    byId('editRLuces').value = revision.estado_luces || '';
+    byId('editRLlantas').value = revision.estado_llantas || '';
+    byId('editRCarroceria').value = revision.estado_carroceria || '';
+    
+    byId('editRObs').value = revision.observaciones || '';
+    byId('editRAprobado').checked = revision.aprobado || false;
+    
+    const modal = byId('modalEditRevision');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+    }
+  }
+  
+  async function actualizarRevision(e) {
+    e.preventDefault();
+    
+    const id = byId('editRevisionId').value;
+    const vehiculoId = byId('editRVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    
+    if (!vehiculo) {
+      alert('Debe seleccionar un vehículo válido');
+      return;
+    }
+    
+    const obj = {
+      fecha: byId('editRFecha').value,
+      placa: vehiculo.placa,
+      inspector: byId('editRInspector').value,
+      estado_motor: byId('editRMotor').value,
+      estado_frenos: byId('editRFrenos').value,
+      estado_luces: byId('editRLuces').value,
+      estado_llantas: byId('editRLlantas').value,
+      estado_carroceria: byId('editRCarroceria').value,
+      observaciones: byId('editRObs').value,
+      aprobado: byId('editRAprobado').checked
+    };
+    
+    try {
+      await apiPut('revisiones', id, obj);
+      Revisiones = await apiGet('revisiones');
+      renderRevisiones();
+      renderKpis();
+      cerrarModal('modalEditRevision');
+      alert('✅ Revisión actualizada exitosamente');
     } catch (e2) {
       alert('❌ Error: ' + e2.message);
     }
@@ -2964,10 +3482,17 @@
     
     fuelVehiculo.forEach(f => {
       const precioLitro = f.litros > 0 ? (Number(f.costo) / Number(f.litros)) : 0;
+      // Calcular km/L para la ficha técnica
+      const prev = Combustible
+        .filter(x=> x.placa === f.placa && new Date(x.fecha) < new Date(f.fecha))
+        .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
+      const dist = prev ? (Number(f.kilometraje)-Number(prev.kilometraje)) : null;
+      const kmL = (dist && dist > 0 && Number(f.litros) > 0) ? (dist/Number(f.litros)).toFixed(1) : null;
+      
       historial.push({
         fecha: f.fecha,
         tipo: 'Combustible',
-        detalle: `${f.litros}L - ${fmt(f.costo)} (₡${Math.round(precioLitro)}/L)`,
+        detalle: `${f.litros}L - ${fmt(f.costo)} (₡${Math.round(precioLitro)}/L)${kmL ? ` - ${kmL} km/L` : ''}`,
         km: f.kilometraje || '',
         observaciones: f.estacion || ''
       });
@@ -3384,6 +3909,14 @@
       
       const data = filtered.map(x=>{
         const precioLitro = x.litros > 0 ? (Number(x.costo) / Number(x.litros)) : 0;
+        
+        // Calcular km/L
+        const prev = Combustible
+          .filter(f=> f.placa === x.placa && new Date(f.fecha) < new Date(x.fecha))
+          .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
+        const dist = prev ? (Number(x.kilometraje)-Number(prev.kilometraje)) : null;
+        const kmL = (dist && dist > 0 && Number(x.litros) > 0) ? (dist/Number(x.litros)).toFixed(1) : null;
+        
         return {
           'Placa': x.placa || '',
           'Fecha': x.fecha,
@@ -3391,6 +3924,7 @@
           'Precio/Litro (₡)': Math.round(precioLitro * 100) / 100,
           'Costo Total (₡)': Number(x.costo) || 0,
           'Odómetro (km)': x.kilometraje || '',
+          'Km/L': kmL || 'N/A',
           'Estación': x.estacion || '',
           'Fecha de Registro': x.created_at ? new Date(x.created_at).toLocaleDateString('es-ES') : ''
         };
@@ -3425,6 +3959,7 @@
         {wch: 15}, // Precio/Litro
         {wch: 15}, // Costo Total
         {wch: 12}, // Odómetro
+        {wch: 10}, // Km/L
         {wch: 15}, // Estación
         {wch: 15}  // Fecha Registro
       ];

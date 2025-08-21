@@ -16,3 +16,69 @@
 2025-08-20 22:18:14,700 WARN stopped: webapp (terminated by SIGTERM)
 2025-08-20 22:18:14,704 INFO spawned: 'webapp' with pid 4977
 2025-08-20 22:18:15,794 INFO success: webapp entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 13:14:53,480 INFO waiting for webapp to stop
+2025-08-21 13:14:53,482 WARN stopped: webapp (terminated by SIGTERM)
+2025-08-21 13:14:53,488 INFO spawned: 'webapp' with pid 11792
+2025-08-21 13:14:54,579 INFO success: webapp entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 14:23:40,380 INFO waiting for webapp to stop
+2025-08-21 14:23:40,382 WARN stopped: webapp (terminated by SIGTERM)
+2025-08-21 14:23:48,264 INFO spawned: 'vehicular_api' with pid 16224
+2025-08-21 14:23:49,274 INFO success: vehicular_api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 14:30:21,317 INFO spawned: 'frontend_server' with pid 17355
+2025-08-21 14:30:22,411 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 14:37:02,273 INFO waiting for frontend_server to stop
+2025-08-21 14:37:02,275 WARN stopped: frontend_server (terminated by SIGTERM)
+2025-08-21 14:37:02,279 INFO spawned: 'frontend_server' with pid 18309
+2025-08-21 14:37:03,365 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 14:42:46,538 INFO waiting for vehicular_api to stop
+2025-08-21 14:42:46,858 INFO stopped: vehicular_api (exit status 0)
+2025-08-21 14:42:46,863 INFO spawned: 'vehicular_api' with pid 18847
+2025-08-21 14:42:48,798 INFO success: vehicular_api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 14:43:41,572 INFO waiting for frontend_server to stop
+2025-08-21 14:43:41,573 WARN stopped: frontend_server (terminated by SIGTERM)
+2025-08-21 14:43:41,577 INFO spawned: 'frontend_server' with pid 18983
+2025-08-21 14:43:42,662 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 14:50:18,388 INFO waiting for vehicular_api to stop
+2025-08-21 14:50:18,720 INFO stopped: vehicular_api (exit status 0)
+2025-08-21 14:50:18,721 INFO waiting for frontend_server to stop
+2025-08-21 14:50:18,722 WARN stopped: frontend_server (terminated by SIGTERM)
+2025-08-21 14:50:18,727 INFO spawned: 'vehicular_api' with pid 19890
+2025-08-21 14:50:19,742 INFO success: vehicular_api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 14:50:20,749 INFO spawned: 'frontend_server' with pid 19893
+2025-08-21 14:50:21,833 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 15:01:31,182 INFO waiting for frontend_server to stop
+2025-08-21 15:01:31,184 WARN stopped: frontend_server (terminated by SIGTERM)
+2025-08-21 15:01:31,189 INFO spawned: 'frontend_server' with pid 20735
+2025-08-21 15:01:32,288 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 15:12:37,921 INFO waiting for frontend_server to stop
+2025-08-21 15:12:37,923 WARN stopped: frontend_server (terminated by SIGTERM)
+2025-08-21 15:12:37,927 INFO spawned: 'frontend_server' with pid 21519
+2025-08-21 15:12:39,015 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 15:24:37,485 INFO waiting for vehicular_api to stop
+2025-08-21 15:24:37,751 INFO stopped: vehicular_api (exit status 0)
+2025-08-21 15:24:37,765 INFO spawned: 'vehicular_api' with pid 22534
+2025-08-21 15:24:38,780 INFO success: vehicular_api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 15:32:23,914 INFO waiting for vehicular_api to stop
+2025-08-21 15:32:24,238 INFO stopped: vehicular_api (exit status 0)
+2025-08-21 15:32:24,243 INFO spawned: 'vehicular_api' with pid 23241
+2025-08-21 15:32:25,245 INFO success: vehicular_api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 15:37:34,882 INFO waiting for vehicular_api to stop
+2025-08-21 15:37:35,176 INFO stopped: vehicular_api (exit status 0)
+2025-08-21 15:37:35,181 INFO spawned: 'vehicular_api' with pid 23720
+2025-08-21 15:37:36,192 INFO success: vehicular_api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 15:47:09,723 INFO waiting for frontend_server to stop
+2025-08-21 15:47:09,725 WARN stopped: frontend_server (terminated by SIGTERM)
+2025-08-21 15:47:09,730 INFO spawned: 'frontend_server' with pid 24423
+2025-08-21 15:47:10,825 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 15:57:54,025 INFO waiting for frontend_server to stop
+2025-08-21 15:57:54,026 WARN stopped: frontend_server (terminated by SIGTERM)
+2025-08-21 15:57:54,030 INFO spawned: 'frontend_server' with pid 25442
+2025-08-21 15:57:55,116 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 16:01:06,325 INFO waiting for vehicular_api to stop
+2025-08-21 16:01:06,325 INFO waiting for frontend_server to stop
+2025-08-21 16:01:06,326 WARN stopped: frontend_server (terminated by SIGTERM)
+2025-08-21 16:01:06,621 INFO stopped: vehicular_api (exit status 0)
+2025-08-21 16:01:06,626 INFO spawned: 'vehicular_api' with pid 25771
+2025-08-21 16:01:06,631 INFO spawned: 'frontend_server' with pid 25772
+2025-08-21 16:01:07,644 INFO success: vehicular_api entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2025-08-21 16:01:07,644 INFO success: frontend_server entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
