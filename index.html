@@ -233,50 +233,86 @@
 
   <main class="container">
     <section id="tab-dashboard" class="tabpanel">
+      <!-- === INDICADORES PRINCIPALES === -->
       <div class="grid kpis">
+        <!-- 1. VEHÍCULOS ACTIVOS -->
         <div class="card">
           <div class="kpi-icon">🚗</div>
-          <h3>Vehículos activos</h3>
-          <div class="big" id="kpiVeh"></div>
+          <h3>Vehículos Activos</h3>
+          <div class="big" id="kpiVeh">-</div>
         </div>
+        
+        <!-- 2. PÓLIZAS POR VENCER -->
         <div class="card">
           <div class="kpi-icon">🛡️</div>
-          <h3>Pólizas ≤30d</h3>
-          <div class="big" id="kpiPol30"></div>
+          <h3>Pólizas (≤30d)</h3>
+          <div class="big" id="kpiPol30">-</div>
+          <div id="proxPolizas" style="margin-top: 8px; min-height: 40px;">
+            <div style="color: var(--text-secondary); font-size: 0.8em;">Cargando...</div>
+          </div>
         </div>
+        
+        <!-- 3. RTV POR VENCER -->
         <div class="card">
-          <div class="kpi-icon">⚠️</div>
-          <h3>Pólizas ≤7d</h3>
-          <div class="big" id="kpiPol7"></div>
+          <div class="kpi-icon">🔍</div>
+          <h3>RTV (≤30d)</h3>
+          <div class="big" id="kpiRtv30">-</div>
+          <div id="proxRTV" style="margin-top: 8px; min-height: 40px;">
+            <div style="color: var(--text-secondary); font-size: 0.8em;">Cargando...</div>
+          </div>
         </div>
-        <div class="card">
-          <div class="kpi-icon">📋</div>
-          <h3>RTV ≤30d</h3>
-          <div class="big" id="kpiRtv30"></div>
-        </div>
-        <div class="card">
-          <div class="kpi-icon">🔧</div>
-          <h3>Mantenimientos mes</h3>
-          <div class="big" id="kpiMantMes"></div>
-        </div>
-        <div class="card">
-          <div class="kpi-icon">⛽</div>
-          <h3>Gasto combustible mes</h3>
-          <div class="big" id="kpiFuelMes"></div>
-        </div>
-        <div class="card">
-          <div class="kpi-icon">📊</div>
-          <h3>Promedio KM/L</h3>
-          <div class="big" id="kpiKmL"></div>
-        </div>
+        
+        <!-- 4. COSTOS DEL MES -->
         <div class="card">
           <div class="kpi-icon">💰</div>
-          <h3>Costo promedio mantto.</h3>
-          <div class="big" id="kpiCostoMant"></div>
+          <h3>Costo Total Mes</h3>
+          <div class="big" id="kpiCostoTotalMes">-</div>
+          <div style="margin-top: 8px; font-size: 0.85em;">
+            <div>⛽ <strong>Combustible:</strong> <span id="kpiCombustibleMes">-</span></div>
+            <div>🔧 <strong>Mantenimiento:</strong> <span id="kpiMantenimientoMes">-</span></div>
+          </div>
         </div>
       </div>
+      
+      <!-- === INDICADORES SECUNDARIOS === -->
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-top: 16px;">
+        <div class="card">
+          <div class="kpi-icon">🔧</div>
+          <h4>Mantenimientos del Mes</h4>
+          <div class="big" style="font-size: 1.5em;" id="kpiMantMes">-</div>
+        </div>
+        
+        <div class="card">
+          <div class="kpi-icon">📊</div>
+          <h4>Promedio KM/L</h4>
+          <div class="big" style="font-size: 1.5em;" id="kpiKmL">-</div>
+        </div>
+      </div>
+      <!-- === RESUMEN DEL MES ACTUAL === -->
       <div class="card" style="margin-top:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center"><strong>Alertas</strong><input id="fltAlertPlaca" type="text" placeholder="Filtrar por placa…" oninput="renderAlertas()"/></div>
+        <h3 style="margin: 0 0 16px 0; color: var(--primary);">📊 Resumen del Mes</h3>
+        <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+          <div style="text-align: center; padding: 12px; background: rgba(0, 123, 255, 0.1); border-radius: 8px;">
+            <div style="font-size: 0.9em; color: var(--text-secondary);">Total Gastado</div>
+            <div style="font-size: 1.4em; font-weight: bold; color: var(--primary);" id="kpiCostoTotalMes2">-</div>
+          </div>
+          <div style="text-align: center; padding: 12px; background: rgba(40, 167, 69, 0.1); border-radius: 8px;">
+            <div style="font-size: 0.9em; color: var(--text-secondary);">⛽ Combustible</div>
+            <div style="font-size: 1.4em; font-weight: bold; color: #28a745;" id="kpiCombustibleMes2">-</div>
+          </div>
+          <div style="text-align: center; padding: 12px; background: rgba(255, 193, 7, 0.1); border-radius: 8px;">
+            <div style="font-size: 0.9em; color: var(--text-secondary);">🔧 Mantenimiento</div>
+            <div style="font-size: 1.4em; font-weight: bold; color: #ffc107;" id="kpiMantenimientoMes2">-</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- === ALERTAS CONSOLIDADAS === -->
+      <div class="card" style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>⚠️ Alertas y Vencimientos</strong>
+          <input id="fltAlertPlaca" type="text" placeholder="Filtrar por placa…" oninput="renderAlertas()"/>
+        </div>
         <table><thead><tr><th>Tipo</th><th>Placa</th><th>Días/Km</th><th>Estado</th></tr></thead><tbody id="tblAlertas"></tbody></table>
       </div>
       <div class="card" style="margin-top:16px">
@@ -284,6 +320,7 @@
           <summary>🧪 Pruebas rápidas (dev)</summary>
           <div class="test" id="testOut"></div>
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="secondary" onclick="runTests('api')">Probar Conectividad API</button>
             <button class="secondary" onclick="runTests('get')">Probar GET Vehículos</button>
             <button class="secondary" onclick="runTests('ui')">Probar UI (selects)</button>
             <button class="secondary" onclick="runTests('core')">Probar Core (setTab/XLSX)</button>
@@ -446,10 +483,53 @@
             <div id="fichaCostos"></div>
           </div>
           
-          <!-- Alertas y próximos mantenimientos -->
+          <!-- Sistema Completo de Alertas -->
           <div class="card">
-            <h3>⚠️ Alertas y Próximos Mantenimientos</h3>
-            <div id="fichaAlertas"></div>
+            <h3>🚨 Sistema Completo de Alertas</h3>
+            <div style="margin-bottom: 16px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                <div style="background: #fff3cd; padding: 8px; border-radius: 6px; text-align: center;">
+                  <div style="font-weight: bold;">🔧 Mantenimientos</div>
+                  <div id="alertasMantenimiento">0</div>
+                </div>
+                <div style="background: #d1ecf1; padding: 8px; border-radius: 6px; text-align: center;">
+                  <div style="font-weight: bold;">🛡️ Pólizas</div>
+                  <div id="alertasPolizas">0</div>
+                </div>
+                <div style="background: #d4edda; padding: 8px; border-radius: 6px; text-align: center;">
+                  <div style="font-weight: bold;">🔍 RTV</div>
+                  <div id="alertasRTV">0</div>
+                </div>
+                <div style="background: #f8d7da; padding: 8px; border-radius: 6px; text-align: center;">
+                  <div style="font-weight: bold;">⚠️ Revisiones</div>
+                  <div id="alertasRevisiones">0</div>
+                </div>
+                <div style="background: #fce4ec; padding: 8px; border-radius: 6px; text-align: center;">
+                  <div style="font-weight: bold;">⛽ Combustible</div>
+                  <div id="alertasCombustible">0</div>
+                </div>
+              </div>
+            </div>
+            <div id="fichaAlertas" style="max-height: 300px; overflow-y: auto;"></div>
+          </div>
+          
+          <!-- Configuración de Email (Solo Administradores) -->
+          <div class="card" data-roles="admin">
+            <h3>📧 Configuración de Alertas por Email</h3>
+            <div style="margin-bottom: 16px;">
+              <p style="color: var(--muted); font-size: 0.9em; margin: 0;">
+                Las alertas se envían automáticamente a: <strong>contabilidad2@arenalmanoa.com</strong>
+              </p>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <button class="secondary" onclick="verificarAlertas()" title="Verificar alertas manualmente">
+                🔍 Verificar Alertas
+              </button>
+              <button class="secondary" onclick="probarEmail()" title="Enviar email de prueba">
+                📧 Probar Email
+              </button>
+              <span id="alertaStatus" style="color: var(--muted); font-size: 0.9em;"></span>
+            </div>
           </div>
         </div>
         
@@ -498,10 +578,12 @@
       <div class="row">
         <form class="card" onsubmit="guardarMantenimiento(event)">
           <h3 style="margin-bottom:8px;color:var(--ink)">+ Mantenimiento</h3>
-          <div class="row"><div><label>Vehículo</label><select id="mVeh"></select></div><div><label>Tipo</label><select id="mTipo" onchange="toggleMaintenanceFields()"><option value="cambio_aceite">Cambio de aceite</option><option value="llantas">Llantas</option><option value="frenos">Frenos</option><option value="bateria">Batería</option><option value="alineacion">Alineación</option><option value="otro">Otro</option></select></div></div>
+          <div class="row"><div><label>Vehículo</label><select id="mVeh"></select></div><div><label>Tipo</label><select id="mTipo" onchange="toggleMaintenanceFields()"><option value="cambio_aceite">🛫 Cambio de aceite</option><option value="mantenimiento_preventivo">🔧 Mantenimiento Preventivo</option><option value="llantas">😞 Llantas</option><option value="frenos">🛑 Frenos</option><option value="bateria">🔋 Batería</option><option value="alineacion">⚖️ Alineación</option><option value="otro">📝 Otro</option></select></div></div>
           <div class="row"><div><label>Fecha</label><input id="mFecha" type="date" required/></div><div><label>Costo</label><input id="mCosto" type="number" min="0" step="0.01" required/></div></div>
-          <div class="row" id="maintenanceKmFields"><div><label>Km actual</label><input id="mKm" type="number" min="0"/></div><div><label>Próximo km</label><input id="mProx" type="number" min="0" placeholder="auto si cambio de aceite"/></div></div>
-          <div class="row" id="maintenanceOilField"><div><label>Último cambio aceite (km)</label><input id="mKmPrevAceite" type="number" readonly/></div><div></div></div>
+          
+          <!-- Campos de alertas duales -->
+          <div class="row" id="maintenanceKmFields"><div><label>Km actual</label><input id="mKm" type="number" min="0"/></div><div><label>Próximo km</label><input id="mProx" type="number" min="0" placeholder="Kilometraje del próximo servicio"/></div></div>
+          <div class="row" id="maintenanceDateFields"><div><label>Próxima fecha</label><input id="mProxFecha" type="date" placeholder="Fecha del próximo servicio"/></div><div><label>Último cambio aceite (km)</label><input id="mKmPrevAceite" type="number" readonly/></div></div>
           <div><label>Observaciones</label><input id="mObs" type="text" placeholder="Detalles"/></div>
           <div style="margin-top:12px;display:flex;gap:8px"><button>Guardar</button><button type="button" class="secondary" onclick="autoProximoKm()">Sugerir próximo (+5,000)</button></div>
         </form>
@@ -1032,6 +1114,7 @@
               <label>Tipo</label>
               <select id="editMTipo">
                 <option value="cambio_aceite">🛢️ Cambio de aceite</option>
+                <option value="mantenimiento_preventivo">🔧 Mantenimiento Preventivo</option>
                 <option value="llantas">🛞 Llantas</option>
                 <option value="frenos">🛑 Frenos</option>
                 <option value="bateria">🔋 Batería</option>
@@ -1062,6 +1145,16 @@
             <div class="form-group">
               <label>Próximo km</label>
               <input id="editMProx" type="number" min="0"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Próxima fecha</label>
+              <input id="editMProxFecha" type="date"/>
+            </div>
+            <div class="form-group">
+              <label></label>
+              <div style="color: var(--muted); font-size: 0.8em; padding-top: 8px;">Solo para Cambio de Aceite y Mantenimiento Preventivo</div>
             </div>
           </div>
           <div class="form-group">
@@ -1498,13 +1591,28 @@
   async function apiGet(table){
     const endpoint = table.toLowerCase();
     const url = `${API}/${endpoint}`;
-    const r = await fetch(url, { 
-      cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const j = await r.json();
-    if(!j.success) throw new Error(j.error||'GET error');
-    return j.data;
+    console.log('API GET:', url); // Debug log
+    
+    try {
+      const r = await fetch(url, { 
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        mode: 'cors'
+      });
+      
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      }
+      
+      const j = await r.json();
+      console.log('API Response:', j); // Debug log
+      
+      if(!j.success) throw new Error(j.error||'GET error');
+      return j.data;
+    } catch (error) {
+      console.error('API GET Error:', error);
+      throw error;
+    }
   }
   
   async function apiPost(table, data, action=null){
@@ -1585,101 +1693,327 @@
   }
 
   function renderKpis(){
-    // === KPIs BÁSICOS ===
+    // === 1. CANTIDAD DE VEHÍCULOS ACTIVOS ===
     if(byId('kpiVeh')) byId('kpiVeh').textContent = Vehiculos.length;
     
-    // === ALERTAS CRITICAS ===
-    const hoy = new Date();
-    const p30 = Polizas.filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento)<=30 && diasRestantes(p.fecha_vencimiento)>=0).length;
-    const p7 = Polizas.filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento)<=7 && diasRestantes(p.fecha_vencimiento)>=0).length;
-    const r30 = RTV.filter(r=> r.fecha_vencimiento && diasRestantes(r.fecha_vencimiento)<=30 && diasRestantes(r.fecha_vencimiento)>=0).length;
-    const r7 = RTV.filter(r=> r.fecha_vencimiento && diasRestantes(r.fecha_vencimiento)<=7 && diasRestantes(r.fecha_vencimiento)>=0).length;
+    // === 2. PÓLIZAS POR VENCER (30 DÍAS) CON PRIMERAS 3 PLACAS ===
+    const polizasPorVencer = Polizas
+      .filter(p=> p.fecha_vencimiento && diasRestantes(p.fecha_vencimiento) <= 30 && diasRestantes(p.fecha_vencimiento) >= 0)
+      .sort((a, b) => diasRestantes(a.fecha_vencimiento) - diasRestantes(b.fecha_vencimiento));
     
-    if(byId('kpiPol30')) byId('kpiPol30').textContent=p30; 
-    if(byId('kpiPol7')) byId('kpiPol7').textContent=p7; 
-    if(byId('kpiRtv30')) byId('kpiRtv30').textContent=r30;
-    if(byId('kpiRtv7')) byId('kpiRtv7').textContent=r7;
+    if(byId('kpiPol30')) {
+      byId('kpiPol30').textContent = polizasPorVencer.length;
+    }
     
-    // === GASTOS DEL MES ===
-    const month=new Date(); month.setDate(1);
-    const gastoMes = Combustible.filter(f=> new Date(f.fecha)>=month)
-      .reduce((a,f)=> a + Number(f.costo), 0);
-    const gastoMantMes = Mantenimientos.filter(m=> new Date(m.fecha)>=month)
-      .reduce((a,m)=> a + Number(m.costo||0), 0);
+    // Mostrar las primeras 3 pólizas por vencer
+    if(byId('proxPolizas')) {
+      const top3Polizas = polizasPorVencer.slice(0, 3);
+      byId('proxPolizas').innerHTML = top3Polizas.length > 0 ? 
+        top3Polizas.map(p => {
+          const dias = diasRestantes(p.fecha_vencimiento);
+          const colorClass = dias <= 7 ? 'dangerP' : 'warnP';
+          return `<div class="pill ${colorClass}" style="margin: 2px; font-size: 0.8em;">${p.placa}: ${dias}d</div>`;
+        }).join('') : 
+        '<div style="color: var(--text-secondary); font-size: 0.8em;">✅ Sin vencimientos próximos</div>';
+    }
     
-    if(byId('kpiFuelMes')) byId('kpiFuelMes').textContent = fmt(gastoMes);
-    if(byId('kpiMantCostoMes')) byId('kpiMantCostoMes').textContent = fmt(gastoMantMes);
-    if(byId('kpiGastoTotal')) byId('kpiGastoTotal').textContent = fmt(gastoMes + gastoMantMes);
+    // === 3. RTV POR VENCER (30 DÍAS) CON PRIMERAS 3 PLACAS ===
+    const rtvPorVencer = RTV
+      .filter(r=> r.fecha_vencimiento && diasRestantes(r.fecha_vencimiento) <= 30 && diasRestantes(r.fecha_vencimiento) >= 0)
+      .sort((a, b) => diasRestantes(a.fecha_vencimiento) - diasRestantes(b.fecha_vencimiento));
     
+    if(byId('kpiRtv30')) {
+      byId('kpiRtv30').textContent = rtvPorVencer.length;
+    }
+    
+    // Mostrar las primeras 3 RTV por vencer
+    if(byId('proxRTV')) {
+      const top3RTV = rtvPorVencer.slice(0, 3);
+      byId('proxRTV').innerHTML = top3RTV.length > 0 ? 
+        top3RTV.map(r => {
+          const dias = diasRestantes(r.fecha_vencimiento);
+          const colorClass = dias <= 7 ? 'dangerP' : 'warnP';
+          return `<div class="pill ${colorClass}" style="margin: 2px; font-size: 0.8em;">${r.placa}: ${dias}d</div>`;
+        }).join('') : 
+        '<div style="color: var(--text-secondary); font-size: 0.8em;">✅ Sin vencimientos próximos</div>';
+    }
+    
+    // === 4. COSTO TOTAL DEL MES ACTUAL ===
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0, 0);
+    
+    const gastosCombustibleMes = Combustible
+      .filter(f => new Date(f.fecha) >= inicioMes)
+      .reduce((total, f) => total + Number(f.costo || 0), 0);
+    
+    const gastosMantenimientoMes = Mantenimientos
+      .filter(m => new Date(m.fecha) >= inicioMes)
+      .reduce((total, m) => total + Number(m.costo || 0), 0);
+    
+    const costoTotalMes = gastosCombustibleMes + gastosMantenimientoMes;
+    
+    // Mostrar costos del mes
+    if(byId('kpiCombustibleMes')) byId('kpiCombustibleMes').textContent = fmt(gastosCombustibleMes);
+    if(byId('kpiMantenimientoMes')) byId('kpiMantenimientoMes').textContent = fmt(gastosMantenimientoMes);
+    if(byId('kpiCostoTotalMes')) byId('kpiCostoTotalMes').textContent = fmt(costoTotalMes);
+    
+    // Duplicar valores para el resumen del mes
+    if(byId('kpiCombustibleMes2')) byId('kpiCombustibleMes2').textContent = fmt(gastosCombustibleMes);
+    if(byId('kpiMantenimientoMes2')) byId('kpiMantenimientoMes2').textContent = fmt(gastosMantenimientoMes);
+    if(byId('kpiCostoTotalMes2')) byId('kpiCostoTotalMes2').textContent = fmt(costoTotalMes);
+    
+    // === ESTADÍSTICAS ADICIONALES ===
     const mantMes = Mantenimientos.filter(m=> {
-      const d=new Date(m.fecha); const n=new Date();
-      return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();
+      const d = new Date(m.fecha);
+      const n = new Date();
+      return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
     }).length;
     if(byId('kpiMantMes')) byId('kpiMantMes').textContent = mantMes;
     
-    // === RENDIMIENTO Y EFICIENCIA ===
-    const combustibleReciente = Combustible.filter(f=> new Date(f.fecha)>=month);
-    let totalKmL = 0, countKmL = 0;
-    combustibleReciente.forEach(f => {
-      if (f._calculatedKmL && f._calculatedKmL > 0) {
-        totalKmL += f._calculatedKmL;
-        countKmL++;
-      }
-    });
-    const avgKmL = countKmL > 0 ? (totalKmL / countKmL).toFixed(1) : '0';
-    if(byId('kpiKmL')) byId('kpiKmL').textContent = avgKmL + ' km/L';
+    // === SISTEMA COMPLETO DE ALERTAS ===
+    renderSistemaCompletoAlertas();
     
-    // === PRÓXIMOS CAMBIOS DE ACEITE ===
-    const proximosCambios = [];
-    Vehiculos.forEach(vehiculo => {
-      // Buscar último cambio de aceite
-      const ultimoCambio = Mantenimientos
-        .filter(m => m.placa === vehiculo.placa && m.tipo === 'cambio_aceite' && m.proximo_km)
-        .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
-      
-      if (ultimoCambio) {
-        // Buscar km actual (desde combustible más reciente)
-        const ultimoCombustible = Combustible
-          .filter(f => f.placa === vehiculo.placa && f.kilometraje)
-          .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
+    // Renderizar funciones adicionales si existen
+    if (typeof renderVehiculosDetalle === 'function') renderVehiculosDetalle();
+    if (typeof renderAlertasConsolidadas === 'function') renderAlertasConsolidadas();
+  }
+  
+  // === FUNCIÓN PARA SISTEMA COMPLETO DE ALERTAS ===
+  function renderSistemaCompletoAlertas() {
+    const hoy = new Date();
+    const en30Dias = new Date();
+    en30Dias.setDate(hoy.getDate() + 30);
+    
+    // === CONTADORES DE ALERTAS ===
+    let alertasMantenimiento = 0;
+    let alertasPolizas = 0;
+    let alertasRTV = 0;
+    let alertasRevisiones = 0;
+    let alertasCombustible = 0;
+    
+    const todasLasAlertas = [];
+    
+    // === 1. ALERTAS DE MANTENIMIENTO ===
+    Mantenimientos.forEach(mant => {
+      if (mant.tipo === 'cambio_aceite' || mant.tipo === 'mantenimiento_preventivo') {
+        const vehiculo = Vehiculos.find(v => v.placa === mant.placa);
+        if (!vehiculo) return;
         
-        if (ultimoCombustible) {
-          const kmActual = Number(ultimoCombustible.kilometraje);
-          const kmProximo = Number(ultimoCambio.proximo_km);
-          const kmRestantes = kmProximo - kmActual;
+        // Alerta por kilometraje
+        if (mant.proximo_km) {
+          const ultimoCombustible = Combustible
+            .filter(f => f.placa === mant.placa && f.kilometraje)
+            .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))[0];
           
-          if (kmRestantes <= 1000 && kmRestantes > 0) { // Alerta si quedan menos de 1000km
-            proximosCambios.push({
-              placa: vehiculo.placa,
-              kmRestantes: kmRestantes,
-              urgente: kmRestantes <= 200
+          if (ultimoCombustible) {
+            const kmActual = Number(ultimoCombustible.kilometraje);
+            const kmProximo = Number(mant.proximo_km);
+            const kmRestantes = kmProximo - kmActual;
+            
+            if (kmRestantes <= 1500 && kmRestantes > 0) {
+              alertasMantenimiento++;
+              todasLasAlertas.push({
+                categoria: 'mantenimiento',
+                tipo: 'kilometraje',
+                placa: mant.placa,
+                descripcion: `${mant.tipo} - ${kmRestantes.toLocaleString()} km restantes`,
+                urgente: kmRestantes <= 200,
+                icono: mant.tipo === 'cambio_aceite' ? '🛢️' : '🔧'
+              });
+            }
+          }
+        }
+        
+        // Alerta por fecha
+        if (mant.proxima_fecha) {
+          const fechaProxima = new Date(mant.proxima_fecha);
+          const diasRestantes = Math.ceil((fechaProxima - hoy) / (1000 * 60 * 60 * 24));
+          
+          if (diasRestantes <= 30 && diasRestantes >= 0) {
+            alertasMantenimiento++;
+            todasLasAlertas.push({
+              categoria: 'mantenimiento',
+              tipo: 'fecha',
+              placa: mant.placa,
+              descripcion: `${mant.tipo} - ${diasRestantes} días restantes`,
+              urgente: diasRestantes <= 7,
+              icono: mant.tipo === 'cambio_aceite' ? '🛢️' : '🔧'
             });
           }
         }
       }
     });
     
-    if(byId('kpiCambiosProximos')) {
-      byId('kpiCambiosProximos').textContent = proximosCambios.length;
-      // Agregar color basado en urgencia
-      const elemento = byId('kpiCambiosProximos').parentElement;
-      if (proximosCambios.some(c => c.urgente)) {
-        elemento.style.background = 'var(--danger)';
-        elemento.style.color = 'white';
-      } else if (proximosCambios.length > 0) {
-        elemento.style.background = 'var(--warning)';
-        elemento.style.color = 'white';
+    // === 2. ALERTAS DE PÓLIZAS VENCIDAS ===
+    Polizas.forEach(poliza => {
+      if (poliza.estado === 'Activa') {
+        const fechaVencimiento = new Date(poliza.fecha_vencimiento);
+        const diasRestantes = Math.ceil((fechaVencimiento - hoy) / (1000 * 60 * 60 * 24));
+        
+        if (diasRestantes <= 30 && diasRestantes >= 0) {
+          alertasPolizas++;
+          const vehiculo = Vehiculos.find(v => v.placa === poliza.placa);
+          todasLasAlertas.push({
+            categoria: 'poliza',
+            tipo: 'vencimiento',
+            placa: poliza.placa,
+            descripcion: `Póliza ${poliza.numero_poliza} - ${diasRestantes} días restantes`,
+            urgente: diasRestantes <= 7,
+            icono: '🛡️',
+            vehiculo: vehiculo ? `${vehiculo.marca} ${vehiculo.modelo}` : 'N/A'
+          });
+        }
+      }
+    });
+    
+    // === 3. ALERTAS DE RTV VENCIDAS ===
+    RTV.forEach(rtv => {
+      if (rtv.estado === 'Vigente') {
+        const fechaVencimiento = new Date(rtv.fecha_vencimiento);
+        const diasRestantes = Math.ceil((fechaVencimiento - hoy) / (1000 * 60 * 60 * 24));
+        
+        if (diasRestantes <= 30 && diasRestantes >= 0) {
+          alertasRTV++;
+          const vehiculo = Vehiculos.find(v => v.placa === rtv.placa);
+          todasLasAlertas.push({
+            categoria: 'rtv',
+            tipo: 'vencimiento',
+            placa: rtv.placa,
+            descripcion: `RTV ${rtv.numero_cita} - ${diasRestantes} días restantes`,
+            urgente: diasRestantes <= 7,
+            icono: '🔍',
+            vehiculo: vehiculo ? `${vehiculo.marca} ${vehiculo.modelo}` : 'N/A'
+          });
+        }
+      }
+    });
+    
+    // === 4. ALERTAS DE REVISIONES CON FALLAS ===
+    const fecha30DiasAtras = new Date();
+    fecha30DiasAtras.setDate(hoy.getDate() - 30);
+    
+    Revisiones.forEach(revision => {
+      if (!revision.aprobado && new Date(revision.fecha) >= fecha30DiasAtras) {
+        alertasRevisiones++;
+        const vehiculo = Vehiculos.find(v => v.placa === revision.placa);
+        
+        const fallas = [];
+        if (revision.estado_motor !== 'Bueno') fallas.push('Motor');
+        if (revision.estado_frenos !== 'Bueno') fallas.push('Frenos');
+        if (revision.estado_luces !== 'Bueno') fallas.push('Luces');
+        if (revision.estado_llantas !== 'Bueno') fallas.push('Llantas');
+        if (revision.estado_carroceria !== 'Bueno') fallas.push('Carrocería');
+        
+        todasLasAlertas.push({
+          categoria: 'revision',
+          tipo: 'falla',
+          placa: revision.placa,
+          descripcion: `Fallas: ${fallas.join(', ') || 'Revisión no aprobada'}`,
+          urgente: true,
+          icono: '⚠️',
+          vehiculo: vehiculo ? `${vehiculo.marca} ${vehiculo.modelo}` : 'N/A',
+          fecha: revision.fecha
+        });
+      }
+    });
+    
+    // === 5. ALERTAS DE CONSUMO ANORMAL DE COMBUSTIBLE ===
+    // Simular detección de consumo anormal (en producción esto vendría del backend)
+    const vehiculosConConsumo = {};
+    Combustible.forEach(registro => {
+      if (!vehiculosConConsumo[registro.placa]) {
+        vehiculosConConsumo[registro.placa] = [];
+      }
+      if (registro.kilometraje && new Date(registro.fecha) >= fecha30DiasAtras) {
+        vehiculosConConsumo[registro.placa].push(registro);
+      }
+    });
+    
+    Object.keys(vehiculosConConsumo).forEach(placa => {
+      const registros = vehiculosConConsumo[placa].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+      if (registros.length >= 3) {
+        // Calcular rendimientos
+        const rendimientos = [];
+        for (let i = 1; i < registros.length; i++) {
+          const kmRecorridos = registros[i].kilometraje - registros[i-1].kilometraje;
+          if (kmRecorridos > 0) {
+            rendimientos.push(kmRecorridos / registros[i].litros);
+          }
+        }
+        
+        if (rendimientos.length >= 2) {
+          const promedio = rendimientos.reduce((a, b) => a + b, 0) / rendimientos.length;
+          const ultimo = rendimientos[rendimientos.length - 1];
+          
+          // Si el último rendimiento es 30% menor al promedio
+          if (ultimo < promedio * 0.7) {
+            alertasCombustible++;
+            const vehiculo = Vehiculos.find(v => v.placa === placa);
+            todasLasAlertas.push({
+              categoria: 'combustible',
+              tipo: 'consumo_anormal',
+              placa: placa,
+              descripcion: `Consumo anormal: ${ultimo.toFixed(1)} vs ${promedio.toFixed(1)} km/L promedio`,
+              urgente: ultimo < promedio * 0.5,
+              icono: '⛽',
+              vehiculo: vehiculo ? `${vehiculo.marca} ${vehiculo.modelo}` : 'N/A'
+            });
+          }
+        }
+      }
+    });
+    
+    // === ACTUALIZAR CONTADORES EN EL DASHBOARD ===
+    if (byId('alertasMantenimiento')) byId('alertasMantenimiento').textContent = alertasMantenimiento;
+    if (byId('alertasPolizas')) byId('alertasPolizas').textContent = alertasPolizas;
+    if (byId('alertasRTV')) byId('alertasRTV').textContent = alertasRTV;
+    if (byId('alertasRevisiones')) byId('alertasRevisiones').textContent = alertasRevisiones;
+    if (byId('alertasCombustible')) byId('alertasCombustible').textContent = alertasCombustible;
+    
+    // === MOSTRAR LISTA DETALLADA DE ALERTAS ===
+    const fichaAlertas = byId('fichaAlertas');
+    if (fichaAlertas) {
+      if (todasLasAlertas.length === 0) {
+        fichaAlertas.innerHTML = '<div style="color: var(--success); text-align: center; padding: 20px;">✅ No hay alertas pendientes</div>';
       } else {
-        elemento.style.background = '';
-        elemento.style.color = '';
+        // Ordenar por urgencia y categoría
+        todasLasAlertas.sort((a, b) => {
+          if (a.urgente && !b.urgente) return -1;
+          if (!a.urgente && b.urgente) return 1;
+          return a.categoria.localeCompare(b.categoria);
+        });
+        
+        const alertasHtml = todasLasAlertas.map(alerta => {
+          const colorClass = alerta.urgente ? 'dangerP' : 'warnP';
+          return `
+            <div class="pill ${colorClass}" style="margin: 4px; padding: 8px; display: block; text-align: left;">
+              <div style="font-weight: bold;">${alerta.icono} ${alerta.placa}</div>
+              <div style="font-size: 0.9em;">${alerta.descripcion}</div>
+              ${alerta.vehiculo ? `<div style="font-size: 0.8em; color: var(--muted);">${alerta.vehiculo}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+        
+        fichaAlertas.innerHTML = alertasHtml;
       }
     }
     
-    // === INDICADORES POR VEHÍCULO ===
-    renderVehiculosDetalle();
+    // === NOTIFICAR SI HAY ALERTAS CRÍTICAS ===
+    const alertasCriticas = todasLasAlertas.filter(a => a.urgente);
+    if (alertasCriticas.length > 0) {
+      console.log(`🚨 ${alertasCriticas.length} alertas críticas detectadas:`, alertasCriticas);
+    }
     
-    // === ALERTAS CONSOLIDADAS ===
-    renderAlertasConsolidadas();
+    return {
+      total: todasLasAlertas.length,
+      criticas: alertasCriticas.length,
+      mantenimiento: alertasMantenimiento,
+      polizas: alertasPolizas,
+      rtv: alertasRTV,
+      revisiones: alertasRevisiones,
+      combustible: alertasCombustible
+    };
   }
   
   // === FUNCIONES AUXILIARES PARA DASHBOARD MEJORADO ===
@@ -2003,13 +2337,30 @@
     
     rec = rec.sort((a,b)=> new Date(b.fecha)-new Date(a.fecha));
     
-    const rows = rec.map(f=>{
-      // Calcular km/L correctamente
-      const prev = Combustible
-        .filter(x=> x.placa === f.placa && new Date(x.fecha) < new Date(f.fecha))
-        .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
-      const dist = prev ? (Number(f.kilometraje)-Number(prev.kilometraje)) : null;
-      const kmL = (dist && dist > 0 && Number(f.litros) > 0) ? (dist/Number(f.litros)) : null;
+    // Ordenar para calcular km/L correctamente
+    const sortedRec = rec.sort((a, b) => {
+      if (a.placa !== b.placa) return a.placa.localeCompare(b.placa);
+      return new Date(a.fecha) - new Date(b.fecha);
+    });
+    
+    const rows = sortedRec.map((f, index) =>{
+      // Calcular km/L correctamente usando el registro anterior de la misma placa
+      let kmL = null;
+      for (let i = index - 1; i >= 0; i--) {
+        const prev = sortedRec[i];
+        if (prev.placa === f.placa && prev.kilometraje && f.kilometraje) {
+          const kmActual = Number(f.kilometraje);
+          const kmAnterior = Number(prev.kilometraje);
+          const litros = Number(f.litros);
+          
+          if (kmActual > kmAnterior && litros > 0) {
+            const distancia = kmActual - kmAnterior;
+            kmL = distancia / litros;
+          }
+          break;
+        }
+      }
+      
       const precioLitro = Number(f.costo) / Number(f.litros);
       
       // Almacenar km/L calculado en el objeto para uso posterior
@@ -2022,7 +2373,7 @@
         <td>${fmt(precioLitro)}</td>
         <td><strong>${fmt(f.costo)}</strong></td>
         <td>${f.kilometraje||'-'} km</td>
-        <td>${kmL ? '<span class="pill ' + (kmL > 10 ? 'ok' : kmL > 7 ? 'warnP' : 'dangerP') + '">' + kmL.toFixed(1) + '</span>' : '-'}</td>
+        <td>${kmL ? '<span class="pill ' + (kmL > 10 ? 'ok' : kmL > 7 ? 'warnP' : 'dangerP') + '">' + kmL.toFixed(2) + '</span>' : '-'}</td>
         <td>
           <button class="action-btn edit-btn" onclick="editarCombustible('${f.id}')" title="Editar">✏️</button>
           ${currentUser && currentUser.role === 'admin' ? `<button class="action-btn delete-btn" onclick="eliminarCombustible('${f.id}')" title="Eliminar">🗑️</button>` : ''}
@@ -2032,9 +2383,9 @@
     byId('tblFuel').innerHTML = rows || '<tr><td colspan="8">Sin registros</td></tr>';
     
     // Estadísticas corregidas
-    const totalCosto = rec.reduce((a,f)=> a + Number(f.costo), 0);
-    const totalLitros = rec.reduce((a,f)=> a + Number(f.litros), 0);
-    const kmLPromedio = rec.map(f=>{
+    const totalCosto = sortedRec.reduce((a,f)=> a + Number(f.costo), 0);
+    const totalLitros = sortedRec.reduce((a,f)=> a + Number(f.litros), 0);
+    const kmLPromedio = sortedRec.map(f=>{
       // Usar el km/L ya calculado
       return f._calculatedKmL;
     }).filter(x => x !== null && x > 0);
@@ -2286,7 +2637,9 @@
       tipo: byId('mTipo').value || 'otro',
       descripcion: byId('mObs').value || byId('mTipo').value || 'Mantenimiento',
       costo: costo, 
-      kilometraje: byId('mKm').value? Number(byId('mKm').value): null
+      kilometraje: byId('mKm').value? Number(byId('mKm').value): null,
+      proximo_km: byId('mProx').value? Number(byId('mProx').value): null,
+      proxima_fecha: byId('mProxFecha').value || null
     };
     
     try{ 
@@ -2556,7 +2909,7 @@
   }
   
   function clearMaintenanceForm() {
-    ['mVeh', 'mTipo', 'mFecha', 'mCosto', 'mKm', 'mProx', 'mObs', 'mKmPrevAceite'].forEach(id => {
+    ['mVeh', 'mTipo', 'mFecha', 'mCosto', 'mKm', 'mProx', 'mProxFecha', 'mObs', 'mKmPrevAceite'].forEach(id => {
       const el = byId(id);
       if (el) {
         if (el.tagName === 'SELECT') {
@@ -2618,22 +2971,38 @@
   function toggleMaintenanceFields() {
     const tipo = byId('mTipo').value;
     const isOilChange = tipo === 'cambio_aceite';
+    const isPreventive = tipo === 'mantenimiento_preventivo';
+    const requiresAlerts = isOilChange || isPreventive;
     
     // SIEMPRE mostrar campos de kilometraje (para todos los tipos)
     const kmFields = byId('maintenanceKmFields');
     if (kmFields) {
-      kmFields.style.display = 'grid'; // Siempre visible
+      kmFields.style.display = 'grid';
     }
     
-    // Solo mostrar campos específicos de aceite cuando es cambio de aceite
-    const oilField = byId('maintenanceOilField');
-    if (oilField) {
-      oilField.style.display = isOilChange ? 'grid' : 'none';
+    // Mostrar campos de fecha próxima para cambio de aceite y mantenimiento preventivo
+    const dateFields = byId('maintenanceDateFields');
+    if (dateFields) {
+      dateFields.style.display = requiresAlerts ? 'grid' : 'none';
     }
     
-    // Si no es cambio de aceite, limpiar solo los campos específicos de aceite
-    if (!isOilChange) {
-      ['mProx', 'mKmPrevAceite'].forEach(id => {
+    // Auto-completar sugerencias
+    if (requiresAlerts) {
+      // Sugerir fecha próxima (3 meses para aceite, 6 meses para preventivo)
+      const today = new Date();
+      const monthsToAdd = isOilChange ? 3 : 6;
+      today.setMonth(today.getMonth() + monthsToAdd);
+      const suggestedDate = today.toISOString().split('T')[0];
+      
+      const proxFechaField = byId('mProxFecha');
+      if (proxFechaField && !proxFechaField.value) {
+        proxFechaField.value = suggestedDate;
+      }
+    }
+    
+    // Limpiar campos cuando no aplica
+    if (!requiresAlerts) {
+      ['mProx', 'mProxFecha', 'mKmPrevAceite'].forEach(id => {
         const el = byId(id);
         if (el) el.value = '';
       });
@@ -2742,6 +3111,7 @@
     byId('editMCosto').value = mant.costo;
     byId('editMKm').value = mant.kilometraje || '';
     byId('editMProx').value = mant.proximo_km || '';
+    byId('editMProxFecha').value = mant.proxima_fecha || '';
     byId('editMObs').value = mant.descripcion || '';
     
     const modal = byId('modalEditMantenimiento');
@@ -2771,7 +3141,9 @@
       tipo: byId('editMTipo').value,
       descripcion: byId('editMObs').value || byId('editMTipo').value,
       costo: parseFloat(byId('editMCosto').value),
-      kilometraje: byId('editMKm').value ? parseInt(byId('editMKm').value) : null
+      kilometraje: byId('editMKm').value ? parseInt(byId('editMKm').value) : null,
+      proximo_km: byId('editMProx').value ? parseInt(byId('editMProx').value) : null,
+      proxima_fecha: byId('editMProxFecha').value || null
     };
     
     try {
@@ -3907,15 +4279,32 @@
         (!placa || x.placa === placa)
       );
       
-      const data = filtered.map(x=>{
+      // Ordenar primero por placa y fecha para calcular km/L correctamente
+      const sortedFiltered = filtered.sort((a,b) => {
+        if (a.placa !== b.placa) return a.placa.localeCompare(b.placa);
+        return new Date(a.fecha) - new Date(b.fecha);
+      });
+      
+      const data = sortedFiltered.map((x, index) =>{
         const precioLitro = x.litros > 0 ? (Number(x.costo) / Number(x.litros)) : 0;
         
-        // Calcular km/L
-        const prev = Combustible
-          .filter(f=> f.placa === x.placa && new Date(f.fecha) < new Date(x.fecha))
-          .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
-        const dist = prev ? (Number(x.kilometraje)-Number(prev.kilometraje)) : null;
-        const kmL = (dist && dist > 0 && Number(x.litros) > 0) ? (dist/Number(x.litros)).toFixed(1) : null;
+        // Calcular km/L correctamente
+        // Buscar el registro anterior de la misma placa
+        let kmL = null;
+        for (let i = index - 1; i >= 0; i--) {
+          const prev = sortedFiltered[i];
+          if (prev.placa === x.placa && prev.kilometraje && x.kilometraje) {
+            const kmActual = Number(x.kilometraje);
+            const kmAnterior = Number(prev.kilometraje);
+            const litros = Number(x.litros);
+            
+            if (kmActual > kmAnterior && litros > 0) {
+              const distancia = kmActual - kmAnterior;
+              kmL = (distancia / litros).toFixed(2);
+            }
+            break; // Solo tomar el registro inmediatamente anterior
+          }
+        }
         
         return {
           'Placa': x.placa || '',
@@ -4362,6 +4751,28 @@
   function tlog(msg, ok=true){ const el=byId('testOut'); if(!el) return; const div=document.createElement('div'); div.className= ok? 'pass' : 'fail'; div.textContent = (ok?'✔ ':'✖ ')+msg; el.appendChild(div); }
   function clearTests(){ const el=byId('testOut'); if(el) el.innerHTML=''; }
   async function runTests(kind){ clearTests(); try{
+      if(kind==='api'){
+        tlog('URL API configurada: ' + API);
+        try {
+          const response = await fetch(API + '/docs');
+          tlog('API responde (docs): ' + response.status, response.ok);
+        } catch(e) {
+          tlog('Error conectando a API docs: ' + e.message, false);
+        }
+        
+        try {
+          const response = await fetch(API + '/vehiculos');
+          tlog('Endpoint /vehiculos responde: ' + response.status, response.ok);
+          if (response.ok) {
+            const data = await response.json();
+            tlog('Respuesta JSON válida', !!data);
+            tlog('Campo success existe', 'success' in data);
+            tlog('Success = true', data.success === true);
+          }
+        } catch(e) {
+          tlog('Error en /vehiculos: ' + e.message, false);
+        }
+      }
       if(kind==='get'){ const data = await apiGet('Vehiculos'); tlog('GET Vehiculos devolvió array', Array.isArray(data)); tlog('GET no lanzó error', true); }
       if(kind==='ui'){ fillVehSelects(); const m = byId('mVeh'); tlog('Select mVeh existe', !!m); tlog('Select mVeh poblado (si hay vehículos)', m && m.options.length>=0); }
       if(kind==='core'){
@@ -4465,6 +4876,69 @@
       
     }, 100);
   });
+  
+  // ===== FUNCIONES DE CONFIGURACIÓN DE EMAIL =====
+  
+  async function verificarAlertas() {
+    try {
+      const statusEl = byId('alertaStatus');
+      if (statusEl) statusEl.textContent = '🔄 Verificando alertas...';
+      
+      const response = await fetch(`${API_URL}/alertas/verificar`);
+      const data = await response.json();
+      
+      if (data.success) {
+        if (statusEl) {
+          const mensaje = data.alertas_enviadas > 0 
+            ? `✅ ${data.alertas_enviadas} alertas procesadas` 
+            : '✅ Sin alertas pendientes';
+          statusEl.textContent = mensaje;
+          setTimeout(() => statusEl.textContent = '', 5000);
+        }
+        alert(`✅ Verificación completada.\n${data.message}`);
+      } else {
+        throw new Error(data.message || 'Error verificando alertas');
+      }
+    } catch (e) {
+      const statusEl = byId('alertaStatus');
+      if (statusEl) {
+        statusEl.textContent = '❌ Error';
+        setTimeout(() => statusEl.textContent = '', 5000);
+      }
+      alert('❌ Error verificando alertas: ' + e.message);
+    }
+  }
+  
+  async function probarEmail() {
+    try {
+      const statusEl = byId('alertaStatus');
+      if (statusEl) statusEl.textContent = '📧 Enviando email de prueba...';
+      
+      const response = await fetch(`${API_URL}/config/email/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        if (statusEl) {
+          statusEl.textContent = '✅ Email enviado';
+          setTimeout(() => statusEl.textContent = '', 5000);
+        }
+        alert('✅ Email de prueba enviado exitosamente a contabilidad2@arenalmanoa.com');
+      } else {
+        throw new Error(data.message || 'Error enviando email de prueba');
+      }
+    } catch (e) {
+      const statusEl = byId('alertaStatus');
+      if (statusEl) {
+        statusEl.textContent = '❌ Error enviando email';
+        setTimeout(() => statusEl.textContent = '', 5000);
+      }
+      alert('❌ Error enviando email de prueba: ' + e.message + '\n\nNota: Es normal que falle si no se han configurado las credenciales SMTP.');
+    }
+  }
+  
   </script>
 </body>
 </html>

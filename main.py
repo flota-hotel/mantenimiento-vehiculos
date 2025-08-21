@@ -11,9 +11,13 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import sqlite3
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 import logging
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import asyncio
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +37,15 @@ app.add_middleware(
 
 # Base de datos SQLite
 DATABASE_PATH = "vehicular_system.db"
+
+# Configuración de Email
+EMAIL_CONFIG = {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "sender_email": "sistema.vehicular@arenalmanoa.com",  # Configurar según tu servidor
+    "sender_password": "",  # Configurar con la contraseña del sistema
+    "recipient_email": "contabilidad2@arenalmanoa.com"
+}
 
 def init_database():
     """Inicializar base de datos con todas las tablas"""
@@ -66,10 +79,22 @@ def init_database():
             descripcion TEXT NOT NULL,
             costo REAL NOT NULL,
             kilometraje INTEGER,
+            proximo_km INTEGER,
+            proxima_fecha DATE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (placa) REFERENCES vehiculos (placa)
         )
     ''')
+    
+    # Agregar columnas si no existen (para migración)
+    try:
+        cursor.execute('ALTER TABLE mantenimientos ADD COLUMN proximo_km INTEGER')
+    except:
+        pass
+    try:
+        cursor.execute('ALTER TABLE mantenimientos ADD COLUMN proxima_fecha DATE')
+    except:
+        pass
     
     # Tabla Combustible
     cursor.execute('''
@@ -166,6 +191,8 @@ class MantenimientoCreate(BaseModel):
     descripcion: str
     costo: float
     kilometraje: Optional[int] = None
+    proximo_km: Optional[int] = None
+    proxima_fecha: Optional[str] = None
 
 class CombustibleCreate(BaseModel):
     fecha: str
@@ -209,6 +236,463 @@ def get_db_connection():
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def send_email_notification(subject: str, body: str, recipient: str = None):
+    """Enviar notificación por email"""
+    try:
+        if not EMAIL_CONFIG["sender_password"]:
+            logger.warning("Email no configurado - no se envía notificación")
+            return False
+            
+        recipient = recipient or EMAIL_CONFIG["recipient_email"]
+        
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_CONFIG["sender_email"]
+        msg['To'] = recipient
+        msg['Subject'] = subject
+        
+        msg.attach(MIMEText(body, 'html'))
+        
+        server = smtplib.SMTP(EMAIL_CONFIG["smtp_server"], EMAIL_CONFIG["smtp_port"])
+        server.starttls()
+        server.login(EMAIL_CONFIG["sender_email"], EMAIL_CONFIG["sender_password"])
+        text = msg.as_string()
+        server.sendmail(EMAIL_CONFIG["sender_email"], recipient, text)
+        server.quit()
+        
+        logger.info(f"Email enviado exitosamente a {recipient}")
+        return True
+    except Exception as e:
+        logger.error(f"Error enviando email: {e}")
+        return False
+
+def check_maintenance_alerts():
+    """Verificar alertas de mantenimiento y enviar notificaciones"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener mantenimientos con alertas próximas
+        hoy = datetime.now().date()
+        en_7_dias = hoy + timedelta(days=7)
+        
+        # Alertas por fecha
+        cursor.execute('''
+            SELECT * FROM mantenimientos 
+            WHERE proxima_fecha IS NOT NULL 
+            AND proxima_fecha <= ? 
+            AND proxima_fecha >= ?
+            ORDER BY proxima_fecha ASC
+        ''', (en_7_dias.isoformat(), hoy.isoformat()))
+        
+        alertas_fecha = cursor.fetchall()
+        
+        # Alertas por kilometraje (necesitamos el km actual de cada vehículo)
+        cursor.execute('''
+            SELECT m.*, c.kilometraje as km_actual
+            FROM mantenimientos m
+            LEFT JOIN (
+                SELECT placa, MAX(kilometraje) as kilometraje
+                FROM combustible 
+                WHERE kilometraje IS NOT NULL
+                GROUP BY placa
+            ) c ON m.placa = c.placa
+            WHERE m.proximo_km IS NOT NULL 
+            AND c.kilometraje IS NOT NULL
+            AND (m.proximo_km - c.kilometraje) <= 1000
+            AND (m.proximo_km - c.kilometraje) > 0
+            ORDER BY (m.proximo_km - c.kilometraje) ASC
+        ''')
+        
+        alertas_km = cursor.fetchall()
+        
+        if alertas_fecha or alertas_km:
+            # Generar email de alertas
+            subject = f"\u26a0\ufe0f Alertas de Mantenimiento - {hoy.strftime('%d/%m/%Y')}"
+            body = generate_alert_email_body(alertas_fecha, alertas_km)
+            send_email_notification(subject, body)
+            
+        conn.close()
+        return len(alertas_fecha) + len(alertas_km)
+        
+    except Exception as e:
+        logger.error(f"Error verificando alertas: {e}")
+        return 0
+
+def generate_alert_email_body(alertas_fecha, alertas_km):
+    """Generar cuerpo del email de alertas"""
+    html = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; }}
+            .header {{ background-color: #f44336; color: white; padding: 20px; text-align: center; }}
+            .content {{ padding: 20px; }}
+            .alert {{ background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 5px; }}
+            .urgent {{ background-color: #f8d7da; border-color: #f5c6cb; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            th {{ background-color: #f2f2f2; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>\u26a0\ufe0f Sistema de Gestión Vehicular</h1>
+            <h2>Alertas de Mantenimiento</h2>
+        </div>
+        <div class="content">
+            <p>Se han detectado las siguientes alertas de mantenimiento:</p>
+    """
+    
+    if alertas_fecha:
+        html += "<h3>\ud83d\udcc5 Alertas por Fecha Próxima</h3>"
+        html += "<table><tr><th>Placa</th><th>Tipo</th><th>Fecha Programada</th><th>Días Restantes</th></tr>"
+        for alerta in alertas_fecha:
+            dias_restantes = (datetime.strptime(alerta['proxima_fecha'], '%Y-%m-%d').date() - datetime.now().date()).days
+            urgente = "urgent" if dias_restantes <= 3 else ""
+            html += f"<tr class='{urgente}'><td>{alerta['placa']}</td><td>{alerta['tipo']}</td><td>{alerta['proxima_fecha']}</td><td>{dias_restantes} días</td></tr>"
+        html += "</table>"
+    
+    if alertas_km:
+        html += "<h3>\ud83d\udccd Alertas por Kilometraje Próximo</h3>"
+        html += "<table><tr><th>Placa</th><th>Tipo</th><th>Km Actual</th><th>Próximo Servicio</th><th>Km Restantes</th></tr>"
+        for alerta in alertas_km:
+            km_restantes = alerta['proximo_km'] - alerta['km_actual']
+            urgente = "urgent" if km_restantes <= 200 else ""
+            html += f"<tr class='{urgente}'><td>{alerta['placa']}</td><td>{alerta['tipo']}</td><td>{alerta['km_actual']:,}</td><td>{alerta['proximo_km']:,}</td><td>{km_restantes:,} km</td></tr>"
+        html += "</table>"
+    
+    html += """
+            <hr>
+            <p><small>Este es un mensaje automático del Sistema de Gestión Vehicular.<br>
+            Para más detalles, accede al sistema en línea.</small></p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
+
+def check_all_alerts():
+    """Verificar todas las alertas del sistema y enviar notificaciones"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        hoy = datetime.now().date()
+        en_30_dias = hoy + timedelta(days=30)
+        en_7_dias = hoy + timedelta(days=7)
+        
+        # === ALERTAS DE MANTENIMIENTO ===
+        # Alertas por fecha
+        cursor.execute('''
+            SELECT * FROM mantenimientos 
+            WHERE proxima_fecha IS NOT NULL 
+            AND proxima_fecha <= ? 
+            AND proxima_fecha >= ?
+            ORDER BY proxima_fecha ASC
+        ''', (en_30_dias.isoformat(), hoy.isoformat()))
+        alertas_mant_fecha = cursor.fetchall()
+        
+        # Alertas por kilometraje
+        cursor.execute('''
+            SELECT m.*, c.kilometraje as km_actual
+            FROM mantenimientos m
+            LEFT JOIN (
+                SELECT placa, MAX(kilometraje) as kilometraje
+                FROM combustible 
+                WHERE kilometraje IS NOT NULL
+                GROUP BY placa
+            ) c ON m.placa = c.placa
+            WHERE m.proximo_km IS NOT NULL 
+            AND c.kilometraje IS NOT NULL
+            AND (m.proximo_km - c.kilometraje) <= 1500
+            AND (m.proximo_km - c.kilometraje) > 0
+            ORDER BY (m.proximo_km - c.kilometraje) ASC
+        ''')
+        alertas_mant_km = cursor.fetchall()
+        
+        # === ALERTAS DE PÓLIZAS VENCIDAS ===
+        cursor.execute('''
+            SELECT p.*, v.marca, v.modelo 
+            FROM polizas p 
+            JOIN vehiculos v ON p.placa = v.placa
+            WHERE p.fecha_vencimiento <= ? 
+            AND p.fecha_vencimiento >= ?
+            AND p.estado = 'Activa'
+            ORDER BY p.fecha_vencimiento ASC
+        ''', (en_30_dias.isoformat(), hoy.isoformat()))
+        alertas_polizas = cursor.fetchall()
+        
+        # === ALERTAS DE RTV VENCIDAS ===
+        cursor.execute('''
+            SELECT r.*, v.marca, v.modelo 
+            FROM rtv r 
+            JOIN vehiculos v ON r.placa = v.placa
+            WHERE r.fecha_vencimiento <= ? 
+            AND r.fecha_vencimiento >= ?
+            AND r.estado = 'Vigente'
+            ORDER BY r.fecha_vencimiento ASC
+        ''', (en_30_dias.isoformat(), hoy.isoformat()))
+        alertas_rtv = cursor.fetchall()
+        
+        # === ALERTAS DE REVISIONES CON FALLAS ===
+        cursor.execute('''
+            SELECT r.*, v.marca, v.modelo 
+            FROM revisiones r 
+            JOIN vehiculos v ON r.placa = v.placa
+            WHERE r.aprobado = 0 
+            AND r.fecha >= ?
+            ORDER BY r.fecha DESC
+        ''', ((hoy - timedelta(days=30)).isoformat(),))
+        alertas_revisiones_fallas = cursor.fetchall()
+        
+        # === ALERTAS DE VARIACIONES ANORMALES EN COMBUSTIBLE ===
+        alertas_combustible_anormal = check_abnormal_fuel_consumption(cursor, hoy)
+        
+        # Consolidar todas las alertas
+        total_alertas = (len(alertas_mant_fecha) + len(alertas_mant_km) + 
+                        len(alertas_polizas) + len(alertas_rtv) + 
+                        len(alertas_revisiones_fallas) + len(alertas_combustible_anormal))
+        
+        if total_alertas > 0:
+            # Generar email completo de alertas
+            subject = f"🚨 ALERTAS SISTEMA VEHICULAR - {hoy.strftime('%d/%m/%Y')} ({total_alertas} alertas)"
+            body = generate_comprehensive_alert_email(
+                alertas_mant_fecha, alertas_mant_km, alertas_polizas, 
+                alertas_rtv, alertas_revisiones_fallas, alertas_combustible_anormal, hoy
+            )
+            send_email_notification(subject, body)
+            
+        conn.close()
+        return total_alertas
+        
+    except Exception as e:
+        logger.error(f"Error verificando alertas: {e}")
+        return 0
+
+def check_abnormal_fuel_consumption(cursor, hoy):
+    """Detectar variaciones anormales en el consumo de combustible"""
+    try:
+        alertas = []
+        
+        # Obtener vehículos con registros de combustible recientes
+        cursor.execute('''
+            SELECT DISTINCT placa FROM combustible 
+            WHERE fecha >= ? AND kilometraje IS NOT NULL
+        ''', ((hoy - timedelta(days=60)).isoformat(),))
+        
+        vehiculos_con_combustible = cursor.fetchall()
+        
+        for vehiculo in vehiculos_con_combustible:
+            placa = vehiculo['placa']
+            
+            # Calcular consumo promedio de los últimos 60 días
+            cursor.execute('''
+                SELECT c.fecha, c.kilometraje, c.litros, c.costo
+                FROM combustible c
+                WHERE c.placa = ? 
+                AND c.fecha >= ? 
+                AND c.kilometraje IS NOT NULL
+                ORDER BY c.fecha ASC, c.id ASC
+            ''', (placa, (hoy - timedelta(days=60)).isoformat()))
+            
+            registros = cursor.fetchall()
+            consumos = []
+            
+            for i in range(1, len(registros)):
+                registro_actual = registros[i]
+                registro_anterior = registros[i-1]
+                
+                km_recorridos = registro_actual['kilometraje'] - registro_anterior['kilometraje']
+                if km_recorridos > 0:
+                    rendimiento = km_recorridos / registro_actual['litros']
+                    consumos.append({
+                        'fecha': registro_actual['fecha'],
+                        'rendimiento': rendimiento,
+                        'km_recorridos': km_recorridos,
+                        'litros': registro_actual['litros']
+                    })
+            
+            if len(consumos) >= 3:
+                # Calcular promedio y detectar anomalías
+                rendimientos = [c['rendimiento'] for c in consumos]
+                promedio = sum(rendimientos) / len(rendimientos)
+                
+                # Verificar últimos 3 registros para detectar deterioro significativo
+                ultimos_3 = consumos[-3:]
+                promedio_reciente = sum(c['rendimiento'] for c in ultimos_3) / len(ultimos_3)
+                
+                # Si el rendimiento reciente es 25% menor al promedio, es anormal
+                if promedio_reciente < promedio * 0.75:
+                    cursor.execute('SELECT marca, modelo FROM vehiculos WHERE placa = ?', (placa,))
+                    vehiculo_info = cursor.fetchone()
+                    
+                    alertas.append({
+                        'placa': placa,
+                        'marca': vehiculo_info['marca'] if vehiculo_info else 'N/A',
+                        'modelo': vehiculo_info['modelo'] if vehiculo_info else 'N/A',
+                        'promedio_historico': round(promedio, 2),
+                        'promedio_reciente': round(promedio_reciente, 2),
+                        'deterioro_porcentaje': round(((promedio - promedio_reciente) / promedio) * 100, 1),
+                        'ultimo_registro': ultimos_3[-1]['fecha']
+                    })
+        
+        return alertas
+        
+    except Exception as e:
+        logger.error(f"Error detectando variaciones de combustible: {e}")
+        return []
+
+def generate_comprehensive_alert_email(alertas_mant_fecha, alertas_mant_km, alertas_polizas, 
+                                     alertas_rtv, alertas_revisiones_fallas, alertas_combustible_anormal, hoy):
+    """Generar email completo con todas las categorías de alertas"""
+    html = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; }}
+            .header {{ background-color: #d32f2f; color: white; padding: 20px; text-align: center; }}
+            .content {{ padding: 20px; }}
+            .alert-section {{ margin-bottom: 30px; }}
+            .alert-title {{ background-color: #f5f5f5; color: #333; padding: 12px; margin: 15px 0 10px 0; 
+                          border-left: 4px solid #ff9800; font-weight: bold; font-size: 16px; }}
+            .alert {{ background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; margin: 8px 0; 
+                     border-radius: 5px; }}
+            .urgent {{ background-color: #f8d7da; border-color: #f5c6cb; }}
+            .critical {{ background-color: #f5c6cb; border-color: #dc3545; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }}
+            th {{ background-color: #f2f2f2; font-weight: bold; }}
+            .summary {{ background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+            .footer {{ font-size: 12px; color: #666; margin-top: 30px; border-top: 1px solid #ddd; 
+                      padding-top: 15px; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🚨 SISTEMA DE GESTIÓN VEHICULAR</h1>
+            <h2>Reporte Completo de Alertas - {hoy.strftime('%d/%m/%Y')}</h2>
+        </div>
+        <div class="content">
+    """
+    
+    total_alertas = (len(alertas_mant_fecha) + len(alertas_mant_km) + len(alertas_polizas) + 
+                    len(alertas_rtv) + len(alertas_revisiones_fallas) + len(alertas_combustible_anormal))
+                    
+    html += f"""
+            <div class="summary">
+                <h3>📊 RESUMEN DE ALERTAS</h3>
+                <ul>
+                    <li><strong>Mantenimientos por fecha:</strong> {len(alertas_mant_fecha)}</li>
+                    <li><strong>Mantenimientos por kilometraje:</strong> {len(alertas_mant_km)}</li>
+                    <li><strong>Pólizas próximas a vencer:</strong> {len(alertas_polizas)}</li>
+                    <li><strong>RTV próximas a vencer:</strong> {len(alertas_rtv)}</li>
+                    <li><strong>Revisiones con fallas:</strong> {len(alertas_revisiones_fallas)}</li>
+                    <li><strong>Consumo anormal de combustible:</strong> {len(alertas_combustible_anormal)}</li>
+                </ul>
+                <p><strong>TOTAL DE ALERTAS: {total_alertas}</strong></p>
+            </div>
+    """
+    
+    # ALERTAS DE MANTENIMIENTO
+    if alertas_mant_fecha or alertas_mant_km:
+        html += '<div class="alert-section">'
+        html += '<div class="alert-title">🔧 ALERTAS DE MANTENIMIENTO</div>'
+        
+        if alertas_mant_fecha:
+            html += "<h4>📅 Por Fecha Próxima</h4>"
+            html += "<table><tr><th>Placa</th><th>Tipo</th><th>Fecha Programada</th><th>Días Restantes</th></tr>"
+            for alerta in alertas_mant_fecha:
+                dias_restantes = (datetime.strptime(alerta['proxima_fecha'], '%Y-%m-%d').date() - hoy).days
+                urgente = "urgent" if dias_restantes <= 3 else "critical" if dias_restantes <= 0 else ""
+                html += f"<tr class='{urgente}'><td>{alerta['placa']}</td><td>{alerta['tipo']}</td><td>{alerta['proxima_fecha']}</td><td>{dias_restantes} días</td></tr>"
+            html += "</table>"
+        
+        if alertas_mant_km:
+            html += "<h4>🛣️ Por Kilometraje Próximo</h4>"
+            html += "<table><tr><th>Placa</th><th>Tipo</th><th>Km Actual</th><th>Próximo Servicio</th><th>Km Restantes</th></tr>"
+            for alerta in alertas_mant_km:
+                km_restantes = alerta['proximo_km'] - alerta['km_actual']
+                urgente = "urgent" if km_restantes <= 200 else "critical" if km_restantes <= 0 else ""
+                html += f"<tr class='{urgente}'><td>{alerta['placa']}</td><td>{alerta['tipo']}</td><td>{alerta['km_actual']:,}</td><td>{alerta['proximo_km']:,}</td><td>{km_restantes:,} km</td></tr>"
+            html += "</table>"
+        
+        html += '</div>'
+    
+    # ALERTAS DE PÓLIZAS
+    if alertas_polizas:
+        html += '<div class="alert-section">'
+        html += '<div class="alert-title">🛡️ PÓLIZAS PRÓXIMAS A VENCER</div>'
+        html += "<table><tr><th>Placa</th><th>Vehículo</th><th>Número Póliza</th><th>Aseguradora</th><th>Vencimiento</th><th>Días Restantes</th></tr>"
+        for poliza in alertas_polizas:
+            dias_restantes = (datetime.strptime(poliza['fecha_vencimiento'], '%Y-%m-%d').date() - hoy).days
+            urgente = "urgent" if dias_restantes <= 7 else "critical" if dias_restantes <= 0 else ""
+            html += f"<tr class='{urgente}'><td>{poliza['placa']}</td><td>{poliza['marca']} {poliza['modelo']}</td><td>{poliza['numero_poliza']}</td><td>{poliza['aseguradora']}</td><td>{poliza['fecha_vencimiento']}</td><td>{dias_restantes} días</td></tr>"
+        html += "</table>"
+        html += '</div>'
+    
+    # ALERTAS DE RTV
+    if alertas_rtv:
+        html += '<div class="alert-section">'
+        html += '<div class="alert-title">🔍 RTV PRÓXIMAS A VENCER</div>'
+        html += "<table><tr><th>Placa</th><th>Vehículo</th><th>Número Cita</th><th>Vencimiento</th><th>Días Restantes</th></tr>"
+        for rtv in alertas_rtv:
+            dias_restantes = (datetime.strptime(rtv['fecha_vencimiento'], '%Y-%m-%d').date() - hoy).days
+            urgente = "urgent" if dias_restantes <= 7 else "critical" if dias_restantes <= 0 else ""
+            html += f"<tr class='{urgente}'><td>{rtv['placa']}</td><td>{rtv['marca']} {rtv['modelo']}</td><td>{rtv['numero_cita']}</td><td>{rtv['fecha_vencimiento']}</td><td>{dias_restantes} días</td></tr>"
+        html += "</table>"
+        html += '</div>'
+    
+    # ALERTAS DE REVISIONES CON FALLAS
+    if alertas_revisiones_fallas:
+        html += '<div class="alert-section">'
+        html += '<div class="alert-title">⚠️ REVISIONES CON FALLAS REPORTADAS</div>'
+        html += "<table><tr><th>Placa</th><th>Vehículo</th><th>Fecha</th><th>Inspector</th><th>Fallas Detectadas</th></tr>"
+        for revision in alertas_revisiones_fallas:
+            fallas = []
+            if revision['estado_motor'] != 'Bueno': fallas.append(f"Motor: {revision['estado_motor']}")
+            if revision['estado_frenos'] != 'Bueno': fallas.append(f"Frenos: {revision['estado_frenos']}")
+            if revision['estado_luces'] != 'Bueno': fallas.append(f"Luces: {revision['estado_luces']}")
+            if revision['estado_llantas'] != 'Bueno': fallas.append(f"Llantas: {revision['estado_llantas']}")
+            if revision['estado_carroceria'] != 'Bueno': fallas.append(f"Carrocería: {revision['estado_carroceria']}")
+            
+            fallas_str = "<br>".join(fallas) if fallas else "Revisión no aprobada"
+            html += f"<tr class='critical'><td>{revision['placa']}</td><td>{revision['marca']} {revision['modelo']}</td><td>{revision['fecha']}</td><td>{revision['inspector']}</td><td>{fallas_str}</td></tr>"
+        html += "</table>"
+        html += '</div>'
+    
+    # ALERTAS DE COMBUSTIBLE ANORMAL
+    if alertas_combustible_anormal:
+        html += '<div class="alert-section">'
+        html += '<div class="alert-title">⛽ VARIACIONES ANORMALES EN COMBUSTIBLE</div>'
+        html += "<table><tr><th>Placa</th><th>Vehículo</th><th>Rendimiento Histórico</th><th>Rendimiento Reciente</th><th>Deterioro</th><th>Último Registro</th></tr>"
+        for combustible in alertas_combustible_anormal:
+            html += f"<tr class='urgent'><td>{combustible['placa']}</td><td>{combustible['marca']} {combustible['modelo']}</td><td>{combustible['promedio_historico']} km/L</td><td>{combustible['promedio_reciente']} km/L</td><td>-{combustible['deterioro_porcentaje']}%</td><td>{combustible['ultimo_registro']}</td></tr>"
+        html += "</table>"
+        html += '<p><strong>Nota:</strong> Se considera anormal cuando el rendimiento reciente es 25% menor al histórico.</p>'
+        html += '</div>'
+    
+    html += """
+            <div class="footer">
+                <p><strong>⚡ ACCIONES RECOMENDADAS:</strong></p>
+                <ul>
+                    <li>Revisar inmediatamente las alertas marcadas como CRÍTICAS (en rojo)</li>
+                    <li>Programar mantenimientos pendientes</li>
+                    <li>Renovar pólizas y RTV próximas a vencer</li>
+                    <li>Investigar fallas reportadas en revisiones</li>
+                    <li>Evaluar vehículos con consumo anormal de combustible</li>
+                </ul>
+                <hr>
+                <p><small>Este es un mensaje automático del Sistema de Gestión Vehicular.<br>
+                Para más detalles, acceda al sistema en línea.</small></p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
 
 def dict_from_row(row):
     """Convertir Row de SQLite a diccionario"""
@@ -356,10 +840,11 @@ async def create_mantenimiento(mantenimiento: MantenimientoCreate):
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO mantenimientos (fecha, placa, tipo, descripcion, costo, kilometraje)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO mantenimientos (fecha, placa, tipo, descripcion, costo, kilometraje, proximo_km, proxima_fecha)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (mantenimiento.fecha, mantenimiento.placa, mantenimiento.tipo,
-              mantenimiento.descripcion, mantenimiento.costo, mantenimiento.kilometraje))
+              mantenimiento.descripcion, mantenimiento.costo, mantenimiento.kilometraje,
+              mantenimiento.proximo_km, mantenimiento.proxima_fecha))
         
         conn.commit()
         conn.close()
@@ -398,11 +883,11 @@ async def update_mantenimiento(mantenimiento_id: int, mantenimiento: Mantenimien
         
         cursor.execute('''
             UPDATE mantenimientos 
-            SET fecha = ?, placa = ?, tipo = ?, descripcion = ?, costo = ?, kilometraje = ?
+            SET fecha = ?, placa = ?, tipo = ?, descripcion = ?, costo = ?, kilometraje = ?, proximo_km = ?, proxima_fecha = ?
             WHERE id = ?
         ''', (mantenimiento.fecha, mantenimiento.placa, mantenimiento.tipo,
               mantenimiento.descripcion, mantenimiento.costo, mantenimiento.kilometraje,
-              mantenimiento_id))
+              mantenimiento.proximo_km, mantenimiento.proxima_fecha, mantenimiento_id))
         
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
@@ -825,6 +1310,207 @@ async def get_stats():
         logger.error(f"Error al obtener estadísticas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Endpoint para verificar alertas manualmente
+@app.get("/alertas/verificar")
+async def verificar_alertas():
+    """Verificar y enviar todas las alertas del sistema"""
+    try:
+        alertas_enviadas = check_all_alerts()
+        return {
+            "success": True, 
+            "message": f"Verificación completada. {alertas_enviadas} alertas procesadas",
+            "alertas_enviadas": alertas_enviadas
+        }
+    except Exception as e:
+        logger.error(f"Error verificando alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para configurar email
+@app.post("/config/email")
+async def configurar_email(email_config: dict):
+    """Configurar ajustes de email"""
+    try:
+        if "sender_password" in email_config:
+            EMAIL_CONFIG["sender_password"] = email_config["sender_password"]
+        if "recipient_email" in email_config:
+            EMAIL_CONFIG["recipient_email"] = email_config["recipient_email"]
+        
+        return {"success": True, "message": "Configuración de email actualizada"}
+    except Exception as e:
+        logger.error(f"Error configurando email: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para probar email
+@app.post("/config/email/test")
+async def test_email():
+    """Enviar email de prueba"""
+    try:
+        subject = "🧪 Prueba del Sistema de Gestión Vehicular"
+        body = """
+        <html>
+        <body>
+            <h2>✅ Prueba de Configuración de Email</h2>
+            <p>Este es un email de prueba del Sistema de Gestión Vehicular.</p>
+            <p>Si recibe este mensaje, la configuración de email está funcionando correctamente.</p>
+            <hr>
+            <p><small>Enviado automáticamente desde el sistema de gestión vehicular.</small></p>
+        </body>
+        </html>
+        """
+        
+        success = send_email_notification(subject, body)
+        
+        if success:
+            return {"success": True, "message": "Email de prueba enviado exitosamente"}
+        else:
+            return {"success": False, "message": "Error enviando email de prueba. Verifique la configuración."}
+    except Exception as e:
+        logger.error(f"Error probando email: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para obtener detalle de alertas para el frontend
+@app.get("/alertas/detalle")
+async def get_alertas_detalle():
+    """Obtener detalle de todas las alertas para mostrar en el frontend"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        hoy = datetime.now().date()
+        en_30_dias = hoy + timedelta(days=30)
+        
+        alertas = {
+            "mantenimiento": [],
+            "polizas": [],
+            "rtv": [],
+            "revisiones": [],
+            "combustible": []
+        }
+        
+        # ALERTAS DE MANTENIMIENTO
+        cursor.execute('''
+            SELECT m.*, v.marca, v.modelo 
+            FROM mantenimientos m
+            JOIN vehiculos v ON m.placa = v.placa
+            WHERE (m.proxima_fecha IS NOT NULL AND m.proxima_fecha <= ? AND m.proxima_fecha >= ?)
+            ORDER BY m.proxima_fecha ASC
+        ''', (en_30_dias.isoformat(), hoy.isoformat()))
+        
+        mantenimientos_fecha = cursor.fetchall()
+        for m in mantenimientos_fecha:
+            dias_restantes = (datetime.strptime(m['proxima_fecha'], '%Y-%m-%d').date() - hoy).days
+            alertas["mantenimiento"].append({
+                "placa": m['placa'],
+                "vehiculo": f"{m['marca']} {m['modelo']}",
+                "tipo": m['tipo'],
+                "descripcion": f"Mantenimiento por fecha - {dias_restantes} días restantes",
+                "dias_restantes": dias_restantes,
+                "urgente": dias_restantes <= 7,
+                "fecha": m['proxima_fecha']
+            })
+        
+        # ALERTAS DE PÓLIZAS
+        cursor.execute('''
+            SELECT p.*, v.marca, v.modelo 
+            FROM polizas p 
+            JOIN vehiculos v ON p.placa = v.placa
+            WHERE p.fecha_vencimiento <= ? AND p.fecha_vencimiento >= ? AND p.estado = 'Activa'
+            ORDER BY p.fecha_vencimiento ASC
+        ''', (en_30_dias.isoformat(), hoy.isoformat()))
+        
+        polizas = cursor.fetchall()
+        for p in polizas:
+            dias_restantes = (datetime.strptime(p['fecha_vencimiento'], '%Y-%m-%d').date() - hoy).days
+            alertas["polizas"].append({
+                "placa": p['placa'],
+                "vehiculo": f"{p['marca']} {p['modelo']}",
+                "numero_poliza": p['numero_poliza'],
+                "aseguradora": p['aseguradora'],
+                "descripcion": f"Póliza vence en {dias_restantes} días",
+                "dias_restantes": dias_restantes,
+                "urgente": dias_restantes <= 7,
+                "fecha": p['fecha_vencimiento']
+            })
+        
+        # ALERTAS DE RTV
+        cursor.execute('''
+            SELECT r.*, v.marca, v.modelo 
+            FROM rtv r 
+            JOIN vehiculos v ON r.placa = v.placa
+            WHERE r.fecha_vencimiento <= ? AND r.fecha_vencimiento >= ? AND r.estado = 'Vigente'
+            ORDER BY r.fecha_vencimiento ASC
+        ''', (en_30_dias.isoformat(), hoy.isoformat()))
+        
+        rtv_records = cursor.fetchall()
+        for r in rtv_records:
+            dias_restantes = (datetime.strptime(r['fecha_vencimiento'], '%Y-%m-%d').date() - hoy).days
+            alertas["rtv"].append({
+                "placa": r['placa'],
+                "vehiculo": f"{r['marca']} {r['modelo']}",
+                "numero_cita": r['numero_cita'],
+                "descripcion": f"RTV vence en {dias_restantes} días",
+                "dias_restantes": dias_restantes,
+                "urgente": dias_restantes <= 7,
+                "fecha": r['fecha_vencimiento']
+            })
+        
+        # ALERTAS DE REVISIONES CON FALLAS
+        cursor.execute('''
+            SELECT r.*, v.marca, v.modelo 
+            FROM revisiones r 
+            JOIN vehiculos v ON r.placa = v.placa
+            WHERE r.aprobado = 0 AND r.fecha >= ?
+            ORDER BY r.fecha DESC
+        ''', ((hoy - timedelta(days=30)).isoformat(),))
+        
+        revisiones = cursor.fetchall()
+        for r in revisiones:
+            fallas = []
+            if r['estado_motor'] != 'Bueno': fallas.append(f"Motor: {r['estado_motor']}")
+            if r['estado_frenos'] != 'Bueno': fallas.append(f"Frenos: {r['estado_frenos']}")
+            if r['estado_luces'] != 'Bueno': fallas.append(f"Luces: {r['estado_luces']}")
+            if r['estado_llantas'] != 'Bueno': fallas.append(f"Llantas: {r['estado_llantas']}")
+            if r['estado_carroceria'] != 'Bueno': fallas.append(f"Carrocería: {r['estado_carroceria']}")
+            
+            alertas["revisiones"].append({
+                "placa": r['placa'],
+                "vehiculo": f"{r['marca']} {r['modelo']}",
+                "inspector": r['inspector'],
+                "fallas": fallas,
+                "descripcion": f"Fallas detectadas: {', '.join(fallas) if fallas else 'Revisión no aprobada'}",
+                "urgente": True,
+                "fecha": r['fecha']
+            })
+        
+        # ALERTAS DE COMBUSTIBLE (detección básica)
+        alertas["combustible"] = check_abnormal_fuel_consumption(cursor, hoy)
+        
+        conn.close()
+        
+        # Calcular totales
+        totales = {
+            "mantenimiento": len(alertas["mantenimiento"]),
+            "polizas": len(alertas["polizas"]),
+            "rtv": len(alertas["rtv"]),
+            "revisiones": len(alertas["revisiones"]),
+            "combustible": len(alertas["combustible"]),
+            "total": sum([len(alertas[k]) for k in alertas.keys()])
+        }
+        
+        return {
+            "success": True,
+            "data": {
+                "alertas": alertas,
+                "totales": totales,
+                "fecha_consulta": hoy.isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo detalle de alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
+    init_database()
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
