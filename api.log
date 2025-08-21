@@ -581,3 +581,16 @@ INFO:     127.0.0.1:39484 - "GET /alertas/verificar HTTP/1.1" 200 OK
 INFO:     127.0.0.1:39492 - "POST /config/email/test HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54530 - "GET /alertas/detalle HTTP/1.1" 200 OK
 INFO:     127.0.0.1:54534 - "GET /alertas/verificar HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "OPTIONS /vehiculos HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "GET /vehiculos HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "OPTIONS /mantenimientos HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "GET /mantenimientos HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "OPTIONS /combustible HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "GET /combustible HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "OPTIONS /revisiones HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "GET /revisiones HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "OPTIONS /polizas HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "GET /polizas HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "OPTIONS /rtv HTTP/1.1" 200 OK
+INFO:     10.12.213.46:51264 - "GET /rtv HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33146 - "GET /config/email HTTP/1.1" 200 OK

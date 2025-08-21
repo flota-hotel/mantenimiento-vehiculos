@@ -42,9 +42,33 @@ DATABASE_PATH = "vehicular_system.db"
 EMAIL_CONFIG = {
     "smtp_server": "smtp.gmail.com",
     "smtp_port": 587,
-    "sender_email": "sistema.vehicular@arenalmanoa.com",  # Configurar según tu servidor
-    "sender_password": "",  # Configurar con la contraseña del sistema
+    "sender_email": "sistema.vehicular@arenalmanoa.com",  # CAMBIAR por su email real
+    "sender_password": "",  # CONFIGURAR con contraseña de aplicación
     "recipient_email": "contabilidad2@arenalmanoa.com"
+}
+
+# Configuraciones alternativas para diferentes proveedores
+EMAIL_PROVIDERS = {
+    "gmail": {
+        "smtp_server": "smtp.gmail.com",
+        "smtp_port": 587,
+        "use_tls": True
+    },
+    "outlook": {
+        "smtp_server": "smtp-mail.outlook.com", 
+        "smtp_port": 587,
+        "use_tls": True
+    },
+    "yahoo": {
+        "smtp_server": "smtp.mail.yahoo.com",
+        "smtp_port": 587, 
+        "use_tls": True
+    },
+    "custom": {
+        "smtp_server": "mail.arenalmanoa.com",  # Su servidor personalizado
+        "smtp_port": 587,
+        "use_tls": True
+    }
 }
 
 def init_database():
@@ -1330,15 +1354,55 @@ async def verificar_alertas():
 async def configurar_email(email_config: dict):
     """Configurar ajustes de email"""
     try:
+        # Actualizar configuración básica
+        if "sender_email" in email_config:
+            EMAIL_CONFIG["sender_email"] = email_config["sender_email"]
         if "sender_password" in email_config:
             EMAIL_CONFIG["sender_password"] = email_config["sender_password"]
         if "recipient_email" in email_config:
             EMAIL_CONFIG["recipient_email"] = email_config["recipient_email"]
         
-        return {"success": True, "message": "Configuración de email actualizada"}
+        # Configurar proveedor específico si se especifica
+        if "provider" in email_config and email_config["provider"] in EMAIL_PROVIDERS:
+            provider_config = EMAIL_PROVIDERS[email_config["provider"]]
+            EMAIL_CONFIG.update(provider_config)
+        
+        # Configuración personalizada de servidor
+        if "smtp_server" in email_config:
+            EMAIL_CONFIG["smtp_server"] = email_config["smtp_server"]
+        if "smtp_port" in email_config:
+            EMAIL_CONFIG["smtp_port"] = int(email_config["smtp_port"])
+        
+        return {
+            "success": True, 
+            "message": "Configuración de email actualizada",
+            "config": {
+                "smtp_server": EMAIL_CONFIG["smtp_server"],
+                "smtp_port": EMAIL_CONFIG["smtp_port"],
+                "sender_email": EMAIL_CONFIG["sender_email"],
+                "recipient_email": EMAIL_CONFIG["recipient_email"],
+                "password_configured": bool(EMAIL_CONFIG["sender_password"])
+            }
+        }
     except Exception as e:
         logger.error(f"Error configurando email: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para obtener configuración actual (sin mostrar contraseña)
+@app.get("/config/email")
+async def get_email_config():
+    """Obtener configuración actual de email (sin contraseña)"""
+    return {
+        "success": True,
+        "config": {
+            "smtp_server": EMAIL_CONFIG["smtp_server"],
+            "smtp_port": EMAIL_CONFIG["smtp_port"], 
+            "sender_email": EMAIL_CONFIG["sender_email"],
+            "recipient_email": EMAIL_CONFIG["recipient_email"],
+            "password_configured": bool(EMAIL_CONFIG["sender_password"])
+        },
+        "providers": EMAIL_PROVIDERS
+    }
 
 # Endpoint para probar email
 @app.post("/config/email/test")

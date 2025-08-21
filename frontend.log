@@ -306,3 +306,14 @@ Servidor corriendo en puerto 3000
 21/Aug/2025 19:13:39 - "GET /icons/icon-512.png HTTP/1.1" 404 -
 Servidor corriendo en puerto 3000
 Servidor corriendo en puerto 3000
+21/Aug/2025 19:26:04 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 19:26:05 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 19:26:05 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 19:26:05 - "GET /index.html HTTP/1.1" 200 -
+21/Aug/2025 19:26:05 - code 404, message File not found
+21/Aug/2025 19:26:05 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 19:26:05 - code 404, message File not found
+21/Aug/2025 19:26:05 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 19:26:05 - code 404, message File not found
+21/Aug/2025 19:26:05 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+Servidor corriendo en puerto 3000

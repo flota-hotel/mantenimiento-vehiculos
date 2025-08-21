@@ -516,19 +516,71 @@
           <!-- Configuración de Email (Solo Administradores) -->
           <div class="card" data-roles="admin">
             <h3>📧 Configuración de Alertas por Email</h3>
-            <div style="margin-bottom: 16px;">
-              <p style="color: var(--muted); font-size: 0.9em; margin: 0;">
-                Las alertas se envían automáticamente a: <strong>contabilidad2@arenalmanoa.com</strong>
+            
+            <!-- Estado actual -->
+            <div id="emailStatus" style="margin-bottom: 16px; padding: 12px; border-radius: 8px;">
+              <p style="margin: 0; font-weight: bold;">Estado: <span id="emailStatusText">Verificando...</span></p>
+              <p style="margin: 4px 0 0 0; font-size: 0.9em; color: var(--muted);" id="emailStatusDetail">
+                Cargando configuración...
               </p>
             </div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <button class="secondary" onclick="verificarAlertas()" title="Verificar alertas manualmente">
-                🔍 Verificar Alertas
+            
+            <!-- Configuración rápida -->
+            <div style="margin-bottom: 16px;">
+              <h4 style="margin: 0 0 12px 0;">⚡ Configuración Rápida</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                  <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Email del sistema:</label>
+                  <input id="configSenderEmail" type="email" placeholder="sistema@arenalmanoa.com" style="font-size: 0.9em;">
+                </div>
+                <div>
+                  <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Contraseña del email:</label>
+                  <input id="configSenderPassword" type="password" placeholder="Contraseña o token de aplicación" style="font-size: 0.9em;">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-bottom: 12px;">
+                <div>
+                  <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Proveedor de email:</label>
+                  <select id="configProvider" style="font-size: 0.9em;">
+                    <option value="gmail">Gmail / Google Workspace</option>
+                    <option value="outlook">Outlook / Microsoft 365</option>
+                    <option value="yahoo">Yahoo Mail</option>
+                    <option value="custom">Servidor personalizado</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Puerto SMTP:</label>
+                  <input id="configSmtpPort" type="number" value="587" style="width: 80px; font-size: 0.9em;">
+                </div>
+              </div>
+              <div style="margin-bottom: 12px;" id="customServerFields" class="hidden">
+                <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Servidor SMTP personalizado:</label>
+                <input id="configSmtpServer" type="text" placeholder="mail.arenalmanoa.com" style="font-size: 0.9em;">
+              </div>
+            </div>
+            
+            <!-- Acciones -->
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button class="success" onclick="guardarConfigEmail()" title="Guardar configuración de email">
+                💾 Guardar Configuración
               </button>
               <button class="secondary" onclick="probarEmail()" title="Enviar email de prueba">
                 📧 Probar Email
               </button>
+              <button class="secondary" onclick="verificarAlertas()" title="Verificar alertas manualmente">
+                🔍 Verificar Alertas
+              </button>
               <span id="alertaStatus" style="color: var(--muted); font-size: 0.9em;"></span>
+            </div>
+            
+            <!-- Ayuda -->
+            <div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 8px; font-size: 0.9em;">
+              <strong>💡 Ayuda de configuración:</strong>
+              <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                <li><strong>Gmail:</strong> Necesita activar autenticación de 2 factores y crear una "contraseña de aplicación"</li>
+                <li><strong>Outlook:</strong> Use su email y contraseña normal de Microsoft 365</li>
+                <li><strong>Servidor personalizado:</strong> Contacte a su administrador de IT para obtener configuración SMTP</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -4879,6 +4931,130 @@
   
   // ===== FUNCIONES DE CONFIGURACIÓN DE EMAIL =====
   
+  async function cargarConfigEmail() {
+    try {
+      const response = await fetch(`${API_URL}/config/email`);
+      const data = await response.json();
+      
+      if (data.success) {
+        const config = data.config;
+        
+        // Actualizar campos del formulario
+        if (byId('configSenderEmail')) byId('configSenderEmail').value = config.sender_email || '';
+        if (byId('configSmtpPort')) byId('configSmtpPort').value = config.smtp_port || 587;
+        
+        // Determinar proveedor basado en servidor SMTP
+        let provider = 'custom';
+        if (config.smtp_server === 'smtp.gmail.com') provider = 'gmail';
+        else if (config.smtp_server === 'smtp-mail.outlook.com') provider = 'outlook';
+        else if (config.smtp_server === 'smtp.mail.yahoo.com') provider = 'yahoo';
+        
+        if (byId('configProvider')) byId('configProvider').value = provider;
+        
+        // Mostrar campos personalizados si es necesario
+        toggleCustomServerFields();
+        
+        // Actualizar estado
+        const statusEl = byId('emailStatus');
+        const statusTextEl = byId('emailStatusText');
+        const statusDetailEl = byId('emailStatusDetail');
+        
+        if (config.password_configured) {
+          if (statusEl) statusEl.style.backgroundColor = '#d1f2eb';
+          if (statusTextEl) statusTextEl.textContent = '✅ Configurado';
+          if (statusDetailEl) statusDetailEl.textContent = `Servidor: ${config.smtp_server}:${config.smtp_port} | Destino: ${config.recipient_email}`;
+        } else {
+          if (statusEl) statusEl.style.backgroundColor = '#fdeaa7';
+          if (statusTextEl) statusTextEl.textContent = '⚠️ Requiere configuración';
+          if (statusDetailEl) statusDetailEl.textContent = 'Configure email y contraseña para recibir alertas automáticas';
+        }
+      }
+    } catch (e) {
+      console.error('Error cargando configuración de email:', e);
+    }
+  }
+  
+  function toggleCustomServerFields() {
+    const provider = byId('configProvider')?.value;
+    const customFields = byId('customServerFields');
+    
+    if (customFields) {
+      if (provider === 'custom') {
+        customFields.classList.remove('hidden');
+      } else {
+        customFields.classList.add('hidden');
+      }
+    }
+  }
+  
+  async function guardarConfigEmail() {
+    try {
+      const statusEl = byId('alertaStatus');
+      if (statusEl) statusEl.textContent = '💾 Guardando configuración...';
+      
+      const config = {
+        sender_email: byId('configSenderEmail')?.value,
+        sender_password: byId('configSenderPassword')?.value,
+        provider: byId('configProvider')?.value,
+        smtp_port: parseInt(byId('configSmtpPort')?.value) || 587
+      };
+      
+      // Agregar servidor personalizado si es necesario
+      if (config.provider === 'custom') {
+        config.smtp_server = byId('configSmtpServer')?.value;
+      }
+      
+      // Validaciones básicas
+      if (!config.sender_email) {
+        alert('❌ Por favor ingrese el email del sistema');
+        return;
+      }
+      
+      if (!config.sender_password) {
+        alert('❌ Por favor ingrese la contraseña del email');
+        return;
+      }
+      
+      if (config.provider === 'custom' && !config.smtp_server) {
+        alert('❌ Por favor ingrese el servidor SMTP personalizado');
+        return;
+      }
+      
+      const response = await fetch(`${API_URL}/config/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        if (statusEl) {
+          statusEl.textContent = '✅ Configuración guardada';
+          setTimeout(() => statusEl.textContent = '', 5000);
+        }
+        
+        // Limpiar campo de contraseña por seguridad
+        if (byId('configSenderPassword')) byId('configSenderPassword').value = '';
+        
+        // Recargar estado
+        cargarConfigEmail();
+        
+        alert('✅ Configuración de email guardada exitosamente.\n\n¿Desea enviar un email de prueba ahora?') 
+          ? probarEmail() : null;
+      } else {
+        throw new Error(data.message || 'Error guardando configuración');
+      }
+    } catch (e) {
+      const statusEl = byId('alertaStatus');
+      if (statusEl) {
+        statusEl.textContent = '❌ Error guardando';
+        setTimeout(() => statusEl.textContent = '', 5000);
+      }
+      alert('❌ Error guardando configuración: ' + e.message);
+    }
+  }
+  
   async function verificarAlertas() {
     try {
       const statusEl = byId('alertaStatus');
@@ -4935,9 +5111,21 @@
         statusEl.textContent = '❌ Error enviando email';
         setTimeout(() => statusEl.textContent = '', 5000);
       }
-      alert('❌ Error enviando email de prueba: ' + e.message + '\n\nNota: Es normal que falle si no se han configurado las credenciales SMTP.');
+      alert('❌ Error enviando email de prueba: ' + e.message + '\n\n💡 Asegúrese de que la configuración de email esté correcta.');
     }
   }
+  
+  // Event listeners para configuración de email
+  document.addEventListener('DOMContentLoaded', function() {
+    // Cargar configuración inicial
+    setTimeout(cargarConfigEmail, 1000);
+    
+    // Event listener para cambio de proveedor
+    const providerSelect = byId('configProvider');
+    if (providerSelect) {
+      providerSelect.addEventListener('change', toggleCustomServerFields);
+    }
+  });
   
   </script>
 </body>
