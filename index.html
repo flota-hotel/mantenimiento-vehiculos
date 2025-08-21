@@ -217,7 +217,7 @@
       </div>
     </div>
     <div class="tabs" id="mainTabs">
-      <button class="tab active" data-tab="dashboard" onclick="setTab('dashboard')">📊 Dashboard</button>
+      <button class="tab active" data-tab="dashboard" onclick="setTab('dashboard')" data-roles="admin">📊 Dashboard</button>
       <button class="tab" data-tab="vehiculos" onclick="setTab('vehiculos')" data-roles="admin">🚗 Vehículos</button>
       <button class="tab" data-tab="ficha-tecnica" onclick="setTab('ficha-tecnica')" data-roles="admin">📋 Ficha Técnica</button>
       <button class="tab" data-tab="polizas" onclick="setTab('polizas')" data-roles="admin">🛡️ Pólizas & RTV</button>
@@ -339,11 +339,7 @@
         <div class="form-row">
           <div class="form-group">
             <label>Dueño</label>
-            <select id="vDueno">
-              <option value="hotel">Hotel (Propio)</option>
-              <option value="arrendamiento">Arrendamiento</option>
-              <option value="leasing">Leasing</option>
-            </select>
+            <input id="vDueno" type="text" placeholder="Ej: Hotel, Juan Pérez, Empresa XYZ"/>
           </div>
           <div class="form-group">
             <label>Número de Póliza</label>
@@ -377,12 +373,7 @@
             <option value="inactivo">❌ Inactivo</option>
             <option value="mantenimiento">🔧 En Mantenimiento</option>
           </select>
-          <select id="fltVehDueno" onchange="renderVehiculos()">
-            <option value="">👤 Todos los dueños</option>
-            <option value="hotel">🏨 Hotel (Propio)</option>
-            <option value="arrendamiento">📝 Arrendamiento</option>
-            <option value="leasing">💼 Leasing</option>
-          </select>
+          <input id="fltVehDueno" type="text" placeholder="🔍 Filtrar por dueño..." onkeyup="renderVehiculos()"/>
         </div>
         <div>
           <button class="secondary export-btn" onclick="exportarVehiculo()">📊 Exportar Excel</button>
@@ -994,11 +985,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Dueño</label>
-              <select id="editVDueno">
-                <option value="hotel">Hotel (Propio)</option>
-                <option value="arrendamiento">Arrendamiento</option>
-                <option value="leasing">Leasing</option>
-              </select>
+              <input id="editVDueno" type="text" placeholder="Ej: Hotel, Juan Pérez, Empresa XYZ"/>
             </div>
             <div class="form-group">
               <label>Número de Póliza</label>
@@ -1157,12 +1144,12 @@
     operador: {
       name: 'Operador',
       password: 'operador123', 
-      permissions: ['dashboard', 'mantenimientos', 'combustible']
+      permissions: ['mantenimientos', 'combustible']
     },
     supervisor: {
       name: 'Supervisor',
       password: 'supervisor123',
-      permissions: ['dashboard', 'revision']
+      permissions: ['revision']
     }
   };
   
@@ -1200,8 +1187,9 @@
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainApp').classList.add('logged-in');
       
-      // Asegurar que el dashboard sea la pestaña activa
-      setTab('dashboard');
+      // Ir a la primera pestaña disponible según el rol
+      const firstAvailableTab = currentUser.permissions[0] || 'dashboard';
+      setTab(firstAvailableTab);
       
       // Actualizar UI según rol
       updateUIForRole();
@@ -1277,7 +1265,7 @@
 
   function setTab(name){
     // Verificar permisos
-    if (!hasPermission(name) && name !== 'dashboard') {
+    if (!hasPermission(name)) {
       alert('No tiene permisos para acceder a esta sección');
       return;
     }
@@ -1415,16 +1403,20 @@
   function renderVehiculos(){
     const q=byId('fltVehPlaca').value||''; 
     const est=byId('fltVehEstado').value;
-    const dueno=byId('fltVehDueno')?.value||'';
+    const dueno=byId('fltVehDueno')?.value?.toLowerCase()||'';
     
     const rows = Vehiculos
-      .filter(v=> (!q || (v.placa||'')===q) && (!est || v.estado===est) && (!dueno || (v.dueno||'hotel')===dueno))
+      .filter(v=> {
+        const matchPlaca = !q || (v.placa||'').includes(q);
+        const matchEstado = !est || v.estado===est;
+        const matchDueno = !dueno || (v.dueno||'').toLowerCase().includes(dueno);
+        return matchPlaca && matchEstado && matchDueno;
+      })
       .map(v=>{
         const estadoColor = v.estado === 'activo' ? 'ok' : (v.estado === 'mantenimiento' ? 'warnP' : 'dangerP');
         
         // Manejar campos que pueden no existir en datos antiguos
-        const duenoValue = v.dueno || 'hotel';
-        const duenoIcon = duenoValue === 'hotel' ? '🏨' : (duenoValue === 'arrendamiento' ? '📝' : '💼');
+        const duenoValue = v.dueno || 'Hotel';
         const aseguradoraValue = v.aseguradora || '-';
         
         return `<tr>
@@ -1432,7 +1424,7 @@
           <td>${v.marca} ${v.modelo}</td>
           <td>${v.anio}</td>
           <td>${v.tipo}</td>
-          <td>${duenoIcon} ${duenoValue}</td>
+          <td>👤 ${duenoValue}</td>
           <td>${aseguradoraValue}</td>
           <td><span class="pill ${estadoColor}">${v.estado}</span></td>
           <td>
@@ -1632,10 +1624,15 @@
     }
   }
   function fillVehSelects(){
-    const opts = Vehiculos.map(v=>`<option value="${v.id}">${v.placa}</option>`).join('');
+    const opts = '<option value="">Seleccione un vehículo...</option>' + 
+                 Vehiculos.map(v=>`<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`).join('');
     ['mVeh','cVeh','bVeh','pVeh','rVeh','fichaVehiculo','editMVeh','editCVeh'].forEach(id=> { 
       const el = byId(id); 
-      if(el) el.innerHTML = opts; 
+      if(el) {
+        const currentValue = el.value;
+        el.innerHTML = opts;
+        if (currentValue) el.value = currentValue;
+      }
     });
   }
   function fillPlacaFilters(){
@@ -1649,15 +1646,6 @@
       el.innerHTML = `<option value="">📋 ${baseText}</option>` + placas.map(p=>`<option value="${p}">${p}</option>`).join(''); 
       if(placas.includes(cur)) el.value=cur; 
     });
-    
-    // Llenar filtro de dueños
-    const duenos = ['hotel', 'arrendamiento', 'leasing'];
-    const fltDueno = byId('fltVehDueno');
-    if (fltDueno) {
-      const duenoIcons = {'hotel': '🏨', 'arrendamiento': '📝', 'leasing': '💼'};
-      fltDueno.innerHTML = '<option value="">👤 Todos los dueños</option>' + 
-        duenos.map(d => `<option value="${d}">${duenoIcons[d]} ${d.charAt(0).toUpperCase() + d.slice(1)}</option>`).join('');
-    }
   }
 
   // ====== FORM HANDLERS ======
@@ -1724,13 +1712,14 @@
   }
   
   function limpiarFormVehiculo() {
-    ['vPlaca', 'vMarca', 'vModelo', 'vAnio', 'vPoliza', 'vAseguradora', 'vColor'].forEach(id => {
+    ['vPlaca', 'vMarca', 'vModelo', 'vAnio', 'vDueno', 'vPoliza', 'vAseguradora', 'vColor'].forEach(id => {
       const el = byId(id);
       if (el) el.value = '';
     });
-    byId('vTipo').selectedIndex = 0;
-    byId('vEstado').selectedIndex = 0;
-    byId('vDueno').selectedIndex = 0;
+    const tipoEl = byId('vTipo');
+    const estadoEl = byId('vEstado');
+    if (tipoEl) tipoEl.selectedIndex = 0;
+    if (estadoEl) estadoEl.selectedIndex = 0;
   }
   async function guardarPoliza(e){
     if(e&&e.preventDefault) e.preventDefault();
@@ -1993,29 +1982,42 @@
   // ====== FUNCIONES DE EDICIÓN ======
   
   function editarVehiculo(id) {
+    console.log('Editando vehículo ID:', id);
+    
     if (!hasPermission('vehiculos')) {
       alert('Sin permisos para editar vehículos');
       return;
     }
     
     const vehiculo = Vehiculos.find(v => v.id == id);
-    if (!vehiculo) return;
+    console.log('Vehículo encontrado:', vehiculo);
+    
+    if (!vehiculo) {
+      alert('Vehículo no encontrado');
+      return;
+    }
     
     // Llenar el modal de edición
     byId('editVehId').value = vehiculo.id;
-    byId('editVPlaca').value = vehiculo.placa;
-    byId('editVMarca').value = vehiculo.marca;
-    byId('editVModelo').value = vehiculo.modelo;
-    byId('editVAnio').value = vehiculo.anio;
-    byId('editVTipo').value = vehiculo.tipo;
-    byId('editVEstado').value = vehiculo.estado;
-    byId('editVDueno').value = vehiculo.dueno || 'hotel';
+    byId('editVPlaca').value = vehiculo.placa || '';
+    byId('editVMarca').value = vehiculo.marca || '';
+    byId('editVModelo').value = vehiculo.modelo || '';
+    byId('editVAnio').value = vehiculo.anio || '';
+    byId('editVTipo').value = vehiculo.tipo || 'otro';
+    byId('editVEstado').value = vehiculo.estado || 'activo';
+    byId('editVDueno').value = vehiculo.dueno || '';
     byId('editVPoliza').value = vehiculo.numero_poliza || '';
     byId('editVAseguradora').value = vehiculo.aseguradora || '';
     byId('editVColor').value = vehiculo.color || '';
     
     // Mostrar modal
-    byId('modalEditVehiculo').classList.remove('hidden');
+    const modal = byId('modalEditVehiculo');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+    }
   }
   
   async function actualizarVehiculo(e) {
@@ -2050,13 +2052,20 @@
   }
   
   function editarMantenimiento(id) {
+    console.log('Editando mantenimiento ID:', id);
+    
     if (!hasPermission('mantenimientos')) {
       alert('Sin permisos para editar mantenimientos');
       return;
     }
     
     const mant = Mantenimientos.find(m => m.id == id);
-    if (!mant) return;
+    console.log('Mantenimiento encontrado:', mant);
+    
+    if (!mant) {
+      alert('Mantenimiento no encontrado');
+      return;
+    }
     
     fillVehSelects(); // Asegurar que los selects estén llenos
     
@@ -2069,7 +2078,13 @@
     byId('editMProx').value = mant.proximo_km || '';
     byId('editMObs').value = mant.observaciones || '';
     
-    byId('modalEditMantenimiento').classList.remove('hidden');
+    const modal = byId('modalEditMantenimiento');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+    }
   }
   
   async function actualizarMantenimiento(e) {
@@ -2100,13 +2115,20 @@
   }
   
   function editarCombustible(id) {
+    console.log('Editando combustible ID:', id);
+    
     if (!hasPermission('combustible')) {
       alert('Sin permisos para editar registros de combustible');
       return;
     }
     
     const fuel = Combustible.find(f => f.id == id);
-    if (!fuel) return;
+    console.log('Combustible encontrado:', fuel);
+    
+    if (!fuel) {
+      alert('Registro de combustible no encontrado');
+      return;
+    }
     
     fillVehSelects();
     
@@ -2118,7 +2140,13 @@
     byId('editCOdo').value = fuel.odometro_km;
     byId('editCProv').value = fuel.proveedor || '';
     
-    byId('modalEditCombustible').classList.remove('hidden');
+    const modal = byId('modalEditCombustible');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+    }
   }
   
   async function actualizarCombustible(e) {
