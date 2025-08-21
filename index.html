@@ -1486,7 +1486,7 @@
   function renderMant(){
     const q=byId('fltMantPlaca').value||''; const t=byId('fltMantTipo').value;
     const filtered = Mantenimientos
-      .filter(m=> (!t || m.tipo===t) && (!q || (vehById(m.vehiculo_id)?.placa||'')===q))
+      .filter(m=> (!t || m.tipo===t) && (!q || m.placa === q))
       .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha));
       
     const rows = filtered
@@ -1504,13 +1504,13 @@
         }[m.tipo] || '📝';
         
         return `<tr>
-          <td><strong>${vehById(m.vehiculo_id)?.placa||''}</strong></td>
+          <td><strong>${m.placa||''}</strong></td>
           <td>${m.fecha}</td>
-          <td>${tipoIcon} ${m.tipo.replace('_', ' ')}</td>
+          <td>${tipoIcon} ${(m.tipo||'').replace('_', ' ')}</td>
           <td><strong>${fmt(m.costo)}</strong></td>
-          <td>${m.km_actual??''}</td>
+          <td>${m.kilometraje??''}</td>
           <td>${m.proximo_km??''}</td>
-          <td>${m.observaciones||''}</td>
+          <td>${m.descripcion||''}</td>
           <td>
             <button class="action-btn edit-btn" onclick="editarMantenimiento('${m.id}')" title="Editar">✏️</button>
             ${currentUser && currentUser.role === 'admin' ? `<button class="action-btn delete-btn" onclick="eliminarMantenimiento('${m.id}')" title="Eliminar">🗑️</button>` : ''}
@@ -1528,7 +1528,7 @@
     const q=byId('fltFuelPlaca').value||'';
     const meses=byId('fltFuelMes')?.value;
     
-    let rec = Combustible.filter(f=> (!q || (vehById(f.vehiculo_id)?.placa||'')===q));
+    let rec = Combustible.filter(f=> (!q || f.placa === q));
     
     if (meses) {
       const fechaLimite = new Date();
@@ -1540,19 +1540,19 @@
     
     const rows = rec.map(f=>{
       const prev = Combustible
-        .filter(x=> Number(x.vehiculo_id)===Number(f.vehiculo_id) && new Date(x.fecha) < new Date(f.fecha))
+        .filter(x=> x.placa === f.placa && new Date(x.fecha) < new Date(f.fecha))
         .sort((a,b)=> new Date(b.fecha)-new Date(a.fecha))[0];
-      const dist = prev? (Number(f.odometro_km)-Number(prev.odometro_km)): null;
+      const dist = prev? (Number(f.kilometraje)-Number(prev.kilometraje)): null;
       const kmL = (dist && dist>0)? (dist/Number(f.litros)): null;
-      const costo = Number(f.litros)*Number(f.precio_por_litro);
+      const precioLitro = f.costo / f.litros;
       
       return `<tr>
-        <td><strong>${vehById(f.vehiculo_id)?.placa||''}</strong></td>
+        <td><strong>${f.placa||''}</strong></td>
         <td>${f.fecha}</td>
         <td>${f.litros}L</td>
-        <td>${fmt(f.precio_por_litro)}</td>
-        <td><strong>${fmt(costo)}</strong></td>
-        <td>${f.odometro_km} km</td>
+        <td>${fmt(precioLitro)}</td>
+        <td><strong>${fmt(f.costo)}</strong></td>
+        <td>${f.kilometraje||'-'} km</td>
         <td>${kmL ? '<span class="pill ' + (kmL > 10 ? 'ok' : kmL > 7 ? 'warnP' : 'dangerP') + '">' + kmL.toFixed(1) + '</span>' : '-'}</td>
         <td>
           <button class="action-btn edit-btn" onclick="editarCombustible('${f.id}')" title="Editar">✏️</button>
@@ -1601,8 +1601,8 @@
     const t=byId('fltRevTipo')?.value||'';
     
     const rows = (Revisiones||[])
-      .filter(r=> (!q || (vehById(r.vehiculo_id)?.placa||'')===q) && (!t || r.tipo===t))
-      .sort((a,b)=> new Date(b.fecha_hora) - new Date(a.fecha_hora))
+      .filter(r=> (!q || r.placa === q))
+      .sort((a,b)=> new Date(b.fecha) - new Date(a.fecha))
       .map(r=>{
         const tipoIcon = {
           'rutinaria': '🔄',
@@ -1630,11 +1630,11 @@
                            estadoGeneral === 'regular' ? 'warnP' : 'ok';
         
         return `<tr>
-          <td><strong>${vehById(r.vehiculo_id)?.placa||''}</strong></td>
-          <td>${tipoIcon} ${r.tipo.replace('_', ' ')}</td>
+          <td><strong>${r.placa||''}</strong></td>
+          <td>${tipoIcon} Revisión</td>
           <td>${r.inspector}</td>
-          <td>${fmtDT(r.fecha_hora)}</td>
-          <td>${r.km} km</td>
+          <td>${r.fecha}</td>
+          <td>-</td>
           <td><span class="pill ${estadoColor}">${estadoGeneral}</span></td>
           <td>
             <button class="action-btn" onclick="verDetalleRevision('${r.id}')" title="Ver detalle">👁️</button>
