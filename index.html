@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Sistema de Gestión Vehicular — Hotel</title>
 
   <!-- PWA (opcional) -->
@@ -36,14 +36,15 @@
     html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;color:var(--ink);background:var(--bg)}
     
     /* Login Screen */
-    .login-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
+    .login-screen{position:fixed;top:0;left:0;width:100%;height:100vh;height:calc(var(--vh, 1vh) * 100);background:linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
     .login-card{background:white;padding:40px;border-radius:20px;box-shadow:var(--shadow-lg);width:100%;max-width:400px;text-align:center}
     .login-title{font-size:24px;font-weight:700;margin-bottom:8px;color:var(--ink)}
     .login-subtitle{color:var(--muted);margin-bottom:32px}
     .login-form{display:flex;flex-direction:column;gap:20px}
-    .role-card{border:2px solid var(--line);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s}
+    .role-card{border:2px solid var(--line);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;min-height:80px;display:flex;flex-direction:column;justify-content:center}
     .role-card:hover{border-color:var(--primary);transform:translateY(-2px)}
-    .role-card.selected{border-color:var(--primary);background:rgba(30, 64, 175, 0.05)}
+    .role-card:active{transform:scale(0.98)}
+    .role-card.selected{border-color:var(--primary);background:rgba(30, 64, 175, 0.05);box-shadow:0 0 0 2px rgba(30, 64, 175, 0.2)}
     .role-title{font-weight:600;margin-bottom:4px}
     .role-desc{font-size:14px;color:var(--muted)}
     .password-field{margin-top:20px}
@@ -65,12 +66,33 @@
     .logout-btn{background:var(--danger);color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px}
     .logout-btn:hover{background:#dc2626}
     
-    input, select{width:100%;padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:14px;transition:border-color 0.2s, box-shadow 0.2s}
+    input, select{width:100%;padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:14px;transition:border-color 0.2s, box-shadow 0.2s;-webkit-appearance:none;-moz-appearance:none;appearance:none}
     input:focus, select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(30, 64, 175, 0.1)}
     
-    button{border:0;border-radius:10px;padding:12px 20px;background:var(--primary);color:#fff;cursor:pointer;font-weight:600;font-size:14px;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px}
+    /* Mejoras específicas para móvil */
+    @media (max-width: 768px) {
+      input, select, textarea {
+        font-size:16px !important; /* Previene zoom en iOS */
+        padding:14px 16px;
+        border-width:2px;
+        border-radius:8px;
+      }
+      input[type="date"], input[type="datetime-local"], input[type="time"] {
+        font-size:16px !important;
+        min-height:48px;
+      }
+      select {
+        background-image:url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23666" d="m0 1h4l-2 2z"/></svg>');
+        background-repeat:no-repeat;
+        background-position:right 12px center;
+        background-size:12px;
+        padding-right:40px;
+      }
+    }
+    
+    button{border:0;border-radius:10px;padding:12px 20px;background:var(--primary);color:#fff;cursor:pointer;font-weight:600;font-size:14px;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;user-select:none;-webkit-tap-highlight-color:transparent;min-height:40px}
     button:hover{background:var(--primary-hover);transform:translateY(-1px);box-shadow:var(--shadow)}
-    button:active{transform:translateY(0)}
+    button:active{transform:scale(0.95);background:var(--primary-hover)}
     button.secondary{background:#f8fafc;color:var(--ink);border:1px solid var(--line)}
     .btn-small{padding:6px 10px;font-size:12px;margin:2px;min-width:auto}
     .btn-small.danger{background:var(--danger)}
@@ -81,10 +103,11 @@
     button.success{background:var(--success)}
     button.success:hover{background:#059669}
     
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:16px 24px;background:rgba(255,255,255,0.5);backdrop-filter:blur(10px)}
-    .tab{padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:16px 24px;background:rgba(255,255,255,0.5);backdrop-filter:blur(10px);position:relative}
+    .tab{padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;user-select:none;-webkit-tap-highlight-color:transparent}
     .tab:hover{background:var(--primary);color:#fff;border-color:transparent;transform:translateY(-1px)}
     .tab.active{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow)}
+    .tab:active{transform:scale(0.95)} /* Feedback táctil */
     
     .container{max-width:1400px;margin:0 auto;padding:24px}
     .grid{display:grid;gap:20px}
@@ -95,10 +118,33 @@
     .big{font-size:32px;font-weight:800;color:var(--primary)}
     .kpi-icon{font-size:24px;margin-bottom:8px;opacity:0.7}
     
-    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;min-width:600px}
     th,td{padding:12px 16px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
-    th{color:var(--muted);font-weight:600;background:#f8fafc;text-transform:uppercase;letter-spacing:0.5px;font-size:12px}
+    th{color:var(--muted);font-weight:600;background:#f8fafc;text-transform:uppercase;letter-spacing:0.5px;font-size:12px;position:sticky;top:0;z-index:2}
     tr:hover{background:#f8fafc}
+    .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;box-shadow:var(--shadow);position:relative}
+    .table-container::-webkit-scrollbar{height:8px}
+    .table-container::-webkit-scrollbar-track{background:#f1f1f1;border-radius:4px}
+    .table-container::-webkit-scrollbar-thumb{background:#c1c1c1;border-radius:4px}
+    .table-container::-webkit-scrollbar-thumb:hover{background:#a1a1a1}
+    
+    /* Indicador de scroll para móvil */
+    @media (max-width: 768px) {
+      .table-container::after{
+        content:'← Deslizar para ver más →';
+        position:absolute;
+        bottom:0;
+        right:0;
+        background:rgba(0,0,0,0.7);
+        color:white;
+        padding:4px 8px;
+        font-size:10px;
+        border-radius:4px 0 0 0;
+        pointer-events:none;
+        opacity:0.8;
+      }
+      .table-container::-webkit-scrollbar{height:6px}
+    }
     
     .row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
     .row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
@@ -137,8 +183,23 @@
     .export-btn:hover{background:#059669}
     
     /* Modal styles */
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer}
-    .modal-content{background:white;padding:24px;border-radius:16px;max-width:800px;width:90%;max-height:90%;overflow-y:auto;cursor:default}
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer;padding:20px;box-sizing:border-box}
+    .modal-content{background:white;padding:24px;border-radius:16px;max-width:800px;width:90%;max-height:90%;overflow-y:auto;cursor:default;position:relative}
+    
+    @media (max-width: 768px) {
+      .modal{
+        align-items:flex-start;
+        padding:10px;
+      }
+      .modal-content{
+        width:100%;
+        max-width:100%;
+        margin-top:20px;
+        border-radius:12px;
+        padding:16px;
+        max-height:calc(100vh - 40px);
+      }
+    }
     .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
     .modal-title{font-size:20px;font-weight:700;color:var(--ink)}
     .close-btn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all 0.2s}
@@ -157,12 +218,256 @@
     .report-date{color:var(--muted);font-size:14px}
     
     @media (max-width: 768px) {
+      /* Layout ajustes */
       .row, .row-3, .form-row, .form-row-3 { grid-template-columns: 1fr; }
       .kpis { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-      .topbar { flex-direction: column; gap: 16px; }
-      .search { max-width: none; }
-      .tabs { padding: 12px 16px; }
-      .container { padding: 16px; }
+      .container { padding: 12px 8px; }
+      
+      /* Header y navegación móvil */
+      .topbar { 
+        flex-direction: column; 
+        gap: 12px; 
+        padding: 12px 16px;
+      }
+      .brand { 
+        font-size: 16px;
+        text-align: center;
+      }
+      .search { 
+        max-width: none; 
+        order: 1;
+      }
+      .user-info { 
+        flex-direction: column; 
+        gap: 8px; 
+        font-size: 12px;
+        text-align: center;
+      }
+      
+      /* Tabs más grandes para móvil */
+      .tabs { 
+        padding: 8px 12px; 
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        position: relative;
+      }
+      .tabs::-webkit-scrollbar {
+        height: 4px;
+      }
+      .tabs::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+        border-radius: 2px;
+      }
+      .tabs::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 2px;
+      }
+      .tab { 
+        padding: 12px 16px; 
+        font-size: 14px;
+        white-space: nowrap;
+        min-width: fit-content;
+        flex-shrink: 0;
+      }
+      
+      /* Formularios móviles */
+      input, select, textarea { 
+        font-size: 16px; /* Previene zoom en iOS */
+        padding: 14px 16px;
+      }
+      button { 
+        padding: 14px 20px; 
+        font-size: 16px;
+        min-height: 48px; /* Mejor área táctil */
+      }
+      .btn-small {
+        padding: 10px 14px;
+        font-size: 14px;
+        min-height: 40px;
+      }
+      
+      /* Cards más compactas */
+      .card { 
+        padding: 16px; 
+        margin-bottom: 12px;
+      }
+      .card h3 { 
+        font-size: 14px; 
+        margin-bottom: 12px;
+      }
+      
+      /* Tablas responsivas */
+      table { 
+        font-size: 12px; 
+        overflow-x: auto;
+        display: block;
+        white-space: nowrap;
+      }
+      thead, tbody, tr { 
+        display: table; 
+        width: 100%;
+        table-layout: fixed;
+      }
+      th, td { 
+        padding: 8px 4px; 
+        font-size: 11px;
+      }
+      
+      /* KPIs más compactos */
+      .big { 
+        font-size: 24px; 
+      }
+      .kpi-icon { 
+        font-size: 20px; 
+      }
+      
+      /* Modales móviles */
+      .modal-content { 
+        width: 95%; 
+        max-width: 95%; 
+        margin: 20px auto;
+        max-height: 85vh;
+        padding: 16px;
+      }
+      .modal-header {
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+      }
+      .modal-title { 
+        font-size: 18px; 
+      }
+      
+      /* Botones flotantes */
+      .sticky-actions { 
+        right: 12px; 
+        bottom: 12px; 
+        gap: 8px;
+      }
+      .sticky-actions button { 
+        font-size: 14px; 
+        padding: 12px 16px;
+      }
+      
+      /* Login móvil */
+      .login-card { 
+        padding: 24px; 
+        margin: 20px;
+        width: calc(100% - 40px);
+      }
+      .login-title { 
+        font-size: 20px; 
+      }
+      .role-card { 
+        padding: 16px; 
+        margin-bottom: 12px;
+      }
+      
+      /* Alertas y pills más pequeños */
+      .pill { 
+        font-size: 10px; 
+        padding: 4px 8px;
+        margin: 1px;
+      }
+      
+      /* Ajustes para campos específicos */
+      .form-group label { 
+        font-size: 14px; 
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+      
+      /* Mejoras para filtros */
+      .form-row {
+        gap: 12px;
+      }
+      
+      /* Botones más accesibles */
+      .export-btn { 
+        font-size: 12px; 
+        padding: 8px 12px;
+        min-height: 40px;
+      }
+      
+      /* Mejoras para ficha técnica */
+      #fichaTecnicaContent .card { 
+        margin-bottom: 8px; 
+      }
+      
+      /* Email config móvil */
+      .card[data-roles="admin"] { 
+        padding: 12px; 
+      }
+      .card[data-roles="admin"] h3 { 
+        font-size: 16px; 
+      }
+      
+      /* Mejoras específicas para dashboard */
+      .kpis .card {
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+      }
+      
+      /* Mejor separación visual */
+      .card + .card {
+        margin-top: 12px;
+      }
+      
+      /* Acciones más grandes */
+      .action-btn {
+        min-height: 36px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      
+      /* Mejora para elementos de búsqueda */
+      .search input {
+        font-size: 14px;
+        padding: 10px 12px;
+      }
+      
+      /* Tags y elementos informativos */
+      .tag {
+        font-size: 11px;
+        padding: 3px 8px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      /* Pantallas muy pequeñas */
+      .container { 
+        padding: 8px 4px; 
+      }
+      .topbar { 
+        padding: 8px 12px; 
+      }
+      .brand { 
+        font-size: 14px; 
+      }
+      .big { 
+        font-size: 20px; 
+      }
+      .modal-content { 
+        width: 98%; 
+        padding: 12px;
+        margin: 10px auto;
+      }
+      table { 
+        font-size: 10px; 
+      }
+      th, td { 
+        padding: 6px 2px; 
+      }
+      .card { 
+        padding: 12px; 
+      }
+      input, select, textarea, button { 
+        font-size: 14px; 
+      }
     }
   </style>
 
@@ -313,7 +618,9 @@
           <strong>⚠️ Alertas y Vencimientos</strong>
           <input id="fltAlertPlaca" type="text" placeholder="Filtrar por placa…" oninput="renderAlertas()"/>
         </div>
-        <table><thead><tr><th>Tipo</th><th>Placa</th><th>Días/Km</th><th>Estado</th></tr></thead><tbody id="tblAlertas"></tbody></table>
+        <div class="table-container">
+          <table><thead><tr><th>Tipo</th><th>Placa</th><th>Días/Km</th><th>Estado</th></tr></thead><tbody id="tblAlertas"></tbody></table>
+        </div>
       </div>
       <div class="card" style="margin-top:16px">
         <details>
@@ -1520,7 +1827,23 @@
       card.classList.remove('selected');
     });
     document.querySelector(`[data-role="${role}"]`).classList.add('selected');
-    document.getElementById('loginPassword').focus();
+    
+    // Enfocar campo de contraseña con delay para móvil
+    setTimeout(() => {
+      const passwordField = document.getElementById('loginPassword');
+      if (passwordField) {
+        passwordField.focus();
+        
+        // En móvil, scroll al campo de contraseña
+        if (window.innerWidth <= 768) {
+          passwordField.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }
+    }, 100);
+    
     document.querySelector('.login-btn').disabled = false;
   }
   
@@ -1642,10 +1965,39 @@
     try{ localStorage.setItem('tab', name); }catch{}
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     const btn = document.querySelector(`.tab[data-tab="${name}"]`);
-    if(btn) btn.classList.add('active');
+    if(btn) {
+      btn.classList.add('active');
+      
+      // Scroll automático a la pestaña activa en móvil
+      if (window.innerWidth <= 768) {
+        const tabsContainer = document.querySelector('.tabs');
+        if (tabsContainer) {
+          const tabRect = btn.getBoundingClientRect();
+          const containerRect = tabsContainer.getBoundingClientRect();
+          
+          if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
+            btn.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'nearest', 
+              inline: 'center' 
+            });
+          }
+        }
+      }
+    }
+    
     document.querySelectorAll('.tabpanel').forEach(s=>s.classList.add('hidden'));
     const sec = byId('tab-'+name);
-    if(sec) sec.classList.remove('hidden');
+    if(sec) {
+      sec.classList.remove('hidden');
+      
+      // Scroll suave al inicio de la sección en móvil
+      if (window.innerWidth <= 768) {
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 100);
+      }
+    }
     render();
   }
 
@@ -5144,7 +5496,69 @@
     if (providerSelect) {
       providerSelect.addEventListener('change', toggleCustomServerFields);
     }
+    
+    // Mejoras específicas para móvil
+    initMobileEnhancements();
   });
+  
+  // ===== MEJORAS PARA MÓVIL =====
+  function initMobileEnhancements() {
+    // Detectar si es móvil
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+      // Prevenir zoom en inputs doble-tap
+      document.addEventListener('touchend', function(e) {
+        const now = new Date().getTime();
+        if (now - lastTouchEnd <= 300) {
+          e.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, false);
+      
+      // Mejorar scroll en tabs
+      const tabsContainer = document.querySelector('.tabs');
+      if (tabsContainer) {
+        // Agregar indicador de scroll sutil
+        tabsContainer.addEventListener('scroll', function() {
+          if (this.scrollLeft > 0) {
+            this.classList.add('scrolled');
+          } else {
+            this.classList.remove('scrolled');
+          }
+        });
+      }
+      
+      // Optimizar tablas para móvil
+      const tables = document.querySelectorAll('table');
+      tables.forEach(table => {
+        if (!table.closest('.table-container')) {
+          const container = document.createElement('div');
+          container.className = 'table-container';
+          table.parentNode.insertBefore(container, table);
+          container.appendChild(table);
+        }
+      });
+      
+      // Mejorar experiencia táctil para cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.style.cursor = 'default';
+      });
+    }
+    
+    // Ajustar viewport height para móvil (problema común con iOS Safari)
+    function updateVH() {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+    
+    updateVH();
+    window.addEventListener('resize', updateVH);
+    window.addEventListener('orientationchange', updateVH);
+  }
+  
+  let lastTouchEnd = 0;
   
   </script>
 </body>

@@ -133,3 +133,7 @@ INFO:     Started server process [39979]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+ERROR:main:Error enviando email: (534, b'5.7.9 Please log in with your web browser and then try again. For more\n5.7.9 information, go to\n5.7.9  https://support.google.com/mail/?p=WebLoginRequired d9443c01a7336-24636064715sm1140365ad.29 - gsmtp')
+ERROR:main:Error enviando email: (535, b'5.7.139 Authentication unsuccessful, the user credentials were incorrect. [MW4P223CA0021.NAMP223.PROD.OUTLOOK.COM 2025-08-21T19:49:10.999Z 08DDE069C9AF3C87]')
+INFO:main:Email enviado exitosamente a contabilidad2@arenalmanoa.com
+INFO:main:Email enviado exitosamente a contabilidad2@arenalmanoa.com
