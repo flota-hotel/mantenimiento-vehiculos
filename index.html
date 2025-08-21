@@ -1603,6 +1603,16 @@
       }
     });
     
+    // Mostrar/ocultar contenido (cards, divs) según permisos
+    document.querySelectorAll('[data-roles]:not(.tab):not(button)').forEach(element => {
+      const roles = element.dataset.roles.split(',');
+      if (roles.includes(currentUser.role)) {
+        element.style.display = 'block';
+      } else {
+        element.style.display = 'none';
+      }
+    });
+    
     // Redirigir a dashboard si la tab actual no está permitida
     const currentTab = document.querySelector('.tab.active');
     if (currentTab && currentTab.dataset.roles && !currentTab.dataset.roles.split(',').includes(currentUser.role)) {
@@ -1725,6 +1735,15 @@
       fillVehSelects();
       fillPlacaFilters();
       render();
+      
+      // Cargar configuración de email si es administrador
+      if (currentUser && currentUser.role === 'admin') {
+        setTimeout(() => {
+          if (typeof cargarConfigEmail === 'function') {
+            cargarConfigEmail();
+          }
+        }, 1000);
+      }
     }catch(e){
       alert('Error cargando datos: '+e.message);
       console.error(e);
@@ -4933,7 +4952,7 @@
   
   async function cargarConfigEmail() {
     try {
-      const response = await fetch(`${API_URL}/config/email`);
+      const response = await fetch(`${API}/config/email`);
       const data = await response.json();
       
       if (data.success) {
@@ -5020,7 +5039,7 @@
         return;
       }
       
-      const response = await fetch(`${API_URL}/config/email`, {
+      const response = await fetch(`${API}/config/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config)
@@ -5060,7 +5079,7 @@
       const statusEl = byId('alertaStatus');
       if (statusEl) statusEl.textContent = '🔄 Verificando alertas...';
       
-      const response = await fetch(`${API_URL}/alertas/verificar`);
+      const response = await fetch(`${API}/alertas/verificar`);
       const data = await response.json();
       
       if (data.success) {
@@ -5090,7 +5109,7 @@
       const statusEl = byId('alertaStatus');
       if (statusEl) statusEl.textContent = '📧 Enviando email de prueba...';
       
-      const response = await fetch(`${API_URL}/config/email/test`, {
+      const response = await fetch(`${API}/config/email/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
