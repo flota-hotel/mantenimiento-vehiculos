@@ -2280,8 +2280,8 @@
     
     if (confirm(`¿Está seguro de eliminar el vehículo ${vehiculo.placa}?`)) {
       try {
-        await apiPost('Vehiculos', {id: parseInt(id)}, 'delete');
-        Vehiculos = await apiGet('Vehiculos');
+        await apiDelete('vehiculos', vehiculo.placa);
+        Vehiculos = await apiGet('vehiculos');
         fillVehSelects();
         fillPlacaFilters();
         renderVehiculos();
@@ -2300,8 +2300,8 @@
     
     if (confirm('¿Está seguro de eliminar este registro de mantenimiento?')) {
       try {
-        await apiPost('Mantenimientos', {id: parseInt(id)}, 'delete');
-        Mantenimientos = await apiGet('Mantenimientos');
+        await apiDelete('mantenimientos', id);
+        Mantenimientos = await apiGet('mantenimientos');
         renderMant();
         renderKpis();
         alert('✅ Registro eliminado exitosamente');
@@ -2319,11 +2319,30 @@
     
     if (confirm('¿Está seguro de eliminar este registro de combustible?')) {
       try {
-        await apiPost('Combustible', {id: parseInt(id)}, 'delete');
-        Combustible = await apiGet('Combustible');
+        await apiDelete('combustible', id);
+        Combustible = await apiGet('combustible');
         renderFuel();
         renderKpis();
         alert('✅ Registro eliminado exitosamente');
+      } catch (e) {
+        alert('❌ Error: ' + e.message);
+      }
+    }
+  }
+
+  async function eliminarRevision(id) {
+    if (currentUser.role !== 'admin') {
+      alert('Solo el administrador puede eliminar registros');
+      return;
+    }
+    
+    if (confirm('¿Está seguro de eliminar esta revisión?')) {
+      try {
+        await apiDelete('revisiones', id);
+        Revisiones = await apiGet('revisiones');
+        renderRevisiones();
+        renderKpis();
+        alert('✅ Revisión eliminada exitosamente');
       } catch (e) {
         alert('❌ Error: ' + e.message);
       }
