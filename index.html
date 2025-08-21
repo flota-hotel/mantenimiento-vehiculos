@@ -1126,8 +1126,8 @@
   </div> <!-- Cierre mainApp -->
 
   <script>
-  // ====== API: integrada con tu URL ======
-  const API = "https://script.google.com/macros/s/AKfycbw-rp2SfA6Exw1Yl6mSm7skgnnyhQ18eTHAB-asVsr1vMagT49N0haWR5KZ-YUGZD_a/exec";
+  // ====== API: Backend Python FastAPI ======
+  const API = "https://8000-i2csqmmo4txbkyhmexll8-6532622b.e2b.dev";
   const API_KEY = ""; // si activas API key, colócala aquí
 
   // ====== ESTADO ======
@@ -1280,47 +1280,73 @@
     render();
   }
 
-  // ====== API CLIENT ======
-  async function apiGet(table, q=""){
-    const ts = Date.now();
-    const url = `${API}?table=${encodeURIComponent(table)}&q=${encodeURIComponent(q)}${API_KEY?`&api_key=${API_KEY}`:''}&_=${ts}`;
-    const r = await fetch(url, { cache: 'no-store' });
+  // ====== API CLIENT PARA FASTAPI ======
+  async function apiGet(table){
+    const endpoint = table.toLowerCase();
+    const url = `${API}/${endpoint}`;
+    const r = await fetch(url, { 
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }
+    });
     const j = await r.json();
-    if(!j.ok) throw new Error(j.error||'GET error');
+    if(!j.success) throw new Error(j.error||'GET error');
     return j.data;
   }
+  
   async function apiPost(table, data, action=null){
-    const body = { table, data };
-    if(action) body.action = action;
-    if(API_KEY) body.api_key = API_KEY;
-    const payload = 'payload=' + encodeURIComponent(JSON.stringify(body));
-    const r = await fetch(API, {
+    const endpoint = table.toLowerCase();
+    const url = `${API}/${endpoint}`;
+    const r = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: payload,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
       cache: 'no-store'
     });
     const j = await r.json();
-    if(!j.ok) throw new Error(j.error||'POST error');
-    return j.data?.inserted || j.data;
+    if(!j.success) throw new Error(j.error||'POST error');
+    return j;
+  }
+  
+  async function apiPut(table, id, data){
+    const endpoint = table.toLowerCase();
+    const url = `${API}/${endpoint}/${id}`;
+    const r = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+      cache: 'no-store'
+    });
+    const j = await r.json();
+    if(!j.success) throw new Error(j.error||'PUT error');
+    return j;
+  }
+  
+  async function apiDelete(table, id){
+    const endpoint = table.toLowerCase();
+    const url = `${API}/${endpoint}/${id}`;
+    const r = await fetch(url, {
+      method: 'DELETE',
+      cache: 'no-store'
+    });
+    const j = await r.json();
+    if(!j.success) throw new Error(j.error||'DELETE error');
+    return j;
   }
 
   // ====== CARGA INICIAL ======
   async function loadAll(){
     try{
-      // Cargar tablas principales que ya existen
-      [Vehiculos, Polizas, RTV, Mantenimientos, Combustible, Bitacora, Alertas] = await Promise.all([
-        apiGet('Vehiculos'), apiGet('Polizas'), apiGet('RTV'), apiGet('Mantenimientos'),
-        apiGet('Combustible'), apiGet('Bitacora'), apiGet('Alertas')
-      ]);
+      // Cargar datos del nuevo backend
+      Vehiculos = await apiGet('vehiculos');
+      Mantenimientos = await apiGet('mantenimientos');
+      Combustible = await apiGet('combustible');
+      Revisiones = await apiGet('revisiones');
+      Polizas = await apiGet('polizas');
       
-      // Intentar cargar Revisiones, si no existe crear tabla vacía
-      try {
-        Revisiones = await apiGet('Revisiones');
-      } catch(e) {
-        console.log('Tabla Revisiones no existe, creando array vacío');
-        Revisiones = [];
-      }
+      // Inicializar arrays vacíos para compatibilidad con el frontend
+      RTV = [];
+      Bitacora = [];
+      Alertas = [];
       
       fillVehSelects();
       fillPlacaFilters();
@@ -1654,28 +1680,24 @@
     if(!hasPermission('vehiculos')) return alert('Sin permisos para crear vehículos');
     
     try{
-      const anio=Number(byId('vAnio').value); 
+      const ano=Number(byId('vAnio').value); 
       const year=new Date().getFullYear();
-      if(anio<1990||anio>year+1) return alert('Año fuera de rango');
+      if(ano<1990||ano>year+1) return alert('Año fuera de rango');
       
-      // Objeto base con campos originales
+      // Objeto para FastAPI backend
       const obj = { 
         placa: (byId('vPlaca').value||'').trim().toUpperCase(), 
         marca: byId('vMarca').value||'', 
         modelo: byId('vModelo').value||'', 
-        anio, 
-        tipo: byId('vTipo').value||'otro', 
-        estado: byId('vEstado').value||'activo'
+        ano: ano,
+        color: byId('vColor').value||'',
+        propietario: byId('vDueno').value||'hotel',
+        poliza: byId('vPoliza').value||'',
+        seguro: byId('vAseguradora').value||''
       };
       
-      // Agregar campos nuevos solo si existen en el formulario
-      if(byId('vDueno')) obj.dueno = byId('vDueno').value||'hotel';
-      if(byId('vPoliza')) obj.numero_poliza = byId('vPoliza').value||'';
-      if(byId('vAseguradora')) obj.aseguradora = byId('vAseguradora').value||'';
-      if(byId('vColor')) obj.color = byId('vColor').value||'';
-      
-      await apiPost('Vehiculos', obj);
-      Vehiculos = await apiGet('Vehiculos');
+      await apiPost('vehiculos', obj);
+      Vehiculos = await apiGet('vehiculos');
       fillVehSelects(); 
       fillPlacaFilters(); 
       renderVehiculos(); 
@@ -1683,31 +1705,7 @@
       limpiarFormVehiculo();
       alert('✅ Vehículo creado exitosamente');
     }catch(e2){ 
-      // Si el error es por campos nuevos, intentar solo con campos originales
-      if(e2.message.includes('Invalid column') || e2.message.includes('columna')) {
-        try {
-          const objBasico = { 
-            placa: (byId('vPlaca').value||'').trim().toUpperCase(), 
-            marca: byId('vMarca').value||'', 
-            modelo: byId('vModelo').value||'', 
-            anio: Number(byId('vAnio').value), 
-            tipo: byId('vTipo').value||'otro', 
-            estado: byId('vEstado').value||'activo'
-          };
-          await apiPost('Vehiculos', objBasico);
-          Vehiculos = await apiGet('Vehiculos');
-          fillVehSelects(); 
-          fillPlacaFilters(); 
-          renderVehiculos(); 
-          renderKpis();
-          limpiarFormVehiculo();
-          alert('✅ Vehículo creado exitosamente (algunos campos nuevos requieren configuración en Google Sheets)');
-        } catch(e3) {
-          alert('❌ Error: '+e3.message);
-        }
-      } else {
-        alert('❌ Error: '+e2.message); 
-      }
+      alert('❌ Error: '+e2.message); 
     }
   }
   
@@ -1749,19 +1747,23 @@
     e.preventDefault();
     if(!hasPermission('mantenimientos')) return alert('Sin permisos para crear mantenimientos');
     
+    // Obtener placa del vehículo seleccionado
+    const vehiculoId = byId('mVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    const placa = vehiculo ? vehiculo.placa : '';
+    
     const obj = { 
-      vehiculo_id: Number(byId('mVeh').value), 
-      tipo: byId('mTipo').value, 
       fecha: byId('mFecha').value, 
+      placa: placa,
+      tipo: byId('mTipo').value,
+      descripcion: byId('mObs').value || byId('mTipo').value,
       costo: Number(byId('mCosto').value||0), 
-      km_actual: byId('mKm').value? Number(byId('mKm').value): '', 
-      proximo_km: byId('mProx').value? Number(byId('mProx').value): '', 
-      observaciones: byId('mObs').value || '' 
+      kilometraje: byId('mKm').value? Number(byId('mKm').value): null
     };
     
     try{ 
-      await apiPost('Mantenimientos', obj); 
-      Mantenimientos = await apiGet('Mantenimientos'); 
+      await apiPost('mantenimientos', obj); 
+      Mantenimientos = await apiGet('mantenimientos'); 
       renderMant(); 
       renderKpis(); 
       refreshHints(); 
@@ -1775,22 +1777,25 @@
     e.preventDefault();
     if(!hasPermission('combustible')) return alert('Sin permisos para registrar combustible');
     
+    // Obtener placa del vehículo seleccionado
+    const vehiculoId = byId('cVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    const placa = vehiculo ? vehiculo.placa : '';
+    
     const obj = { 
-      vehiculo_id: Number(byId('cVeh').value), 
       fecha: byId('cFecha').value, 
+      placa: placa,
       litros: Number(byId('cLitros').value), 
-      precio_por_litro: Number(byId('cPPL').value), 
-      odometro_km: Number(byId('cOdo').value), 
-      proveedor: byId('cProv').value||'' 
+      costo: Number(byId('cPPL').value) * Number(byId('cLitros').value), 
+      kilometraje: Number(byId('cOdo').value), 
+      estacion: byId('cProv').value||'' 
     };
     
     try{ 
-      await apiPost('Combustible', obj); 
-      Combustible = await apiGet('Combustible'); 
-      Alertas = await apiGet('Alertas'); 
+      await apiPost('combustible', obj); 
+      Combustible = await apiGet('combustible'); 
       renderFuel(); 
       renderKpis(); 
-      renderAlertas(); 
       refreshHints(); 
       alert('✅ Carga de combustible guardada exitosamente'); 
     }catch(e2){ 
@@ -1815,65 +1820,62 @@
     e.preventDefault();
     if(!hasPermission('revision')) return alert('Sin permisos para crear revisiones');
     
+    // Obtener placa del vehículo seleccionado
+    const vehiculoId = byId('rVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    const placa = vehiculo ? vehiculo.placa : '';
+    
+    // Evaluar estados generales
+    const estadoMotor = evaluarEstadoGeneral(['rAceiteMotor', 'rCoolant', 'rBateria']);
+    const estadoFrenas = evaluarEstadoGeneral(['rLiquidoFrenos', 'rSistemaFrenos']);
+    const estadoLuces = evaluarEstadoLuces();
+    const estadoLlantas = byId('rEstadoLlantas').value || 'bueno';
+    const estadoCarroceria = byId('rEstadoCarroceria').value || 'bueno';
+    
+    // Determinar aprobación general
+    const aprobado = [estadoMotor, estadoFrenas, estadoLuces, estadoLlantas, estadoCarroceria].every(estado => estado !== 'malo');
+    
     const obj = {
-      vehiculo_id: Number(byId('rVeh').value),
-      tipo: byId('rTipo').value,
-      fecha_hora: byId('rFecha').value,
-      inspector: byId('rInspector').value,
-      km: Number(byId('rKm').value),
-      nivel_combustible: byId('rNivelComb').value,
-      
-      // Líquidos
-      aceite_motor: byId('rAceiteMotor').value,
-      liquido_frenos: byId('rLiquidoFrenos').value,
-      coolant: byId('rCoolant').value,
-      limpiaparabrisas: byId('rLimpiaparabrisas').value,
-      aceite_transmision: byId('rAceiteTransmision').value,
-      liquido_direccion: byId('rLiquidoDireccion').value,
-      
-      // Mecánica
-      estado_llantas: byId('rEstadoLlantas').value,
-      presion_llantas: byId('rPresionLlantas').value,
-      sistema_frenos: byId('rSistemaFrenos').value,
-      bateria: byId('rBateria').value,
-      
-      // Eléctrico
-      luces_delanteras: byId('rLucesDelanteras').checked,
-      luces_traseras: byId('rLucesTraseras').checked,
-      luces_direccionales: byId('rLucesDireccionales').checked,
-      luces_freno: byId('rLucesFreno').checked,
-      luces_reversa: byId('rLucesReversa').checked,
-      espejos_laterales: byId('rEspejosLaterales').checked,
-      espejo_retrovisor: byId('rEspejoRetrovisor').checked,
-      limpiaparabrisas_func: byId('rLimpiaparabrisas').checked,
-      cinturones: byId('rCinturones').checked,
-      bocina: byId('rBocina').checked,
-      
-      // Estado general
-      estado_carroceria: byId('rEstadoCarroceria').value,
-      estado_interior: byId('rEstadoInterior').value,
-      observaciones: byId('rObservaciones').value || ''
+      fecha: byId('rFecha').value,
+      placa: placa,
+      inspector: byId('rInspector').value || 'Inspector',
+      estado_motor: estadoMotor,
+      estado_frenos: estadoFrenas,
+      estado_luces: estadoLuces,
+      estado_llantas: estadoLlantas,
+      estado_carroceria: estadoCarroceria,
+      observaciones: byId('rObservaciones').value || '',
+      aprobado: aprobado
     };
     
     try {
-      await apiPost('Revisiones', obj);
-      try {
-        Revisiones = await apiGet('Revisiones');
-      } catch(e3) {
-        // Si falla obtener después del post, mantener el array actual
-        console.log('No se pudo obtener las revisiones después del guardado');
-      }
+      await apiPost('revisiones', obj);
+      Revisiones = await apiGet('revisiones');
       renderRevisiones();
       limpiarFormRevision();
       alert('✅ Revisión guardada exitosamente');
     } catch(e2) {
-      // Verificar si el error es por tabla no existente
-      if (e2.message.includes('Tabla inválida') || e2.message.includes('table')) {
-        alert('⚠️ La funcionalidad de Revisiones requiere configuración adicional en Google Sheets. Por ahora puedes usar las demás funciones del sistema.');
-      } else {
-        alert('❌ Error: ' + e2.message);
-      }
+      alert('❌ Error: ' + e2.message);
     }
+  }
+  
+  // Función auxiliar para evaluar estado general
+  function evaluarEstadoGeneral(fieldIds) {
+    const estados = fieldIds.map(id => byId(id)?.value || 'bueno');
+    if (estados.some(e => e === 'malo')) return 'malo';
+    if (estados.some(e => e === 'regular')) return 'regular';
+    return 'bueno';
+  }
+  
+  // Función auxiliar para evaluar estado de luces
+  function evaluarEstadoLuces() {
+    const luces = ['rLucesDelanteras', 'rLucesTraseras', 'rLucesDireccionales', 'rLucesFreno'];
+    const funcionan = luces.map(id => byId(id)?.checked || false);
+    const porcentajeFuncionando = funcionan.filter(Boolean).length / funcionan.length;
+    
+    if (porcentajeFuncionando >= 0.8) return 'bueno';
+    if (porcentajeFuncionando >= 0.5) return 'regular';
+    return 'malo';
   }
   
   function limpiarFormRevision() {
