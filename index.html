@@ -476,7 +476,7 @@
             <div><button class="secondary" onclick="guardarPoliza(event)">Guardar póliza</button></div>
           </div>
           <div>
-            <div class="row"><div><label>Vehículo</label><select id="rVeh"></select></div><div><label>N° Cita</label><input id="rCita" type="text"/></div></div>
+            <div class="row"><div><label>Vehículo</label><select id="rtvVeh"></select></div><div><label>N° Cita</label><input id="rCita" type="text"/></div></div>
             <div class="row"><div><label>Vence (RTV)</label><input id="rVence" type="date"/></div><div></div></div>
             <div><button class="secondary" onclick="guardarRTV(event)">Guardar RTV</button></div>
           </div>
@@ -498,10 +498,10 @@
       <div class="row">
         <form class="card" onsubmit="guardarMantenimiento(event)">
           <h3 style="margin-bottom:8px;color:var(--ink)">+ Mantenimiento</h3>
-          <div class="row"><div><label>Vehículo</label><select id="mVeh"></select></div><div><label>Tipo</label><select id="mTipo"><option value="cambio_aceite">Cambio de aceite</option><option value="llantas">Llantas</option><option value="frenos">Frenos</option><option value="bateria">Batería</option><option value="alineacion">Alineación</option><option value="otro">Otro</option></select></div></div>
+          <div class="row"><div><label>Vehículo</label><select id="mVeh"></select></div><div><label>Tipo</label><select id="mTipo" onchange="toggleMaintenanceFields()"><option value="cambio_aceite">Cambio de aceite</option><option value="llantas">Llantas</option><option value="frenos">Frenos</option><option value="bateria">Batería</option><option value="alineacion">Alineación</option><option value="otro">Otro</option></select></div></div>
           <div class="row"><div><label>Fecha</label><input id="mFecha" type="date" required/></div><div><label>Costo</label><input id="mCosto" type="number" min="0" step="0.01" required/></div></div>
-          <div class="row"><div><label>Km actual</label><input id="mKm" type="number" min="0"/></div><div><label>Próximo km</label><input id="mProx" type="number" min="0" placeholder="auto si cambio de aceite"/></div></div>
-          <div class="row"><div><label>Último cambio aceite (km)</label><input id="mKmPrevAceite" type="number" readonly/></div><div></div></div>
+          <div class="row" id="maintenanceKmFields"><div><label>Km actual</label><input id="mKm" type="number" min="0"/></div><div><label>Próximo km</label><input id="mProx" type="number" min="0" placeholder="auto si cambio de aceite"/></div></div>
+          <div class="row" id="maintenanceOilField"><div><label>Último cambio aceite (km)</label><input id="mKmPrevAceite" type="number" readonly/></div><div></div></div>
           <div><label>Observaciones</label><input id="mObs" type="text" placeholder="Detalles"/></div>
           <div style="margin-top:12px;display:flex;gap:8px"><button>Guardar</button><button type="button" class="secondary" onclick="autoProximoKm()">Sugerir próximo (+5,000)</button></div>
         </form>
@@ -1767,7 +1767,7 @@
   function fillVehSelects(){
     const opts = '<option value="">Seleccione un vehículo...</option>' + 
                  Vehiculos.map(v=>`<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`).join('');
-    ['mVeh','cVeh','bVeh','pVeh','rVeh','fichaVehiculo','editMVeh','editCVeh','editPVeh','editRVeh'].forEach(id=> { 
+    ['mVeh','cVeh','bVeh','pVeh','rVeh','rtvVeh','fichaVehiculo','editMVeh','editCVeh','editPVeh','editRVeh'].forEach(id=> { 
       const el = byId(id); 
       if(el) {
         const currentValue = el.value;
@@ -1883,7 +1883,7 @@
     if(!hasPermission('polizas')) return alert('Sin permisos para crear RTV');
     
     // Obtener placa del vehículo seleccionado
-    const vehiculoId = byId('rVeh').value;
+    const vehiculoId = byId('rtvVeh').value;
     const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
     const placa = vehiculo ? vehiculo.placa : '';
     
@@ -2206,7 +2206,7 @@
   }
   
   function clearMaintenanceForm() {
-    ['mVeh', 'mTipo', 'mFecha', 'mCosto', 'mKm', 'mProx', 'mObs'].forEach(id => {
+    ['mVeh', 'mTipo', 'mFecha', 'mCosto', 'mKm', 'mProx', 'mObs', 'mKmPrevAceite'].forEach(id => {
       const el = byId(id);
       if (el) {
         if (el.tagName === 'SELECT') {
@@ -2216,6 +2216,8 @@
         }
       }
     });
+    // Después de limpiar, actualizar la visibilidad de campos
+    toggleMaintenanceFields();
   }
   
   function clearInspectionForm() {
@@ -2247,7 +2249,7 @@
   }
   
   function clearRTVForm() {
-    ['rVeh', 'rCita', 'rVence'].forEach(id => {
+    ['rtvVeh', 'rCita', 'rVence'].forEach(id => {
       const el = byId(id);
       if (el) {
         if (el.tagName === 'SELECT') {
@@ -2261,6 +2263,32 @@
   function buscarPlaca(){ const v=byId('qPlaca').value.trim().toUpperCase(); if(!v) return; const sel = byId('fltVehPlaca'); if(sel){ sel.value=v; } setTab('vehiculos'); renderVehiculos(); }
   function exportarVehiculo(){ const placa = byId('fltVehPlaca').value; if(!placa) return alert('Seleccione una placa en el filtro'); exportFichaExcel(placa); }
   function autoProximoKm(){ const tipo = byId('mTipo').value; if(tipo !== 'cambio_aceite') { alert('Aplica solo a "Cambio de aceite"'); return; } const km = parseInt(byId('mKm').value||'0',10); if(!km || Number.isNaN(km) || km<0){ alert('Ingrese km actual válido'); return; } byId('mProx').value = km + 5000; }
+  
+  // Función para mostrar/ocultar campos específicos de cambio de aceite
+  function toggleMaintenanceFields() {
+    const tipo = byId('mTipo').value;
+    const isOilChange = tipo === 'cambio_aceite';
+    
+    // Mostrar/ocultar campos de kilometraje y próximo km
+    const kmFields = byId('maintenanceKmFields');
+    const oilField = byId('maintenanceOilField');
+    
+    if (kmFields) {
+      kmFields.style.display = isOilChange ? 'grid' : 'none';
+    }
+    
+    if (oilField) {
+      oilField.style.display = isOilChange ? 'grid' : 'none';
+    }
+    
+    // Si no es cambio de aceite, limpiar los campos
+    if (!isOilChange) {
+      ['mKm', 'mProx', 'mKmPrevAceite'].forEach(id => {
+        const el = byId(id);
+        if (el) el.value = '';
+      });
+    }
+  }
   
   // ====== FUNCIONES DE EDICIÓN ======
   
@@ -2845,7 +2873,7 @@
     
     // Información básica (usar placa en lugar de vehiculo_id)
     const poliza = Polizas.find(p => p.placa === vehiculo.placa);
-    const rtv = []; // RTV no implementado en el nuevo backend
+    const rtvVehiculo = RTV.find(r => r.placa === vehiculo.placa);
     
     let infoBasica = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -2861,9 +2889,9 @@
           <strong>Propietario:</strong> ${vehiculo.propietario || vehiculo.dueno || 'Hotel'}<br>
           <strong>Estado:</strong> <span class="pill ok">Activo</span><br>
           <strong>Aseguradora:</strong> ${vehiculo.seguro || vehiculo.aseguradora || 'No especificada'}<br>
-          <strong>Póliza:</strong> ${vehiculo.poliza || vehiculo.numero_poliza || 'No especificada'}<br>
+          <strong>Póliza:</strong> ${poliza ? poliza.numero_poliza : (vehiculo.poliza || 'No especificada')}<br>
           <strong>Vence Póliza:</strong> ${poliza ? poliza.fecha_vencimiento : 'No registrada'}<br>
-          <strong>Vence RTV:</strong> No registrada
+          <strong>Vence RTV:</strong> ${rtvVehiculo ? rtvVehiculo.fecha_vencimiento : 'No registrada'}
         </div>
       </div>
     `;
@@ -2929,28 +2957,29 @@
         fecha: m.fecha,
         tipo: 'Mantenimiento',
         detalle: `${m.tipo} - ${fmt(m.costo)}`,
-        km: m.km_actual || '',
-        observaciones: m.observaciones || ''
+        km: m.kilometraje || '',
+        observaciones: m.descripcion || ''
       });
     });
     
     fuelVehiculo.forEach(f => {
+      const precioLitro = f.litros > 0 ? (Number(f.costo) / Number(f.litros)) : 0;
       historial.push({
         fecha: f.fecha,
         tipo: 'Combustible',
-        detalle: `${f.litros}L - ${fmt(Number(f.litros) * Number(f.precio_por_litro))}`,
-        km: f.odometro_km,
-        observaciones: f.proveedor || ''
+        detalle: `${f.litros}L - ${fmt(f.costo)} (₡${Math.round(precioLitro)}/L)`,
+        km: f.kilometraje || '',
+        observaciones: f.estacion || ''
       });
     });
     
     revVehiculo.forEach(r => {
       historial.push({
-        fecha: r.fecha_hora.split('T')[0],
+        fecha: r.fecha,
         tipo: 'Revisión',
-        detalle: `${r.tipo} por ${r.inspector}`,
-        km: r.km,
-        observaciones: r.observaciones || 'Revisión completa'
+        detalle: `Revisión Técnica por ${r.inspector}`,
+        km: '', // Las revisiones no tienen kilometraje
+        observaciones: r.observaciones || `Estados: Motor(${r.estado_motor}), Frenos(${r.estado_frenos}), Luces(${r.estado_luces})`
       });
     });
     
@@ -3848,7 +3877,7 @@
       if (fechaB) fechaB.value = hoy;
       
       // Event listeners para hints y cálculos
-      ['bVeh','cVeh','mVeh','rVeh'].forEach(id=>{ 
+      ['bVeh','cVeh','mVeh','rVeh','rtvVeh'].forEach(id=>{ 
         const el=byId(id); 
         if(el){ el.addEventListener('change', refreshHints); }
       });
@@ -3860,6 +3889,9 @@
           el.addEventListener('change', calcKmLEstimado); 
         }
       });
+      
+      // Inicializar campos de mantenimiento
+      toggleMaintenanceFields();
       
       // UX: Enter en buscador = buscar
       const q = byId('qPlaca');
