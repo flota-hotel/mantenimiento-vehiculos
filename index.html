@@ -873,6 +873,7 @@
               <option value="ficha_vehiculo">📋 Ficha Técnica por Vehículo</option>
               <option value="resumen_costos">💰 Resumen de Costos</option>
               <option value="alertas">⚠️ Alertas y Vencimientos</option>
+              <option value="resumen_general">📊 Resumen General de Flota</option>
             </select>
           </div>
           <div class="form-group">
@@ -2999,32 +3000,93 @@
 
   // ====== EXPORTS (XLSX) ======
   function exportFichaExcel(placa){
-    const v = Vehiculos.find(x=>x.placa===placa); if(!v) return alert('Placa no existe');
-    const mant = Mantenimientos.filter(x=> Number(x.vehiculo_id)===Number(v.id)).map(x=>({Fecha:x.fecha, Tipo:x.tipo, Costo:Number(x.costo)||0, Km_actual:x.km_actual||'', Proximo_km:x.proximo_km||'', Obs:x.observaciones||''}));
-    const fuel = Combustible.filter(x=> Number(x.vehiculo_id)===Number(v.id)).map(x=>({Fecha:x.fecha, Litros:Number(x.litros)||0, Precio_por_litro:Number(x.precio_por_litro)||0, Costo:(Number(x.litros)*Number(x.precio_por_litro))||0, Odometro:Number(x.odometro_km)||0}));
-    const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.json_to_sheet(mant); ws1['!cols']=[{wch:12},{wch:18},{wch:12},{wch:12},{wch:12},{wch:30}];
-    const ws2 = XLSX.utils.json_to_sheet(fuel); ws2['!cols']=[{wch:12},{wch:10},{wch:14},{wch:12},{wch:12}];
-    XLSX.utils.book_append_sheet(wb, ws1, 'Mantenimientos');
-    XLSX.utils.book_append_sheet(wb, ws2, 'Combustible');
-    XLSX.writeFile(wb, `ficha_${placa}.xlsx`);
+    const v = Vehiculos.find(x=>x.placa===placa); 
+    if(!v) return alert('Placa no existe');
+    
+    // Usar la nueva función mejorada
+    byId('repTipo').value = 'ficha_vehiculo';
+    byId('repPlaca').value = placa;
+    exportReportXLSX();
   }
   function exportMantXLSX(){
-    const a='2025-01-01'; const b=today(); const p='';
-    const data = Mantenimientos.filter(x=> x.fecha>=a && x.fecha<=b && (!p || (vehById(x.vehiculo_id)?.placa||'')===p)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Tipo:x.tipo, Costo:Number(x.costo)||0, Km_actual:x.km_actual||'', Proximo_km:x.proximo_km||'', Obs:x.observaciones||''}));
-    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:18},{wch:12},{wch:12},{wch:12},{wch:30}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Mantenimientos'); XLSX.writeFile(wb, 'reporte_mantenimientos.xlsx');
+    // Usar la nueva función mejorada
+    byId('repTipo').value = 'mantenimientos';
+    byId('repA').value = '2000-01-01';
+    byId('repB').value = today();
+    byId('repPlaca').value = '';
+    exportReportXLSX();
   }
+  
   function exportFuelXLSX(){
-    const a='2025-01-01'; const b=today(); const p='';
-    const data = Combustible.filter(x=> x.fecha>=a && x.fecha<=b && (!p || (vehById(x.vehiculo_id)?.placa||'')===p)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Litros:Number(x.litros)||0, Precio_por_litro:Number(x.precio_por_litro)||0, Costo:(Number(x.litros)*Number(x.precio_por_litro))||0, Odometro:Number(x.odometro_km)||0}));
-    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:10},{wch:16},{wch:12},{wch:12}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Combustible'); XLSX.writeFile(wb, 'reporte_combustible.xlsx');
+    // Usar la nueva función mejorada
+    byId('repTipo').value = 'combustible';
+    byId('repA').value = '2000-01-01';
+    byId('repB').value = today();
+    byId('repPlaca').value = '';
+    exportReportXLSX();
   }
+  
   function exportAlertXLSX(){
-    const data = (Alertas||[]).map(a=>({Tipo:a.tipo, Placa:vehById(a.vehiculo_id)?.placa||'', Dias:a.dias_restantes||'', Km:a.km_restantes||'', Estado:a.estado}));
-    const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:22},{wch:12},{wch:8},{wch:10},{wch:12}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Alertas'); XLSX.writeFile(wb, 'reporte_alertas.xlsx');
+    // Generar reporte de alertas (vencimientos próximos)
+    const wb = XLSX.utils.book_new();
+    const fechaActual = new Date();
+    
+    // Alertas de pólizas
+    const alertasPolizas = Polizas.map(p => {
+      const dias = diasRestantes(p.fecha_vencimiento);
+      return {
+        'Tipo': 'Póliza de Seguro',
+        'Placa': p.placa,
+        'Detalle': `${p.aseguradora} - ${p.numero_poliza}`,
+        'Fecha Vencimiento': p.fecha_vencimiento,
+        'Días Restantes': dias,
+        'Estado': dias <= 0 ? 'VENCIDA' : dias <= 7 ? 'CRÍTICO' : dias <= 30 ? 'PRÓXIMO A VENCER' : 'VIGENTE',
+        'Prioridad': dias <= 0 ? '🔴 URGENTE' : dias <= 7 ? '🟠 ALTA' : dias <= 30 ? '🟡 MEDIA' : '🟢 BAJA'
+      };
+    }).filter(a => a['Días Restantes'] <= 30); // Solo alertas de próximos 30 días
+    
+    // Alertas de RTV
+    const alertasRTV = RTV.map(r => {
+      const dias = diasRestantes(r.fecha_vencimiento);
+      return {
+        'Tipo': 'Revisión Técnica Vehicular',
+        'Placa': r.placa,
+        'Detalle': `Cita: ${r.numero_cita}`,
+        'Fecha Vencimiento': r.fecha_vencimiento,
+        'Días Restantes': dias,
+        'Estado': dias <= 0 ? 'VENCIDA' : dias <= 7 ? 'CRÍTICO' : dias <= 30 ? 'PRÓXIMO A VENCER' : 'VIGENTE',
+        'Prioridad': dias <= 0 ? '🔴 URGENTE' : dias <= 7 ? '🟠 ALTA' : dias <= 30 ? '🟡 MEDIA' : '🟢 BAJA'
+      };
+    }).filter(a => a['Días Restantes'] <= 30);
+    
+    // Combinar todas las alertas
+    const todasAlertas = [...alertasPolizas, ...alertasRTV]
+      .sort((a, b) => a['Días Restantes'] - b['Días Restantes']);
+    
+    if(todasAlertas.length === 0) {
+      alert('No hay alertas de vencimiento en los próximos 30 días');
+      return;
+    }
+    
+    const ws = XLSX.utils.json_to_sheet(todasAlertas);
+    ws['!cols'] = [
+      {wch: 25}, // Tipo
+      {wch: 12}, // Placa
+      {wch: 25}, // Detalle
+      {wch: 15}, // Fecha Venc
+      {wch: 10}, // Días
+      {wch: 18}, // Estado
+      {wch: 12}  // Prioridad
+    ];
+    
+    // Agregar título
+    const fechaGeneracion = new Date().toLocaleString('es-ES');
+    XLSX.utils.sheet_add_aoa(ws, [[`REPORTE DE ALERTAS Y VENCIMIENTOS - Generado: ${fechaGeneracion}`]], {origin: "A1"});
+    
+    XLSX.utils.book_append_sheet(wb, ws, 'Alertas');
+    XLSX.writeFile(wb, `alertas_vencimientos_${fechaGeneracion.replace(/[\/\s:]/g, '_')}.xlsx`);
+    
+    alert(`✅ Reporte de alertas exportado con ${todasAlertas.length} elementos`);
   }
   // ====== REPORTES MEJORADOS ======
   
@@ -3222,36 +3284,510 @@
     const a = byId('repA').value||'2000-01-01';
     const b = byId('repB').value||today();
     const wb = XLSX.utils.book_new();
+    
+    // Información de encabezado para todos los reportes
+    const fechaGeneracion = new Date().toLocaleString('es-ES');
+    const rangoFechas = placa ? `Vehículo: ${placa} | ` : 'Todos los vehículos | ';
+    const titulo = rangoFechas + `Período: ${a} a ${b} | Generado: ${fechaGeneracion}`;
 
     if(tipo==='mantenimientos'){
-      const data = Mantenimientos.filter(x=> x.fecha>=a && x.fecha<=b && (!placa || (vehById(x.vehiculo_id)?.placa||'')===placa)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Tipo:x.tipo, Costo:Number(x.costo)||0, Km_actual:x.km_actual||'', Proximo_km:x.proximo_km||'', Obs:x.observaciones||''}));
-      const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:18},{wch:12},{wch:12},{wch:12},{wch:30}];
+      // Filtrar y mapear datos de mantenimientos con la estructura correcta del nuevo backend
+      const filtered = Mantenimientos.filter(x=> 
+        x.fecha >= a && 
+        x.fecha <= b && 
+        (!placa || x.placa === placa)
+      );
+      
+      const data = filtered.map(x=>({
+        'Placa': x.placa || '',
+        'Fecha': x.fecha,
+        'Tipo de Mantenimiento': x.tipo || '',
+        'Descripción': x.descripcion || '',
+        'Costo (₡)': Number(x.costo) || 0,
+        'Kilometraje': x.kilometraje || '',
+        'Fecha de Registro': x.created_at ? new Date(x.created_at).toLocaleDateString('es-ES') : ''
+      }));
+      
+      // Calcular totales
+      const costoTotal = data.reduce((sum, item) => sum + Number(item['Costo (₡)']), 0);
+      const cantidadServicios = data.length;
+      
+      // Agregar fila de resumen
+      data.push({});
+      data.push({
+        'Placa': 'RESUMEN',
+        'Fecha': `Total de servicios: ${cantidadServicios}`,
+        'Tipo de Mantenimiento': '',
+        'Descripción': '',
+        'Costo (₡)': costoTotal,
+        'Kilometraje': 'COSTO TOTAL',
+        'Fecha de Registro': ''
+      });
+      
+      const ws = XLSX.utils.json_to_sheet(data);
+      
+      // Formato de columnas
+      ws['!cols'] = [
+        {wch: 12}, // Placa
+        {wch: 12}, // Fecha
+        {wch: 20}, // Tipo
+        {wch: 30}, // Descripción
+        {wch: 15}, // Costo
+        {wch: 12}, // Kilometraje
+        {wch: 15}  // Fecha Registro
+      ];
+      
+      // Agregar título en la primera fila
+      XLSX.utils.sheet_add_aoa(ws, [[`REPORTE DE MANTENIMIENTOS - ${titulo}`]], {origin: "A1"});
+      
       XLSX.utils.book_append_sheet(wb, ws, 'Mantenimientos');
-      XLSX.writeFile(wb, 'reporte_mantenimientos.xlsx');
+      XLSX.writeFile(wb, `mantenimientos_${placa || 'todos'}_${a}_${b}.xlsx`);
       return;
     }
+    
     if(tipo==='combustible'){
-      const data = Combustible.filter(x=> x.fecha>=a && x.fecha<=b && (!placa || (vehById(x.vehiculo_id)?.placa||'')===placa)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Fecha:x.fecha, Litros:Number(x.litros)||0, Precio_por_litro:Number(x.precio_por_litro)||0, Costo:(Number(x.litros)*Number(x.precio_por_litro))||0, Odometro:Number(x.odometro_km)||0}));
-      const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:10},{wch:16},{wch:12},{wch:12}];
+      // Filtrar y mapear datos de combustible con la estructura correcta
+      const filtered = Combustible.filter(x=> 
+        x.fecha >= a && 
+        x.fecha <= b && 
+        (!placa || x.placa === placa)
+      );
+      
+      const data = filtered.map(x=>{
+        const precioLitro = x.litros > 0 ? (Number(x.costo) / Number(x.litros)) : 0;
+        return {
+          'Placa': x.placa || '',
+          'Fecha': x.fecha,
+          'Litros': Number(x.litros) || 0,
+          'Precio/Litro (₡)': Math.round(precioLitro * 100) / 100,
+          'Costo Total (₡)': Number(x.costo) || 0,
+          'Odómetro (km)': x.kilometraje || '',
+          'Estación': x.estacion || '',
+          'Fecha de Registro': x.created_at ? new Date(x.created_at).toLocaleDateString('es-ES') : ''
+        };
+      });
+      
+      // Calcular totales y estadísticas
+      const litrosTotales = data.reduce((sum, item) => sum + Number(item['Litros']), 0);
+      const costoTotal = data.reduce((sum, item) => sum + Number(item['Costo Total (₡)']), 0);
+      const promedioPrecioLitro = litrosTotales > 0 ? (costoTotal / litrosTotales) : 0;
+      const cantidadCargas = data.length;
+      
+      // Agregar filas de resumen
+      data.push({});
+      data.push({
+        'Placa': 'RESUMEN',
+        'Fecha': `Total cargas: ${cantidadCargas}`,
+        'Litros': litrosTotales,
+        'Precio/Litro (₡)': Math.round(promedioPrecioLitro * 100) / 100,
+        'Costo Total (₡)': costoTotal,
+        'Odómetro (km)': 'TOTALES',
+        'Estación': '',
+        'Fecha de Registro': ''
+      });
+      
+      const ws = XLSX.utils.json_to_sheet(data);
+      
+      // Formato de columnas
+      ws['!cols'] = [
+        {wch: 12}, // Placa
+        {wch: 12}, // Fecha
+        {wch: 10}, // Litros
+        {wch: 15}, // Precio/Litro
+        {wch: 15}, // Costo Total
+        {wch: 12}, // Odómetro
+        {wch: 15}, // Estación
+        {wch: 15}  // Fecha Registro
+      ];
+      
+      // Agregar título
+      XLSX.utils.sheet_add_aoa(ws, [[`REPORTE DE COMBUSTIBLE - ${titulo}`]], {origin: "A1"});
+      
       XLSX.utils.book_append_sheet(wb, ws, 'Combustible');
-      XLSX.writeFile(wb, 'reporte_combustible.xlsx');
+      XLSX.writeFile(wb, `combustible_${placa || 'todos'}_${a}_${b}.xlsx`);
       return;
     }
+    
     if(tipo==='revisiones'){
-      const data = (Revisiones||[]).filter(x=> (!placa || (vehById(x.vehiculo_id)?.placa||'')===placa) && (String(x.fecha_hora).slice(0,10)>=a) && (String(x.fecha_hora).slice(0,10)<=b)).map(x=>({Placa:vehById(x.vehiculo_id)?.placa||'', Tipo:x.tipo, Inspector:x.inspector||'', FechaHora:x.fecha_hora, Km:x.km||'', AceiteMotor:x.aceite_motor||'', LiquidoFreno:x.liquido_frenos||'', Coolant:x.coolant||'', Obs:x.observaciones||''}));
-      const ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:10},{wch:12},{wch:16},{wch:18},{wch:10},{wch:12},{wch:12},{wch:12},{wch:30}];
+      // Filtrar y mapear datos de revisiones con la estructura correcta
+      const filtered = Revisiones.filter(x=> 
+        (!placa || x.placa === placa) && 
+        x.fecha >= a && 
+        x.fecha <= b
+      );
+      
+      const data = filtered.map(x=>({
+        'Placa': x.placa || '',
+        'Fecha': x.fecha,
+        'Inspector': x.inspector || '',
+        'Estado Motor': x.estado_motor || '',
+        'Estado Frenos': x.estado_frenos || '',
+        'Estado Luces': x.estado_luces || '',
+        'Estado Llantas': x.estado_llantas || '',
+        'Estado Carrocería': x.estado_carroceria || '',
+        'Aprobado': x.aprobado ? 'SÍ' : 'NO',
+        'Observaciones': x.observaciones || '',
+        'Fecha de Registro': x.created_at ? new Date(x.created_at).toLocaleDateString('es-ES') : ''
+      }));
+      
+      // Estadísticas
+      const totalRevisiones = data.length;
+      const aprobadas = data.filter(x => x.Aprobado === 'SÍ').length;
+      const reprobadas = totalRevisiones - aprobadas;
+      
+      // Agregar resumen
+      data.push({});
+      data.push({
+        'Placa': 'RESUMEN',
+        'Fecha': `Total: ${totalRevisiones}`,
+        'Inspector': `Aprobadas: ${aprobadas}`,
+        'Estado Motor': `Reprobadas: ${reprobadas}`,
+        'Estado Frenos': '',
+        'Estado Luces': '',
+        'Estado Llantas': '',
+        'Estado Carrocería': '',
+        'Aprobado': '',
+        'Observaciones': '',
+        'Fecha de Registro': ''
+      });
+      
+      const ws = XLSX.utils.json_to_sheet(data);
+      
+      // Formato de columnas
+      ws['!cols'] = [
+        {wch: 12}, // Placa
+        {wch: 12}, // Fecha
+        {wch: 15}, // Inspector
+        {wch: 12}, // Estado Motor
+        {wch: 12}, // Estado Frenos
+        {wch: 12}, // Estado Luces
+        {wch: 12}, // Estado Llantas
+        {wch: 15}, // Estado Carrocería
+        {wch: 10}, // Aprobado
+        {wch: 30}, // Observaciones
+        {wch: 15}  // Fecha Registro
+      ];
+      
+      // Agregar título
+      XLSX.utils.sheet_add_aoa(ws, [[`REPORTE DE REVISIONES - ${titulo}`]], {origin: "A1"});
+      
       XLSX.utils.book_append_sheet(wb, ws, 'Revisiones');
-      XLSX.writeFile(wb, 'reporte_revisiones.xlsx');
+      XLSX.writeFile(wb, `revisiones_${placa || 'todos'}_${a}_${b}.xlsx`);
       return;
     }
+    
     if(tipo==='polizas_rtv'){
-      const dataP = Polizas.map(p=>({Placa:vehById(p.vehiculo_id)?.placa||'', Aseguradora:p.aseguradora||'', Numero:p.numero_poliza||'', Vence:p.vencimiento_poliza||''}));
-      const dataR = RTV.map(r=>({Placa:vehById(r.vehiculo_id)?.placa||'', Cita:r.numero_cita||'', Vence:r.vencimiento_rtv||''}));
-      const wsP=XLSX.utils.json_to_sheet(dataP); wsP['!cols']=[{wch:10},{wch:16},{wch:16},{wch:12}];
-      const wsR=XLSX.utils.json_to_sheet(dataR); wsR['!cols']=[{wch:10},{wch:12},{wch:12}];
-      XLSX.utils.book_append_sheet(wb, wsP, 'Polizas');
+      // Datos de Pólizas
+      const polizasData = Polizas.map(p=>{
+        const diasVencimiento = diasRestantes(p.fecha_vencimiento);
+        return {
+          'Placa': p.placa || '',
+          'Aseguradora': p.aseguradora || '',
+          'Número Póliza': p.numero_poliza || '',
+          'Fecha Inicio': p.fecha_inicio || '',
+          'Fecha Vencimiento': p.fecha_vencimiento || '',
+          'Tipo Cobertura': p.tipo_cobertura || '',
+          'Estado': p.estado || '',
+          'Días al Vencimiento': diasVencimiento,
+          'Semáforo': diasVencimiento <= 7 ? '🔴 CRÍTICO' : diasVencimiento <= 30 ? '🟡 PRÓXIMO' : '🟢 VIGENTE',
+          'Fecha de Registro': p.created_at ? new Date(p.created_at).toLocaleDateString('es-ES') : ''
+        };
+      });
+      
+      // Datos de RTV
+      const rtvData = RTV.map(r=>{
+        const diasVencimiento = diasRestantes(r.fecha_vencimiento);
+        return {
+          'Placa': r.placa || '',
+          'Número Cita': r.numero_cita || '',
+          'Fecha Vencimiento': r.fecha_vencimiento || '',
+          'Estado': r.estado || '',
+          'Días al Vencimiento': diasVencimiento,
+          'Semáforo': diasVencimiento <= 7 ? '🔴 CRÍTICO' : diasVencimiento <= 30 ? '🟡 PRÓXIMO' : '🟢 VIGENTE',
+          'Observaciones': r.observaciones || '',
+          'Fecha de Registro': r.created_at ? new Date(r.created_at).toLocaleDateString('es-ES') : ''
+        };
+      });
+      
+      // Crear hojas
+      const wsP = XLSX.utils.json_to_sheet(polizasData);
+      const wsR = XLSX.utils.json_to_sheet(rtvData);
+      
+      // Formato de columnas para Pólizas
+      wsP['!cols'] = [
+        {wch: 12}, // Placa
+        {wch: 15}, // Aseguradora
+        {wch: 15}, // Número
+        {wch: 12}, // Fecha Inicio
+        {wch: 12}, // Fecha Venc
+        {wch: 12}, // Tipo
+        {wch: 10}, // Estado
+        {wch: 8},  // Días
+        {wch: 12}, // Semáforo
+        {wch: 15}  // Fecha Registro
+      ];
+      
+      // Formato de columnas para RTV
+      wsR['!cols'] = [
+        {wch: 12}, // Placa
+        {wch: 12}, // Cita
+        {wch: 12}, // Fecha Venc
+        {wch: 10}, // Estado
+        {wch: 8},  // Días
+        {wch: 12}, // Semáforo
+        {wch: 25}, // Observaciones
+        {wch: 15}  // Fecha Registro
+      ];
+      
+      // Agregar títulos
+      XLSX.utils.sheet_add_aoa(wsP, [[`REPORTE DE PÓLIZAS - ${titulo}`]], {origin: "A1"});
+      XLSX.utils.sheet_add_aoa(wsR, [[`REPORTE DE RTV - ${titulo}`]], {origin: "A1"});
+      
+      XLSX.utils.book_append_sheet(wb, wsP, 'Pólizas');
       XLSX.utils.book_append_sheet(wb, wsR, 'RTV');
-      XLSX.writeFile(wb, 'reporte_polizas_rtv.xlsx');
+      XLSX.writeFile(wb, `polizas_rtv_${fechaGeneracion.replace(/[\/\s:]/g, '_')}.xlsx`);
+      return;
+    }
+    
+    if(tipo==='ficha_vehiculo' && placa){
+      // Reporte completo por vehículo
+      const vehiculo = Vehiculos.find(v => v.placa === placa);
+      if(!vehiculo){
+        alert('Vehículo no encontrado');
+        return;
+      }
+      
+      // Datos del vehículo
+      const vehiculoData = [{
+        'Campo': 'Placa',
+        'Valor': vehiculo.placa
+      }, {
+        'Campo': 'Marca',
+        'Valor': vehiculo.marca
+      }, {
+        'Campo': 'Modelo',
+        'Valor': vehiculo.modelo
+      }, {
+        'Campo': 'Año',
+        'Valor': vehiculo.ano
+      }, {
+        'Campo': 'Color',
+        'Valor': vehiculo.color || 'No especificado'
+      }, {
+        'Campo': 'Propietario',
+        'Valor': vehiculo.propietario || 'Hotel'
+      }];
+      
+      // Mantenimientos del vehículo
+      const mantVehiculo = Mantenimientos.filter(m => m.placa === placa);
+      
+      // Combustible del vehículo
+      const fuelVehiculo = Combustible.filter(f => f.placa === placa);
+      
+      // Revisiones del vehículo
+      const revVehiculo = Revisiones.filter(r => r.placa === placa);
+      
+      // Pólizas del vehículo
+      const polizaVehiculo = Polizas.filter(p => p.placa === placa);
+      
+      // RTV del vehículo
+      const rtvVehiculo = RTV.filter(r => r.placa === placa);
+      
+      // Crear múltiples hojas
+      const wsVeh = XLSX.utils.json_to_sheet(vehiculoData);
+      wsVeh['!cols'] = [{wch: 20}, {wch: 30}];
+      
+      XLSX.utils.book_append_sheet(wb, wsVeh, 'Información General');
+      
+      if(mantVehiculo.length > 0) {
+        const wsMant = XLSX.utils.json_to_sheet(mantVehiculo.map(m => ({
+          'Fecha': m.fecha,
+          'Tipo': m.tipo,
+          'Descripción': m.descripcion,
+          'Costo': m.costo,
+          'Kilometraje': m.kilometraje
+        })));
+        wsMant['!cols'] = [{wch: 12}, {wch: 18}, {wch: 30}, {wch: 12}, {wch: 12}];
+        XLSX.utils.book_append_sheet(wb, wsMant, 'Mantenimientos');
+      }
+      
+      if(fuelVehiculo.length > 0) {
+        const wsFuel = XLSX.utils.json_to_sheet(fuelVehiculo.map(f => ({
+          'Fecha': f.fecha,
+          'Litros': f.litros,
+          'Costo': f.costo,
+          'Kilometraje': f.kilometraje,
+          'Estación': f.estacion
+        })));
+        wsFuel['!cols'] = [{wch: 12}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 15}];
+        XLSX.utils.book_append_sheet(wb, wsFuel, 'Combustible');
+      }
+      
+      if(revVehiculo.length > 0) {
+        const wsRev = XLSX.utils.json_to_sheet(revVehiculo.map(r => ({
+          'Fecha': r.fecha,
+          'Inspector': r.inspector,
+          'Motor': r.estado_motor,
+          'Frenos': r.estado_frenos,
+          'Luces': r.estado_luces,
+          'Llantas': r.estado_llantas,
+          'Carrocería': r.estado_carroceria,
+          'Aprobado': r.aprobado ? 'SÍ' : 'NO',
+          'Observaciones': r.observaciones
+        })));
+        wsRev['!cols'] = [{wch: 12}, {wch: 15}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 8}, {wch: 30}];
+        XLSX.utils.book_append_sheet(wb, wsRev, 'Revisiones');
+      }
+      
+      XLSX.writeFile(wb, `ficha_completa_${placa}_${fechaGeneracion.replace(/[\/\s:]/g, '_')}.xlsx`);
+      return;
+    }
+    
+    if(tipo==='resumen_costos'){
+      // Reporte de resumen de costos por vehículo y por tipo
+      const vehiculosData = Vehiculos.map(vehiculo => {
+        const mantVehiculo = Mantenimientos.filter(m => m.placa === vehiculo.placa);
+        const fuelVehiculo = Combustible.filter(f => f.placa === vehiculo.placa);
+        
+        const costoMantenimiento = mantVehiculo.reduce((sum, m) => sum + Number(m.costo || 0), 0);
+        const costosCombustible = fuelVehiculo.reduce((sum, f) => sum + Number(f.costo || 0), 0);
+        const totalLitros = fuelVehiculo.reduce((sum, f) => sum + Number(f.litros || 0), 0);
+        
+        return {
+          'Placa': vehiculo.placa,
+          'Marca': vehiculo.marca,
+          'Modelo': vehiculo.modelo,
+          'Año': vehiculo.ano,
+          'Costo Mantenimiento (₡)': costoMantenimiento,
+          'Costo Combustible (₡)': costosCombustible,
+          'Total Litros': totalLitros,
+          'Costo Total (₡)': costoMantenimiento + costosCombustible,
+          'Servicios Mantenimiento': mantVehiculo.length,
+          'Cargas Combustible': fuelVehiculo.length
+        };
+      });
+      
+      // Agregar totales
+      const totalMantenimiento = vehiculosData.reduce((sum, v) => sum + v['Costo Mantenimiento (₡)'], 0);
+      const totalCombustible = vehiculosData.reduce((sum, v) => sum + v['Costo Combustible (₡)'], 0);
+      const totalLitrosFlota = vehiculosData.reduce((sum, v) => sum + v['Total Litros'], 0);
+      
+      vehiculosData.push({});
+      vehiculosData.push({
+        'Placa': 'TOTALES FLOTA',
+        'Marca': `${Vehiculos.length} vehículos`,
+        'Modelo': '',
+        'Año': '',
+        'Costo Mantenimiento (₡)': totalMantenimiento,
+        'Costo Combustible (₡)': totalCombustible,
+        'Total Litros': totalLitrosFlota,
+        'Costo Total (₡)': totalMantenimiento + totalCombustible,
+        'Servicios Mantenimiento': Mantenimientos.length,
+        'Cargas Combustible': Combustible.length
+      });
+      
+      const ws = XLSX.utils.json_to_sheet(vehiculosData);
+      ws['!cols'] = [
+        {wch: 12}, // Placa
+        {wch: 12}, // Marca
+        {wch: 15}, // Modelo
+        {wch: 8},  // Año
+        {wch: 18}, // Costo Mant
+        {wch: 18}, // Costo Comb
+        {wch: 12}, // Litros
+        {wch: 15}, // Total
+        {wch: 12}, // Servicios
+        {wch: 12}  // Cargas
+      ];
+      
+      XLSX.utils.sheet_add_aoa(ws, [[`RESUMEN DE COSTOS POR VEHÍCULO - ${titulo}`]], {origin: "A1"});
+      
+      XLSX.utils.book_append_sheet(wb, ws, 'Resumen Costos');
+      XLSX.writeFile(wb, `resumen_costos_${fechaGeneracion.replace(/[\/\s:]/g, '_')}.xlsx`);
+      return;
+    }
+    
+    if(tipo==='resumen_general'){
+      // Reporte general de la flota
+      const totalVehiculos = Vehiculos.length;
+      const totalMantenimientos = Mantenimientos.length;
+      const totalCombustible = Combustible.length;
+      const totalRevisiones = Revisiones.length;
+      const totalPolizas = Polizas.length;
+      const totalRTV = RTV.length;
+      
+      // Estadísticas generales
+      const estadisticasGenerales = [
+        { 'Concepto': 'Total de Vehículos', 'Cantidad': totalVehiculos, 'Detalle': '' },
+        { 'Concepto': 'Servicios de Mantenimiento', 'Cantidad': totalMantenimientos, 'Detalle': 'Registros totales' },
+        { 'Concepto': 'Cargas de Combustible', 'Cantidad': totalCombustible, 'Detalle': 'Registros totales' },
+        { 'Concepto': 'Revisiones Técnicas', 'Cantidad': totalRevisiones, 'Detalle': 'Inspecciones realizadas' },
+        { 'Concepto': 'Pólizas de Seguro', 'Cantidad': totalPolizas, 'Detalle': 'Activas y vencidas' },
+        { 'Concepto': 'RTV Registradas', 'Cantidad': totalRTV, 'Detalle': 'Revisiones técnicas vehiculares' }
+      ];
+      
+      // Costos totales
+      const costoTotalMant = Mantenimientos.reduce((sum, m) => sum + Number(m.costo || 0), 0);
+      const costoTotalComb = Combustible.reduce((sum, f) => sum + Number(f.costo || 0), 0);
+      const litrosTotales = Combustible.reduce((sum, f) => sum + Number(f.litros || 0), 0);
+      
+      const resumenCostos = [
+        { 'Concepto': 'Costo Total Mantenimientos', 'Monto (₡)': costoTotalMant, 'Observaciones': 'Todos los servicios registrados' },
+        { 'Concepto': 'Costo Total Combustible', 'Monto (₡)': costoTotalComb, 'Observaciones': `${litrosTotales} litros totales` },
+        { 'Concepto': 'COSTO TOTAL OPERACIÓN', 'Monto (₡)': costoTotalMant + costoTotalComb, 'Observaciones': 'Mantenimiento + Combustible' }
+      ];
+      
+      // Vehículos por marca
+      const vehiculosPorMarca = {};
+      Vehiculos.forEach(v => {
+        vehiculosPorMarca[v.marca] = (vehiculosPorMarca[v.marca] || 0) + 1;
+      });
+      
+      const resumenMarcas = Object.entries(vehiculosPorMarca).map(([marca, cantidad]) => ({
+        'Marca': marca,
+        'Cantidad': cantidad,
+        'Porcentaje': Math.round((cantidad / totalVehiculos) * 100) + '%'
+      }));
+      
+      // Alertas de vencimientos
+      const polizasProximas = Polizas.filter(p => diasRestantes(p.fecha_vencimiento) <= 30).length;
+      const rtvProximas = RTV.filter(r => diasRestantes(r.fecha_vencimiento) <= 30).length;
+      
+      const alertasVencimiento = [
+        { 'Tipo': 'Pólizas próximas a vencer (30 días)', 'Cantidad': polizasProximas, 'Estado': polizasProximas > 0 ? '⚠️ ATENCIÓN' : '✅ OK' },
+        { 'Tipo': 'RTV próximos a vencer (30 días)', 'Cantidad': rtvProximas, 'Estado': rtvProximas > 0 ? '⚠️ ATENCIÓN' : '✅ OK' }
+      ];
+      
+      // Crear hojas
+      const wsGeneral = XLSX.utils.json_to_sheet(estadisticasGenerales);
+      const wsCostos = XLSX.utils.json_to_sheet(resumenCostos);
+      const wsMarcas = XLSX.utils.json_to_sheet(resumenMarcas);
+      const wsAlertas = XLSX.utils.json_to_sheet(alertasVencimiento);
+      
+      // Formato de columnas
+      wsGeneral['!cols'] = [{wch: 30}, {wch: 12}, {wch: 25}];
+      wsCostos['!cols'] = [{wch: 30}, {wch: 18}, {wch: 30}];
+      wsMarcas['!cols'] = [{wch: 15}, {wch: 12}, {wch: 12}];
+      wsAlertas['!cols'] = [{wch: 35}, {wch: 12}, {wch: 15}];
+      
+      // Agregar títulos
+      XLSX.utils.sheet_add_aoa(wsGeneral, [[`ESTADÍSTICAS GENERALES - ${titulo}`]], {origin: "A1"});
+      XLSX.utils.sheet_add_aoa(wsCostos, [[`RESUMEN DE COSTOS - ${titulo}`]], {origin: "A1"});
+      XLSX.utils.sheet_add_aoa(wsMarcas, [[`VEHÍCULOS POR MARCA - ${titulo}`]], {origin: "A1"});
+      XLSX.utils.sheet_add_aoa(wsAlertas, [[`ALERTAS DE VENCIMIENTO - ${titulo}`]], {origin: "A1"});
+      
+      XLSX.utils.book_append_sheet(wb, wsGeneral, 'Estadísticas Generales');
+      XLSX.utils.book_append_sheet(wb, wsCostos, 'Resumen Costos');
+      XLSX.utils.book_append_sheet(wb, wsMarcas, 'Vehículos por Marca');
+      XLSX.utils.book_append_sheet(wb, wsAlertas, 'Alertas Vencimiento');
+      
+      XLSX.writeFile(wb, `resumen_general_flota_${fechaGeneracion.replace(/[\/\s:]/g, '_')}.xlsx`);
+      return;
+    }
+    
+    if(tipo==='alertas'){
+      // Usar la función de alertas existente
+      exportAlertXLSX();
       return;
     }
     
