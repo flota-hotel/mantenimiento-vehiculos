@@ -2023,12 +2023,12 @@
     byId('editVPlaca').value = vehiculo.placa || '';
     byId('editVMarca').value = vehiculo.marca || '';
     byId('editVModelo').value = vehiculo.modelo || '';
-    byId('editVAnio').value = vehiculo.anio || '';
+    byId('editVAnio').value = vehiculo.ano || '';
     byId('editVTipo').value = vehiculo.tipo || 'otro';
     byId('editVEstado').value = vehiculo.estado || 'activo';
-    byId('editVDueno').value = vehiculo.dueno || '';
-    byId('editVPoliza').value = vehiculo.numero_poliza || '';
-    byId('editVAseguradora').value = vehiculo.aseguradora || '';
+    byId('editVDueno').value = vehiculo.propietario || '';
+    byId('editVPoliza').value = vehiculo.poliza || '';
+    byId('editVAseguradora').value = vehiculo.seguro || '';
     byId('editVColor').value = vehiculo.color || '';
     
     // Mostrar modal
@@ -2045,23 +2045,26 @@
     e.preventDefault();
     
     const id = byId('editVehId').value;
+    const placa = byId('editVPlaca').value.trim().toUpperCase();
+    
+    // Validaciones
+    if(!placa) return alert('La placa es requerida');
+    if(!byId('editVMarca').value.trim()) return alert('La marca es requerida');
+    if(!byId('editVModelo').value.trim()) return alert('El modelo es requerido');
+    
     const obj = {
-      id: parseInt(id),
-      placa: byId('editVPlaca').value.trim().toUpperCase(),
-      marca: byId('editVMarca').value,
-      modelo: byId('editVModelo').value,
-      anio: parseInt(byId('editVAnio').value),
-      tipo: byId('editVTipo').value,
-      estado: byId('editVEstado').value,
-      dueno: byId('editVDueno').value,
-      numero_poliza: byId('editVPoliza').value,
-      aseguradora: byId('editVAseguradora').value,
-      color: byId('editVColor').value
+      marca: byId('editVMarca').value.trim(),
+      modelo: byId('editVModelo').value.trim(),
+      ano: parseInt(byId('editVAnio').value),
+      color: byId('editVColor').value || 'No especificado',
+      propietario: byId('editVDueno').value || 'Hotel',
+      poliza: byId('editVPoliza').value || null,
+      seguro: byId('editVAseguradora').value || null
     };
     
     try {
-      await apiPost('Vehiculos', obj, 'update');
-      Vehiculos = await apiGet('Vehiculos');
+      await apiPut('vehiculos', placa, obj);
+      Vehiculos = await apiGet('vehiculos');
       fillVehSelects();
       fillPlacaFilters();
       renderVehiculos();
@@ -2091,13 +2094,15 @@
     fillVehSelects(); // Asegurar que los selects estén llenos
     
     byId('editMantId').value = mant.id;
-    byId('editMVeh').value = mant.vehiculo_id;
+    // Encontrar el vehículo por placa para obtener el ID
+    const vehiculo = Vehiculos.find(v => v.placa === mant.placa);
+    byId('editMVeh').value = vehiculo ? vehiculo.id : '';
     byId('editMTipo').value = mant.tipo;
     byId('editMFecha').value = mant.fecha;
     byId('editMCosto').value = mant.costo;
-    byId('editMKm').value = mant.km_actual || '';
+    byId('editMKm').value = mant.kilometraje || '';
     byId('editMProx').value = mant.proximo_km || '';
-    byId('editMObs').value = mant.observaciones || '';
+    byId('editMObs').value = mant.descripcion || '';
     
     const modal = byId('modalEditMantenimiento');
     if (modal) {
@@ -2112,20 +2117,26 @@
     e.preventDefault();
     
     const id = byId('editMantId').value;
+    const vehiculoId = byId('editMVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    
+    if (!vehiculo) {
+      alert('Debe seleccionar un vehículo válido');
+      return;
+    }
+    
     const obj = {
-      id: parseInt(id),
-      vehiculo_id: parseInt(byId('editMVeh').value),
-      tipo: byId('editMTipo').value,
       fecha: byId('editMFecha').value,
+      placa: vehiculo.placa,
+      tipo: byId('editMTipo').value,
+      descripcion: byId('editMObs').value || byId('editMTipo').value,
       costo: parseFloat(byId('editMCosto').value),
-      km_actual: byId('editMKm').value ? parseInt(byId('editMKm').value) : null,
-      proximo_km: byId('editMProx').value ? parseInt(byId('editMProx').value) : null,
-      observaciones: byId('editMObs').value
+      kilometraje: byId('editMKm').value ? parseInt(byId('editMKm').value) : null
     };
     
     try {
-      await apiPost('Mantenimientos', obj, 'update');
-      Mantenimientos = await apiGet('Mantenimientos');
+      await apiPut('mantenimientos', id, obj);
+      Mantenimientos = await apiGet('mantenimientos');
       renderMant();
       renderKpis();
       cerrarModal('modalEditMantenimiento');
@@ -2154,12 +2165,14 @@
     fillVehSelects();
     
     byId('editFuelId').value = fuel.id;
-    byId('editCVeh').value = fuel.vehiculo_id;
+    // Encontrar el vehículo por placa para obtener el ID
+    const vehiculo = Vehiculos.find(v => v.placa === fuel.placa);
+    byId('editCVeh').value = vehiculo ? vehiculo.id : '';
     byId('editCFecha').value = fuel.fecha;
     byId('editCLitros').value = fuel.litros;
-    byId('editCPPL').value = fuel.precio_por_litro;
-    byId('editCOdo').value = fuel.odometro_km;
-    byId('editCProv').value = fuel.proveedor || '';
+    byId('editCPPL').value = fuel.costo / fuel.litros; // Calcular precio por litro
+    byId('editCOdo').value = fuel.kilometraje;
+    byId('editCProv').value = fuel.estacion || '';
     
     const modal = byId('modalEditCombustible');
     if (modal) {
@@ -2174,19 +2187,30 @@
     e.preventDefault();
     
     const id = byId('editFuelId').value;
+    const vehiculoId = byId('editCVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    
+    if (!vehiculo) {
+      alert('Debe seleccionar un vehículo válido');
+      return;
+    }
+    
+    const litros = parseFloat(byId('editCLitros').value);
+    const precioPorLitro = parseFloat(byId('editCPPL').value);
+    const costo = litros * precioPorLitro;
+    
     const obj = {
-      id: parseInt(id),
-      vehiculo_id: parseInt(byId('editCVeh').value),
       fecha: byId('editCFecha').value,
-      litros: parseFloat(byId('editCLitros').value),
-      precio_por_litro: parseFloat(byId('editCPPL').value),
-      odometro_km: parseInt(byId('editCOdo').value),
-      proveedor: byId('editCProv').value
+      placa: vehiculo.placa,
+      litros: litros,
+      costo: costo,
+      kilometraje: parseInt(byId('editCOdo').value) || null,
+      estacion: byId('editCProv').value || null
     };
     
     try {
-      await apiPost('Combustible', obj, 'update');
-      Combustible = await apiGet('Combustible');
+      await apiPut('combustible', id, obj);
+      Combustible = await apiGet('combustible');
       renderFuel();
       renderKpis();
       cerrarModal('modalEditCombustible');

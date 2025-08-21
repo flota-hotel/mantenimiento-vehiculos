@@ -368,6 +368,32 @@ async def delete_mantenimiento(mantenimiento_id: int):
         logger.error(f"Error al eliminar mantenimiento: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.put("/mantenimientos/{mantenimiento_id}")
+async def update_mantenimiento(mantenimiento_id: int, mantenimiento: MantenimientoCreate):
+    """Actualizar un mantenimiento"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE mantenimientos 
+            SET fecha = ?, placa = ?, tipo = ?, descripcion = ?, costo = ?, kilometraje = ?
+            WHERE id = ?
+        ''', (mantenimiento.fecha, mantenimiento.placa, mantenimiento.tipo,
+              mantenimiento.descripcion, mantenimiento.costo, mantenimiento.kilometraje,
+              mantenimiento_id))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "Mantenimiento actualizado exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al actualizar mantenimiento: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ================================
 # ENDPOINTS COMBUSTIBLE
 # ================================
@@ -425,6 +451,32 @@ async def delete_combustible(combustible_id: int):
         return {"success": True, "message": "Registro de combustible eliminado exitosamente"}
     except Exception as e:
         logger.error(f"Error al eliminar registro de combustible: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/combustible/{combustible_id}")
+async def update_combustible(combustible_id: int, combustible: CombustibleCreate):
+    """Actualizar un registro de combustible"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE combustible 
+            SET fecha = ?, placa = ?, litros = ?, costo = ?, kilometraje = ?, estacion = ?
+            WHERE id = ?
+        ''', (combustible.fecha, combustible.placa, combustible.litros,
+              combustible.costo, combustible.kilometraje, combustible.estacion,
+              combustible_id))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Registro de combustible no encontrado")
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "Registro de combustible actualizado exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al actualizar registro de combustible: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ================================
