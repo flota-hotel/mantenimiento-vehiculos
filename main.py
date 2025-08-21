@@ -632,6 +632,32 @@ async def create_poliza(poliza: PolizaCreate):
         logger.error(f"Error al crear póliza: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.put("/polizas/{poliza_id}")
+async def update_poliza(poliza_id: int, poliza: PolizaCreate):
+    """Actualizar una póliza"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE polizas 
+            SET numero_poliza = ?, placa = ?, aseguradora = ?, fecha_inicio = ?, 
+                fecha_vencimiento = ?, tipo_cobertura = ?, estado = ?
+            WHERE id = ?
+        ''', (poliza.numero_poliza, poliza.placa, poliza.aseguradora, poliza.fecha_inicio,
+              poliza.fecha_vencimiento, poliza.tipo_cobertura, poliza.estado, poliza_id))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Póliza no encontrada")
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "Póliza actualizada exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al actualizar póliza: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/polizas/{poliza_id}")
 async def delete_poliza(poliza_id: int):
     """Eliminar una póliza"""
@@ -688,6 +714,30 @@ async def create_rtv(rtv: RTVCreate):
         return {"success": True, "message": "RTV creado exitosamente"}
     except Exception as e:
         logger.error(f"Error al crear RTV: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/rtv/{rtv_id}")
+async def update_rtv(rtv_id: int, rtv: RTVCreate):
+    """Actualizar un registro de RTV"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE rtv 
+            SET numero_cita = ?, placa = ?, fecha_vencimiento = ?, estado = ?, observaciones = ?
+            WHERE id = ?
+        ''', (rtv.numero_cita, rtv.placa, rtv.fecha_vencimiento, rtv.estado, rtv.observaciones, rtv_id))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="RTV no encontrado")
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "RTV actualizado exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al actualizar RTV: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/rtv/{rtv_id}")

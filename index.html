@@ -72,6 +72,9 @@
     button:hover{background:var(--primary-hover);transform:translateY(-1px);box-shadow:var(--shadow)}
     button:active{transform:translateY(0)}
     button.secondary{background:#f8fafc;color:var(--ink);border:1px solid var(--line)}
+    .btn-small{padding:6px 10px;font-size:12px;margin:2px;min-width:auto}
+    .btn-small.danger{background:var(--danger)}
+    .btn-small.danger:hover{background:#dc2626}
     button.secondary:hover{background:#f1f5f9;border-color:var(--primary)}
     button.danger{background:var(--danger)}
     button.danger:hover{background:#dc2626}
@@ -482,11 +485,11 @@
       <div class="row">
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center"><strong>Pólizas</strong><select id="fltPolVencer" onchange="renderPolizas()"><option value="">Todas</option><option value="30">Solo ≤30 días</option><option value="7">Solo ≤7 días</option></select></div>
-          <table><thead><tr><th>Placa</th><th>Aseguradora</th><th>N° Póliza</th><th>Vence</th><th>Semáforo</th></tr></thead><tbody id="tblPol"></tbody></table>
+          <table><thead><tr><th>Placa</th><th>Aseguradora</th><th>N° Póliza</th><th>Vence</th><th>Semáforo</th><th>Acciones</th></tr></thead><tbody id="tblPol"></tbody></table>
         </div>
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center"><strong>RTV</strong><select id="fltRtvVencer" onchange="renderRtv()"><option value="">Todas</option><option value="30">Solo ≤30 días</option><option value="7">Solo ≤7 días</option></select></div>
-          <table><thead><tr><th>Placa</th><th>N° Cita</th><th>Vence</th><th>Semáforo</th></tr></thead><tbody id="tblRtv"></tbody></table>
+          <table><thead><tr><th>Placa</th><th>N° Cita</th><th>Vence</th><th>Semáforo</th><th>Acciones</th></tr></thead><tbody id="tblRtv"></tbody></table>
         </div>
       </div>
     </section>
@@ -1118,6 +1121,106 @@
         </form>
       </div>
     </div>
+
+    <!-- Modal Editar Póliza -->
+    <div id="modalEditPoliza" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">✏️ Editar Póliza</h3>
+          <button class="close-btn" onclick="cerrarModal('modalEditPoliza')">×</button>
+        </div>
+        <form onsubmit="actualizarPoliza(event)">
+          <input type="hidden" id="editPolizaId"/>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Vehículo</label>
+              <select id="editPVeh" required></select>
+            </div>
+            <div class="form-group">
+              <label>Aseguradora</label>
+              <input id="editPAseg" type="text" required/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>N° Póliza</label>
+              <input id="editPNum" type="text" required/>
+            </div>
+            <div class="form-group">
+              <label>Fecha Vencimiento</label>
+              <input id="editPVence" type="date" required/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tipo Cobertura</label>
+              <select id="editPTipo">
+                <option value="Básica">Básica</option>
+                <option value="Completa">Completa</option>
+                <option value="Terceros">Terceros</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="editPEstado">
+                <option value="Activa">Activa</option>
+                <option value="Vencida">Vencida</option>
+                <option value="Cancelada">Cancelada</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:20px">
+            <button type="submit" class="success">💾 Actualizar</button>
+            <button type="button" class="secondary" onclick="cerrarModal('modalEditPoliza'); return false;">❌ Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar RTV -->
+    <div id="modalEditRTV" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">✏️ Editar RTV</h3>
+          <button class="close-btn" onclick="cerrarModal('modalEditRTV')">×</button>
+        </div>
+        <form onsubmit="actualizarRTV(event)">
+          <input type="hidden" id="editRTVId"/>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Vehículo</label>
+              <select id="editRVeh" required></select>
+            </div>
+            <div class="form-group">
+              <label>N° Cita</label>
+              <input id="editRCita" type="text" required/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Fecha Vencimiento</label>
+              <input id="editRVence" type="date" required/>
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="editREstado">
+                <option value="Vigente">Vigente</option>
+                <option value="Vencido">Vencido</option>
+                <option value="Pendiente">Pendiente</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Observaciones</label>
+            <textarea id="editRObs" rows="3"></textarea>
+          </div>
+          <div style="margin-top:20px">
+            <button type="submit" class="success">💾 Actualizar</button>
+            <button type="button" class="secondary" onclick="cerrarModal('modalEditRTV'); return false;">❌ Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
 
   <div class="footer">
@@ -1471,12 +1574,15 @@
   function renderPolizas(){
     const mode=byId('fltPolVencer').value;
     const rows = Polizas.map(p=>{
-      const d=diasRestantes(p.vencimiento_poliza);
+      const d=diasRestantes(p.fecha_vencimiento);
       if(mode==='30' && d>30) return '';
       if(mode==='7' && d>7) return '';
-      return `<tr><td>${vehById(p.vehiculo_id)?.placa||''}</td><td>${p.aseguradora}</td><td>${p.numero_poliza}</td><td>${p.vencimiento_poliza}</td><td>${semaforo(d)}</td></tr>`;
+      const acciones = hasPermission('polizas') ? 
+        `<button class="btn-small" onclick="editarPoliza(${p.id})" title="Editar">✏️</button>
+         <button class="btn-small danger" onclick="eliminarPoliza(${p.id})" title="Eliminar">🗑️</button>` : '';
+      return `<tr><td>${p.placa||''}</td><td>${p.aseguradora}</td><td>${p.numero_poliza}</td><td>${p.fecha_vencimiento}</td><td>${semaforo(d)}</td><td>${acciones}</td></tr>`;
     }).join('');
-    byId('tblPol').innerHTML = rows || '<tr><td colspan="5">Sin datos</td></tr>';
+    byId('tblPol').innerHTML = rows || '<tr><td colspan="6">Sin datos</td></tr>';
   }
   function renderRtv(){
     const mode=byId('fltRtvVencer').value;
@@ -1484,9 +1590,12 @@
       const d=diasRestantes(r.fecha_vencimiento);
       if(mode==='30' && d>30) return '';
       if(mode==='7' && d>7) return '';
-      return `<tr><td>${r.placa||'-'}</td><td>${r.numero_cita||'-'}</td><td>${r.fecha_vencimiento}</td><td>${semaforo(d)}</td></tr>`;
+      const acciones = hasPermission('polizas') ? 
+        `<button class="btn-small" onclick="editarRTV(${r.id})" title="Editar">✏️</button>
+         <button class="btn-small danger" onclick="eliminarRTV(${r.id})" title="Eliminar">🗑️</button>` : '';
+      return `<tr><td>${r.placa||'-'}</td><td>${r.numero_cita||'-'}</td><td>${r.fecha_vencimiento}</td><td>${semaforo(d)}</td><td>${acciones}</td></tr>`;
     }).join('');
-    byId('tblRtv').innerHTML = rows || '<tr><td colspan="4">Sin datos</td></tr>';
+    byId('tblRtv').innerHTML = rows || '<tr><td colspan="5">Sin datos</td></tr>';
   }
   function renderMant(){
     const q=byId('fltMantPlaca').value||''; const t=byId('fltMantTipo').value;
@@ -1657,7 +1766,7 @@
   function fillVehSelects(){
     const opts = '<option value="">Seleccione un vehículo...</option>' + 
                  Vehiculos.map(v=>`<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`).join('');
-    ['mVeh','cVeh','bVeh','pVeh','rVeh','fichaVehiculo','editMVeh','editCVeh'].forEach(id=> { 
+    ['mVeh','cVeh','bVeh','pVeh','rVeh','fichaVehiculo','editMVeh','editCVeh','editPVeh','editRVeh'].forEach(id=> { 
       const el = byId(id); 
       if(el) {
         const currentValue = el.value;
@@ -2293,6 +2402,201 @@
       renderKpis();
       cerrarModal('modalEditMantenimiento');
       alert('✅ Mantenimiento actualizado exitosamente');
+    } catch (e2) {
+      alert('❌ Error: ' + e2.message);
+    }
+  }
+  
+  // ====== FUNCIONES PARA PÓLIZAS ======
+  function editarPoliza(id) {
+    console.log('Editando póliza ID:', id);
+    
+    if (!hasPermission('polizas')) {
+      alert('Sin permisos para editar pólizas');
+      return;
+    }
+    
+    const poliza = Polizas.find(p => p.id == id);
+    console.log('Póliza encontrada:', poliza);
+    
+    if (!poliza) {
+      alert('Póliza no encontrada');
+      return;
+    }
+    
+    fillVehSelects();
+    
+    byId('editPolizaId').value = poliza.id;
+    // Encontrar el vehículo por placa para obtener el ID
+    const vehiculo = Vehiculos.find(v => v.placa === poliza.placa);
+    byId('editPVeh').value = vehiculo ? vehiculo.id : '';
+    byId('editPAseg').value = poliza.aseguradora;
+    byId('editPNum').value = poliza.numero_poliza;
+    byId('editPVence').value = poliza.fecha_vencimiento;
+    byId('editPTipo').value = poliza.tipo_cobertura || 'Básica';
+    byId('editPEstado').value = poliza.estado || 'Activa';
+    
+    const modal = byId('modalEditPoliza');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+    }
+  }
+  
+  async function actualizarPoliza(e) {
+    e.preventDefault();
+    
+    const id = byId('editPolizaId').value;
+    const vehiculoId = byId('editPVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    
+    if (!vehiculo) {
+      alert('Debe seleccionar un vehículo válido');
+      return;
+    }
+    
+    const obj = {
+      numero_poliza: byId('editPNum').value,
+      placa: vehiculo.placa,
+      aseguradora: byId('editPAseg').value,
+      fecha_inicio: new Date().toISOString().split('T')[0],
+      fecha_vencimiento: byId('editPVence').value,
+      tipo_cobertura: byId('editPTipo').value,
+      estado: byId('editPEstado').value
+    };
+    
+    try {
+      await apiPut('polizas', id, obj);
+      Polizas = await apiGet('polizas');
+      renderPolizas();
+      renderKpis();
+      cerrarModal('modalEditPoliza');
+      alert('✅ Póliza actualizada exitosamente');
+    } catch (e2) {
+      alert('❌ Error: ' + e2.message);
+    }
+  }
+  
+  async function eliminarPoliza(id) {
+    if (!hasPermission('polizas')) {
+      alert('Sin permisos para eliminar pólizas');
+      return;
+    }
+    
+    const poliza = Polizas.find(p => p.id == id);
+    if (!poliza) {
+      alert('Póliza no encontrada');
+      return;
+    }
+    
+    if (!confirm(`¿Está seguro de eliminar la póliza ${poliza.numero_poliza}?`)) {
+      return;
+    }
+    
+    try {
+      await apiDelete('polizas', id);
+      Polizas = await apiGet('polizas');
+      renderPolizas();
+      renderKpis();
+      alert('✅ Póliza eliminada exitosamente');
+    } catch (e2) {
+      alert('❌ Error: ' + e2.message);
+    }
+  }
+  
+  // ====== FUNCIONES PARA RTV ======
+  function editarRTV(id) {
+    console.log('Editando RTV ID:', id);
+    
+    if (!hasPermission('polizas')) {
+      alert('Sin permisos para editar RTV');
+      return;
+    }
+    
+    const rtv = RTV.find(r => r.id == id);
+    console.log('RTV encontrado:', rtv);
+    
+    if (!rtv) {
+      alert('RTV no encontrado');
+      return;
+    }
+    
+    fillVehSelects();
+    
+    byId('editRTVId').value = rtv.id;
+    // Encontrar el vehículo por placa para obtener el ID
+    const vehiculo = Vehiculos.find(v => v.placa === rtv.placa);
+    byId('editRVeh').value = vehiculo ? vehiculo.id : '';
+    byId('editRCita').value = rtv.numero_cita;
+    byId('editRVence').value = rtv.fecha_vencimiento;
+    byId('editREstado').value = rtv.estado || 'Vigente';
+    byId('editRObs').value = rtv.observaciones || '';
+    
+    const modal = byId('modalEditRTV');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+    }
+  }
+  
+  async function actualizarRTV(e) {
+    e.preventDefault();
+    
+    const id = byId('editRTVId').value;
+    const vehiculoId = byId('editRVeh').value;
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    
+    if (!vehiculo) {
+      alert('Debe seleccionar un vehículo válido');
+      return;
+    }
+    
+    const obj = {
+      numero_cita: byId('editRCita').value,
+      placa: vehiculo.placa,
+      fecha_vencimiento: byId('editRVence').value,
+      estado: byId('editREstado').value,
+      observaciones: byId('editRObs').value || ''
+    };
+    
+    try {
+      await apiPut('rtv', id, obj);
+      RTV = await apiGet('rtv');
+      renderRtv();
+      renderKpis();
+      cerrarModal('modalEditRTV');
+      alert('✅ RTV actualizado exitosamente');
+    } catch (e2) {
+      alert('❌ Error: ' + e2.message);
+    }
+  }
+  
+  async function eliminarRTV(id) {
+    if (!hasPermission('polizas')) {
+      alert('Sin permisos para eliminar RTV');
+      return;
+    }
+    
+    const rtv = RTV.find(r => r.id == id);
+    if (!rtv) {
+      alert('RTV no encontrado');
+      return;
+    }
+    
+    if (!confirm(`¿Está seguro de eliminar el RTV ${rtv.numero_cita}?`)) {
+      return;
+    }
+    
+    try {
+      await apiDelete('rtv', id);
+      RTV = await apiGet('rtv');
+      renderRtv();
+      renderKpis();
+      alert('✅ RTV eliminado exitosamente');
     } catch (e2) {
       alert('❌ Error: ' + e2.message);
     }
