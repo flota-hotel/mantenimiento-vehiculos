@@ -666,7 +666,9 @@
       <button class="tab" data-tab="polizas" onclick="setTab('polizas')" data-roles="admin">🛡️ Pólizas & RTV</button>
       <button class="tab" data-tab="mantenimientos" onclick="setTab('mantenimientos')" data-roles="admin,operador">🔧 Mantenimientos</button>
       <button class="tab" data-tab="combustible" onclick="setTab('combustible')" data-roles="admin,operador">⛽ Combustible</button>
+      <button class="tab" data-tab="bitacora" onclick="setTab('bitacora')" data-roles="admin,operador,supervisor">📝 Bitácora</button>
       <button class="tab" data-tab="revision" onclick="setTab('revision')" data-roles="admin,supervisor">🔍 Revisión</button>
+      <button class="tab" data-tab="alertas-config" onclick="setTab('alertas-config')" data-roles="admin">⚠️ Config. Alertas</button>
       <button class="tab" data-tab="reportes" onclick="setTab('reportes')" data-roles="admin">📈 Reportes</button>
     </div>
   </header>
@@ -722,11 +724,7 @@
           <div class="big" style="font-size: 1.5em;" id="kpiMantMes">-</div>
         </div>
         
-        <div class="card">
-          <div class="kpi-icon">📊</div>
-          <h4>Promedio KM/L</h4>
-          <div class="big" style="font-size: 1.5em;" id="kpiKmL">-</div>
-        </div>
+
       </div>
       <!-- === RESUMEN DEL MES ACTUAL === -->
       <div class="card" style="margin-top:16px">
@@ -746,17 +744,7 @@
           </div>
         </div>
       </div>
-      
-      <!-- === ALERTAS CONSOLIDADAS === -->
-      <div class="card" style="margin-top:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <strong>⚠️ Alertas y Vencimientos</strong>
-          <input id="fltAlertPlaca" type="text" placeholder="Filtrar por placa…" oninput="renderAlertas()"/>
-        </div>
-        <div class="table-container">
-          <table><thead><tr><th>Tipo</th><th>Placa</th><th>Días/Km</th><th>Estado</th></tr></thead><tbody id="tblAlertas"></tbody></table>
-        </div>
-      </div>
+
       <div class="card" style="margin-top:16px">
         <details>
           <summary>🧪 Pruebas rápidas (dev)</summary>
@@ -1178,6 +1166,138 @@
       </div>
     </section>
 
+    <section id="tab-bitacora" class="tabpanel hidden">
+      <div class="row">
+        <!-- Registro de Salida/Retorno -->
+        <form class="card" onsubmit="procesarBitacora(event)">
+          <h3 style="margin-bottom:8px;color:var(--ink)">📝 Registro de Bitácora</h3>
+          
+          <div class="row">
+            <div>
+              <label>Vehículo</label>
+              <select id="bVeh" onchange="verificarEstadoVehiculo()" required></select>
+            </div>
+            <div>
+              <label>Chofer</label>
+              <input id="bChofer" type="text" placeholder="Nombre del chofer" required/>
+            </div>
+          </div>
+          
+          <div id="salidaFields">
+            <h4 style="color: var(--primary); margin: 20px 0 10px 0;">🚗 SALIDA DEL VEHÍCULO</h4>
+            <div class="row">
+              <div>
+                <label>Kilometraje de Salida</label>
+                <input id="bKmSalida" type="number" min="0" required/>
+              </div>
+              <div>
+                <label>Nivel de Combustible</label>
+                <select id="bCombustibleSalida" required>
+                  <option value="vacio">Vacío (E)</option>
+                  <option value="1/4">1/4</option>
+                  <option value="1/2">1/2</option>
+                  <option value="3/4">3/4</option>
+                  <option value="lleno">Lleno (F)</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>Estado del Vehículo</label>
+                <select id="bEstadoSalida" required>
+                  <option value="excelente">Excelente</option>
+                  <option value="bueno">Bueno</option>
+                  <option value="regular">Regular</option>
+                  <option value="requiere_atencion">Requiere Atención</option>
+                </select>
+              </div>
+              <div>
+                <label>Observaciones Salida</label>
+                <input id="bObsSalida" type="text" placeholder="Observaciones opcionales"/>
+              </div>
+            </div>
+          </div>
+          
+          <div id="retornoFields" class="hidden">
+            <h4 style="color: var(--success); margin: 20px 0 10px 0;">🔄 RETORNO DEL VEHÍCULO</h4>
+            <div class="row">
+              <div>
+                <label>Kilometraje de Retorno</label>
+                <input id="bKmRetorno" type="number" min="0"/>
+              </div>
+              <div>
+                <label>Nivel de Combustible</label>
+                <select id="bCombustibleRetorno">
+                  <option value="vacio">Vacío (E)</option>
+                  <option value="1/4">1/4</option>
+                  <option value="1/2">1/2</option>
+                  <option value="3/4">3/4</option>
+                  <option value="lleno">Lleno (F)</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label>Estado del Vehículo</label>
+                <select id="bEstadoRetorno">
+                  <option value="excelente">Excelente</option>
+                  <option value="bueno">Bueno</option>
+                  <option value="regular">Regular</option>
+                  <option value="requiere_atencion">Requiere Atención</option>
+                </select>
+              </div>
+              <div>
+                <label>Observaciones Retorno</label>
+                <input id="bObsRetorno" type="text" placeholder="Observaciones del retorno"/>
+              </div>
+            </div>
+          </div>
+          
+          <div style="margin-top:20px">
+            <button type="submit" class="success" id="btnBitacora">📝 Registrar Salida</button>
+            <button type="button" class="secondary" onclick="limpiarFormBitacora()">🗑️ Limpiar</button>
+          </div>
+        </form>
+        
+        <!-- Histórico de Bitácora -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <strong>📋 Histórico de Bitácora</strong>
+            <div style="display:flex;gap:8px">
+              <select id="fltBitacoraPlaca" onchange="renderBitacora()">
+                <option value="">📋 Todas las placas</option>
+              </select>
+              <select id="fltBitacoraEstado" onchange="renderBitacora()">
+                <option value="">📊 Todos los estados</option>
+                <option value="en_curso">🔄 En Curso</option>
+                <option value="completado">✅ Completado</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Placa</th>
+                  <th>Chofer</th>
+                  <th>Salida</th>
+                  <th>Retorno</th>
+                  <th>Km Salida</th>
+                  <th>Km Retorno</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tblBitacora"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:16px;display:flex;justify-content:end">
+            <button class="export-btn" onclick="exportarBitacora()">📊 Exportar Excel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="tab-revision" class="tabpanel hidden">
       <div class="row">
         <form class="card" onsubmit="guardarRevision(event)">
@@ -1342,22 +1462,96 @@
           <!-- Revisiones eléctricas y exteriores -->
           <div class="card" style="margin:20px 0;background:#f8fafc">
             <h4 style="margin:0 0 12px 0">💡 Sistema Eléctrico y Exterior</h4>
-            <div class="form-row">
-              <div style="display:flex;gap:20px;flex-wrap:wrap">
-                <label><input type="checkbox" id="rLucesDelanteras"/> Luces Delanteras</label>
-                <label><input type="checkbox" id="rLucesTraseras"/> Luces Traseras</label>
-                <label><input type="checkbox" id="rLucesDireccionales"/> Direccionales</label>
-                <label><input type="checkbox" id="rLucesFreno"/> Luces de Freno</label>
-                <label><input type="checkbox" id="rLucesReversa"/> Luces de Reversa</label>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Luces Delanteras</label>
+                <select id="rLucesDelanteras">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Luces Traseras</label>
+                <select id="rLucesTraseras">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Direccionales</label>
+                <select id="rLucesDireccionales">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
               </div>
             </div>
-            <div class="form-row">
-              <div style="display:flex;gap:20px;flex-wrap:wrap">
-                <label><input type="checkbox" id="rEspejosLaterales"/> Espejos Laterales</label>
-                <label><input type="checkbox" id="rEspejoRetrovisor"/> Espejo Retrovisor</label>
-                <label><input type="checkbox" id="rLimpiaparabrisas"/> Limpiaparabrisas</label>
-                <label><input type="checkbox" id="rCinturones"/> Cinturones de Seguridad</label>
-                <label><input type="checkbox" id="rBocina"/> Bocina</label>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Luces de Freno</label>
+                <select id="rLucesFreno">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Luces de Reversa</label>
+                <select id="rLucesReversa">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Espejos Laterales</label>
+                <select id="rEspejosLaterales">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Espejo Retrovisor</label>
+                <select id="rEspejoRetrovisor">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Limpiaparabrisas</label>
+                <select id="rLimpiaparabrisas">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Cinturones</label>
+                <select id="rCinturones">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Bocina</label>
+                <select id="rBocina">
+                  <option value="1">✅ Buen Estado</option>
+                  <option value="0">❌ Mal Estado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Nivel Combustible</label>
+                <select id="rNivelComb">
+                  <option value="vacio">Vacío (E)</option>
+                  <option value="1/4">1/4</option>
+                  <option value="1/2">1/2</option>
+                  <option value="3/4">3/4</option>
+                  <option value="lleno">Lleno (F)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Kilometraje Actual</label>
+                <input id="rKm" type="number" min="0" required/>
               </div>
             </div>
           </div>
@@ -1430,6 +1624,90 @@
           <div style="margin-top:16px;display:flex;justify-content:end">
             <button class="export-btn" onclick="exportarRevisiones()">📊 Exportar Excel</button>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-alertas-config" class="tabpanel hidden">
+      <div class="card">
+        <h3 style="margin:0 0 20px 0">⚠️ Configuración de Alertas Automáticas</h3>
+        
+        <form onsubmit="guardarConfigAlertas(event)">
+          <!-- Email de Destino -->
+          <div class="form-group">
+            <label>📧 Email de Destino para Alertas</label>
+            <input id="alertaEmail" type="email" placeholder="contabilidad2@arenalmanoa.com" required/>
+          </div>
+          
+          <!-- Tipos de Alertas -->
+          <div class="card" style="background:#f8fafc;margin:20px 0">
+            <h4 style="margin:0 0 16px 0">📋 Tipos de Alertas a Enviar</h4>
+            <div class="form-row">
+              <div style="display:flex;gap:20px;flex-wrap:wrap">
+                <label><input type="checkbox" id="alertaMant" checked/> 🔧 Mantenimientos por vencer</label>
+                <label><input type="checkbox" id="alertaPolizas" checked/> 🛡️ Pólizas por vencer</label>
+                <label><input type="checkbox" id="alertaRTV" checked/> 🔍 RTV por vencer</label>
+              </div>
+            </div>
+            <div class="form-row">
+              <div style="display:flex;gap:20px;flex-wrap:wrap">
+                <label><input type="checkbox" id="alertaRevisiones" checked/> ⚠️ Fallas en revisiones</label>
+                <label><input type="checkbox" id="alertaCombustible" checked/> ⛽ Anomalías de combustible</label>
+                <label><input type="checkbox" id="alertaBitacora" checked/> 📝 Inconsistencias en bitácora</label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Configuración de Anticipación -->
+          <div class="card" style="background:#f8fafc;margin:20px 0">
+            <h4 style="margin:0 0 16px 0">⏰ Días de Anticipación</h4>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Pólizas (días)</label>
+                <input id="diasPolizas" type="number" min="1" max="365" value="30"/>
+              </div>
+              <div class="form-group">
+                <label>RTV (días)</label>
+                <input id="diasRTV" type="number" min="1" max="365" value="30"/>
+              </div>
+              <div class="form-group">
+                <label>Mantenimientos (días)</label>
+                <input id="diasMant" type="number" min="1" max="365" value="30"/>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Configuración de Kilometraje -->
+          <div class="card" style="background:#f8fafc;margin:20px 0">
+            <h4 style="margin:0 0 16px 0">🚗 Alertas de Kilometraje</h4>
+            <div class="form-group">
+              <label>Diferencia de km para alerta de bitácora</label>
+              <input id="kmDiferencia" type="number" min="1" max="1000" value="10"/>
+              <small style="color:var(--muted)">Se enviará alerta si la diferencia de kilometraje entre registros es mayor a este valor</small>
+            </div>
+          </div>
+          
+          <!-- Estado Actual -->
+          <div id="estadoAlertas" class="card" style="background:#e8f5e8;margin:20px 0">
+            <h4 style="margin:0 0 12px 0;color:#2e7d2e">📊 Estado Actual del Sistema</h4>
+            <div id="estadoAlertasContent">
+              <p>Cargando estado del sistema...</p>
+            </div>
+          </div>
+          
+          <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
+            <button type="submit" class="success">💾 Guardar Configuración</button>
+            <button type="button" class="secondary" onclick="probarAlertas()">📧 Probar Alertas</button>
+            <button type="button" class="secondary" onclick="verificarAlertasManual()">🔍 Verificar Alertas Ahora</button>
+          </div>
+        </form>
+      </div>
+      
+      <!-- Historial de Alertas -->
+      <div class="card" style="margin-top:20px">
+        <h3>📜 Historial de Alertas Enviadas</h3>
+        <div id="historialAlertas">
+          <p style="color:var(--muted)">El historial de alertas se mostrará aquí...</p>
         </div>
       </div>
     </section>

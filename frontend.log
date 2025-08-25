@@ -396,3 +396,91 @@ Servidor corriendo en puerto 3000
 21/Aug/2025 19:59:07 - "GET /icons/icon-512.png HTTP/1.1" 404 -
 21/Aug/2025 19:59:08 - code 404, message File not found
 21/Aug/2025 19:59:08 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:05:23 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 20:05:24 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 20:05:24 - "GET /index.html HTTP/1.1" 200 -
+21/Aug/2025 20:05:24 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 20:05:24 - code 404, message File not found
+21/Aug/2025 20:05:24 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:05:24 - code 404, message File not found
+21/Aug/2025 20:05:24 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:06:04 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 20:06:05 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 20:06:05 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 20:06:05 - "GET /index.html HTTP/1.1" 200 -
+21/Aug/2025 20:06:05 - code 404, message File not found
+21/Aug/2025 20:06:05 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:06:05 - code 404, message File not found
+21/Aug/2025 20:06:05 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+21/Aug/2025 20:06:05 - code 404, message File not found
+21/Aug/2025 20:06:05 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:06:23 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 20:06:24 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 20:06:24 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 20:06:24 - "GET /index.html HTTP/1.1" 304 -
+21/Aug/2025 20:06:24 - code 404, message File not found
+21/Aug/2025 20:06:24 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:06:26 - code 404, message File not found
+21/Aug/2025 20:06:26 - "GET /favicon.ico HTTP/1.1" 404 -
+21/Aug/2025 20:06:26 - code 404, message File not found
+21/Aug/2025 20:06:26 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:06:28 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 20:06:28 - code 404, message File not found
+21/Aug/2025 20:06:28 - "GET /favicon.ico HTTP/1.1" 404 -
+21/Aug/2025 20:58:16 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 20:58:16 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 20:58:17 - "GET / HTTP/1.1" 200 -
+21/Aug/2025 20:58:17 - "GET /index.html HTTP/1.1" 200 -
+21/Aug/2025 20:58:17 - "GET /manifest.webmanifest HTTP/1.1" 304 -
+21/Aug/2025 20:58:17 - code 404, message File not found
+21/Aug/2025 20:58:17 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:58:17 - code 404, message File not found
+21/Aug/2025 20:58:17 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 20:58:17 - code 404, message File not found
+21/Aug/2025 20:58:17 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+21/Aug/2025 22:01:46 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 22:01:47 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 22:01:47 - "GET /index.html HTTP/1.1" 304 -
+21/Aug/2025 22:01:47 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 22:01:47 - code 404, message File not found
+21/Aug/2025 22:01:47 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 22:01:47 - code 404, message File not found
+21/Aug/2025 22:01:47 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+21/Aug/2025 22:01:47 - code 404, message File not found
+21/Aug/2025 22:01:47 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 23:07:50 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 23:07:50 - "GET /sw.js HTTP/1.1" 304 -
+21/Aug/2025 23:07:50 - "GET / HTTP/1.1" 304 -
+21/Aug/2025 23:07:50 - "GET /index.html HTTP/1.1" 304 -
+21/Aug/2025 23:07:50 - code 404, message File not found
+21/Aug/2025 23:07:50 - "GET /favicon.ico HTTP/1.1" 404 -
+21/Aug/2025 23:07:50 - code 404, message File not found
+21/Aug/2025 23:07:50 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+21/Aug/2025 23:07:50 - code 404, message File not found
+21/Aug/2025 23:07:50 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+21/Aug/2025 23:07:50 - code 404, message File not found
+21/Aug/2025 23:07:50 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+22/Aug/2025 18:20:14 - "GET / HTTP/1.1" 304 -
+22/Aug/2025 18:20:14 - "GET /sw.js HTTP/1.1" 304 -
+22/Aug/2025 18:20:14 - "GET /manifest.webmanifest HTTP/1.1" 304 -
+22/Aug/2025 18:20:14 - "GET / HTTP/1.1" 304 -
+22/Aug/2025 18:20:14 - "GET /index.html HTTP/1.1" 304 -
+22/Aug/2025 18:20:15 - code 404, message File not found
+22/Aug/2025 18:20:15 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+22/Aug/2025 18:20:15 - code 404, message File not found
+22/Aug/2025 18:20:15 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+22/Aug/2025 18:20:15 - code 404, message File not found
+22/Aug/2025 18:20:15 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+24/Aug/2025 23:15:20 - "GET / HTTP/1.1" 304 -
+24/Aug/2025 23:15:20 - "GET /sw.js HTTP/1.1" 304 -
+24/Aug/2025 23:15:20 - "GET / HTTP/1.1" 304 -
+24/Aug/2025 23:15:20 - "GET /index.html HTTP/1.1" 304 -
+24/Aug/2025 23:15:20 - "GET /manifest.webmanifest HTTP/1.1" 304 -
+24/Aug/2025 23:15:20 - code 404, message File not found
+24/Aug/2025 23:15:20 - "GET /favicon.ico HTTP/1.1" 404 -
+24/Aug/2025 23:15:20 - code 404, message File not found
+24/Aug/2025 23:15:20 - "GET /icons/icon-512.png HTTP/1.1" 404 -
+24/Aug/2025 23:15:20 - code 404, message File not found
+24/Aug/2025 23:15:20 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+24/Aug/2025 23:15:22 - code 404, message File not found
+24/Aug/2025 23:15:22 - "GET /icons/icon-192.png HTTP/1.1" 404 -

@@ -149,6 +149,19 @@ def init_database():
             estado_carroceria TEXT NOT NULL,
             observaciones TEXT,
             aprobado BOOLEAN NOT NULL,
+            -- Nuevos campos para sistema eléctrico y exterior
+            luces_delanteras BOOLEAN DEFAULT 1,
+            luces_traseras BOOLEAN DEFAULT 1,
+            luces_direccionales BOOLEAN DEFAULT 1,
+            luces_freno BOOLEAN DEFAULT 1,
+            luces_reversa BOOLEAN DEFAULT 1,
+            espejos_laterales BOOLEAN DEFAULT 1,
+            espejo_retrovisor BOOLEAN DEFAULT 1,
+            limpiaparabrisas BOOLEAN DEFAULT 1,
+            cinturones BOOLEAN DEFAULT 1,
+            bocina BOOLEAN DEFAULT 1,
+            nivel_combustible TEXT DEFAULT 'lleno',
+            kilometraje INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (placa) REFERENCES vehiculos (placa)
         )
@@ -183,6 +196,98 @@ def init_database():
             FOREIGN KEY (placa) REFERENCES vehiculos (placa)
         )
     ''')
+    
+    # Tabla Bitácora
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bitacora (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            placa TEXT NOT NULL,
+            chofer TEXT NOT NULL,
+            fecha_salida DATETIME NOT NULL,
+            km_salida INTEGER NOT NULL,
+            nivel_combustible_salida TEXT NOT NULL,
+            estado_vehiculo_salida TEXT NOT NULL,
+            fecha_retorno DATETIME,
+            km_retorno INTEGER,
+            nivel_combustible_retorno TEXT,
+            estado_vehiculo_retorno TEXT,
+            observaciones TEXT,
+            estado TEXT DEFAULT 'en_curso',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (placa) REFERENCES vehiculos (placa)
+        )
+    ''')
+    
+    # Tabla de configuración de alertas
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS config_alertas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email_destino TEXT NOT NULL,
+            alertas_mantenimiento BOOLEAN DEFAULT 1,
+            alertas_polizas BOOLEAN DEFAULT 1,
+            alertas_rtv BOOLEAN DEFAULT 1,
+            alertas_revisiones BOOLEAN DEFAULT 1,
+            alertas_combustible BOOLEAN DEFAULT 1,
+            alertas_bitacora BOOLEAN DEFAULT 1,
+            dias_anticipacion_polizas INTEGER DEFAULT 30,
+            dias_anticipacion_rtv INTEGER DEFAULT 30,
+            dias_anticipacion_mantenimiento INTEGER DEFAULT 30,
+            km_diferencia_alerta INTEGER DEFAULT 10,
+            activo BOOLEAN DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Agregar nuevas columnas a la tabla revisiones si no existen
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN luces_delanteras BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN luces_traseras BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN luces_direccionales BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN luces_freno BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN luces_reversa BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN espejos_laterales BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN espejo_retrovisor BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN limpiaparabrisas BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN cinturones BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN bocina BOOLEAN DEFAULT 1")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN nivel_combustible TEXT DEFAULT 'lleno'")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE revisiones ADD COLUMN kilometraje INTEGER")
+    except:
+        pass
     
     conn.commit()
     conn.close()
@@ -237,6 +342,19 @@ class RevisionCreate(BaseModel):
     estado_carroceria: str
     observaciones: Optional[str] = None
     aprobado: bool
+    # Nuevos campos para sistema eléctrico y exterior
+    luces_delanteras: Optional[bool] = True
+    luces_traseras: Optional[bool] = True
+    luces_direccionales: Optional[bool] = True
+    luces_freno: Optional[bool] = True
+    luces_reversa: Optional[bool] = True
+    espejos_laterales: Optional[bool] = True
+    espejo_retrovisor: Optional[bool] = True
+    limpiaparabrisas: Optional[bool] = True
+    cinturones: Optional[bool] = True
+    bocina: Optional[bool] = True
+    nivel_combustible: Optional[str] = 'lleno'
+    kilometraje: Optional[int] = None
 
 class PolizaCreate(BaseModel):
     numero_poliza: str
@@ -253,6 +371,33 @@ class RTVCreate(BaseModel):
     fecha_vencimiento: str
     estado: Optional[str] = "Vigente"
     observaciones: Optional[str] = None
+
+class BitacoraSalida(BaseModel):
+    placa: str
+    chofer: str
+    km_salida: int
+    nivel_combustible_salida: str
+    estado_vehiculo_salida: str
+    observaciones: Optional[str] = None
+
+class BitacoraRetorno(BaseModel):
+    km_retorno: int
+    nivel_combustible_retorno: str
+    estado_vehiculo_retorno: str
+    observaciones: Optional[str] = None
+
+class ConfigAlertas(BaseModel):
+    email_destino: str
+    alertas_mantenimiento: Optional[bool] = True
+    alertas_polizas: Optional[bool] = True
+    alertas_rtv: Optional[bool] = True
+    alertas_revisiones: Optional[bool] = True
+    alertas_combustible: Optional[bool] = True
+    alertas_bitacora: Optional[bool] = True
+    dias_anticipacion_polizas: Optional[int] = 30
+    dias_anticipacion_rtv: Optional[int] = 30
+    dias_anticipacion_mantenimiento: Optional[int] = 30
+    km_diferencia_alerta: Optional[int] = 10
 
 # Utilidades de base de datos
 def get_db_connection():
@@ -1065,11 +1210,18 @@ async def create_revision(revision: RevisionCreate):
         cursor.execute('''
             INSERT INTO revisiones (fecha, placa, inspector, estado_motor, estado_frenos,
                                   estado_luces, estado_llantas, estado_carroceria, 
-                                  observaciones, aprobado)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                  observaciones, aprobado, luces_delanteras, luces_traseras,
+                                  luces_direccionales, luces_freno, luces_reversa,
+                                  espejos_laterales, espejo_retrovisor, limpiaparabrisas,
+                                  cinturones, bocina, nivel_combustible, kilometraje)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (revision.fecha, revision.placa, revision.inspector, revision.estado_motor,
               revision.estado_frenos, revision.estado_luces, revision.estado_llantas,
-              revision.estado_carroceria, revision.observaciones, revision.aprobado))
+              revision.estado_carroceria, revision.observaciones, revision.aprobado,
+              revision.luces_delanteras, revision.luces_traseras, revision.luces_direccionales,
+              revision.luces_freno, revision.luces_reversa, revision.espejos_laterales,
+              revision.espejo_retrovisor, revision.limpiaparabrisas, revision.cinturones,
+              revision.bocina, revision.nivel_combustible, revision.kilometraje))
         
         conn.commit()
         conn.close()
@@ -1077,6 +1229,41 @@ async def create_revision(revision: RevisionCreate):
         return {"success": True, "message": "Revisión creada exitosamente"}
     except Exception as e:
         logger.error(f"Error al crear revisión: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/revisiones/{revision_id}")
+async def update_revision(revision_id: int, revision: RevisionCreate):
+    """Actualizar una revisión existente"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE revisiones 
+            SET fecha = ?, placa = ?, inspector = ?, estado_motor = ?, estado_frenos = ?,
+                estado_luces = ?, estado_llantas = ?, estado_carroceria = ?, 
+                observaciones = ?, aprobado = ?, luces_delanteras = ?, luces_traseras = ?,
+                luces_direccionales = ?, luces_freno = ?, luces_reversa = ?,
+                espejos_laterales = ?, espejo_retrovisor = ?, limpiaparabrisas = ?,
+                cinturones = ?, bocina = ?, nivel_combustible = ?, kilometraje = ?
+            WHERE id = ?
+        ''', (revision.fecha, revision.placa, revision.inspector, revision.estado_motor,
+              revision.estado_frenos, revision.estado_luces, revision.estado_llantas,
+              revision.estado_carroceria, revision.observaciones, revision.aprobado,
+              revision.luces_delanteras, revision.luces_traseras, revision.luces_direccionales,
+              revision.luces_freno, revision.luces_reversa, revision.espejos_laterales,
+              revision.espejo_retrovisor, revision.limpiaparabrisas, revision.cinturones,
+              revision.bocina, revision.nivel_combustible, revision.kilometraje, revision_id))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Revisión no encontrada")
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "Revisión actualizada exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al actualizar revisión: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/revisiones/{revision_id}")
@@ -1348,6 +1535,200 @@ async def verificar_alertas():
     except Exception as e:
         logger.error(f"Error verificando alertas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ================================
+# ENDPOINTS BITÁCORA
+# ================================
+
+@app.get("/bitacora")
+async def get_bitacora():
+    """Obtener todos los registros de bitácora"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM bitacora ORDER BY fecha_salida DESC")
+        bitacora = [dict_from_row(row) for row in cursor.fetchall()]
+        conn.close()
+        return {"success": True, "data": bitacora}
+    except Exception as e:
+        logger.error(f"Error al obtener bitácora: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/bitacora/salida")
+async def registrar_salida(salida: BitacoraSalida):
+    """Registrar salida de vehículo"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si hay inconsistencia de kilometraje
+        cursor.execute("""
+            SELECT km_retorno, chofer FROM bitacora 
+            WHERE placa = ? AND estado = 'completado' 
+            ORDER BY fecha_retorno DESC LIMIT 1
+        """, (salida.placa,))
+        
+        ultimo_registro = cursor.fetchone()
+        alerta_km = False
+        
+        if ultimo_registro and ultimo_registro['km_retorno']:
+            diferencia = abs(salida.km_salida - ultimo_registro['km_retorno'])
+            # Si la diferencia es mayor a 10 km, enviar alerta
+            if diferencia > 10:
+                alerta_km = True
+                asyncio.create_task(enviar_alerta_kilometraje(
+                    salida.placa, salida.chofer, salida.km_salida, 
+                    ultimo_registro['km_retorno'], ultimo_registro['chofer']
+                ))
+        
+        # Insertar nuevo registro
+        cursor.execute('''
+            INSERT INTO bitacora (placa, chofer, fecha_salida, km_salida, 
+                                nivel_combustible_salida, estado_vehiculo_salida, observaciones)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (salida.placa, salida.chofer, datetime.now().isoformat(), 
+              salida.km_salida, salida.nivel_combustible_salida, 
+              salida.estado_vehiculo_salida, salida.observaciones))
+        
+        bitacora_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True, 
+            "message": "Salida registrada exitosamente",
+            "bitacora_id": bitacora_id,
+            "alerta_km": alerta_km
+        }
+    except Exception as e:
+        logger.error(f"Error al registrar salida: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/bitacora/{bitacora_id}/retorno")
+async def registrar_retorno(bitacora_id: int, retorno: BitacoraRetorno):
+    """Registrar retorno de vehículo"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE bitacora 
+            SET fecha_retorno = ?, km_retorno = ?, nivel_combustible_retorno = ?,
+                estado_vehiculo_retorno = ?, observaciones = ?, estado = 'completado'
+            WHERE id = ?
+        ''', (datetime.now().isoformat(), retorno.km_retorno, 
+              retorno.nivel_combustible_retorno, retorno.estado_vehiculo_retorno,
+              retorno.observaciones, bitacora_id))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Registro de bitácora no encontrado")
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "Retorno registrado exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al registrar retorno: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def enviar_alerta_kilometraje(placa, chofer_actual, km_actual, km_anterior, chofer_anterior):
+    """Enviar alerta por inconsistencia de kilometraje"""
+    try:
+        diferencia = abs(km_actual - km_anterior)
+        subject = f"⚠️ ALERTA: Inconsistencia de Kilometraje - Vehículo {placa}"
+        
+        body = f"""
+        <h2>🚨 ALERTA DE INCONSISTENCIA EN BITÁCORA</h2>
+        <p><strong>Vehículo:</strong> {placa}</p>
+        <p><strong>Diferencia detectada:</strong> {diferencia} km</p>
+        <p><strong>Kilometraje anterior:</strong> {km_anterior} km (por {chofer_anterior})</p>
+        <p><strong>Kilometraje actual:</strong> {km_actual} km (por {chofer_actual})</p>
+        <p><strong>Fecha:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+        
+        <p style="color: red;"><strong>ACCIÓN REQUERIDA:</strong> Verificar la inconsistencia en el kilometraje del vehículo.</p>
+        """
+        
+        send_email_notification(subject, body)
+        logger.info(f"Alerta de kilometraje enviada para vehículo {placa}")
+    except Exception as e:
+        logger.error(f"Error enviando alerta de kilometraje: {e}")
+
+# ================================
+# ENDPOINTS CONFIGURACIÓN DE ALERTAS
+# ================================
+
+@app.get("/config/alertas")
+async def get_config_alertas():
+    """Obtener configuración actual de alertas"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM config_alertas WHERE activo = 1 ORDER BY id DESC LIMIT 1")
+        config = cursor.fetchone()
+        conn.close()
+        
+        if config:
+            return {"success": True, "config": dict_from_row(config)}
+        else:
+            # Retornar configuración por defecto
+            return {
+                "success": True, 
+                "config": {
+                    "email_destino": "contabilidad2@arenalmanoa.com",
+                    "alertas_mantenimiento": True,
+                    "alertas_polizas": True,
+                    "alertas_rtv": True,
+                    "alertas_revisiones": True,
+                    "alertas_combustible": True,
+                    "alertas_bitacora": True,
+                    "dias_anticipacion_polizas": 30,
+                    "dias_anticipacion_rtv": 30,
+                    "dias_anticipacion_mantenimiento": 30,
+                    "km_diferencia_alerta": 10
+                }
+            }
+    except Exception as e:
+        logger.error(f"Error al obtener configuración de alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/config/alertas")
+async def set_config_alertas(config: ConfigAlertas):
+    """Configurar alertas del sistema"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Desactivar configuración anterior
+        cursor.execute("UPDATE config_alertas SET activo = 0")
+        
+        # Insertar nueva configuración
+        cursor.execute('''
+            INSERT INTO config_alertas (
+                email_destino, alertas_mantenimiento, alertas_polizas, alertas_rtv,
+                alertas_revisiones, alertas_combustible, alertas_bitacora,
+                dias_anticipacion_polizas, dias_anticipacion_rtv, 
+                dias_anticipacion_mantenimiento, km_diferencia_alerta
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (config.email_destino, config.alertas_mantenimiento, config.alertas_polizas,
+              config.alertas_rtv, config.alertas_revisiones, config.alertas_combustible,
+              config.alertas_bitacora, config.dias_anticipacion_polizas, 
+              config.dias_anticipacion_rtv, config.dias_anticipacion_mantenimiento,
+              config.km_diferencia_alerta))
+        
+        # Actualizar configuración global de EMAIL
+        EMAIL_CONFIG["recipient_email"] = config.email_destino
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "Configuración de alertas guardada exitosamente"}
+    except Exception as e:
+        logger.error(f"Error al configurar alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================================
+# ENDPOINTS CONFIGURACIÓN EMAIL
+# ================================
 
 # Endpoint para configurar email
 @app.post("/config/email")
