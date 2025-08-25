@@ -789,6 +789,10 @@
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label>Kilometraje Inicial</label>
+            <input id="vKmInicial" type="number" min="0" placeholder="Ej: 50000" title="Kilometraje actual del odómetro del vehículo"/>
+          </div>
+          <div class="form-group">
             <label>Tipo</label>
             <select id="vTipo">
               <option value="sedán">Sedán</option>
@@ -860,6 +864,7 @@
               <th>Placa</th>
               <th>Marca/Modelo</th>
               <th>Año</th>
+              <th>Km Inicial</th>
               <th>Tipo</th>
               <th>Dueño</th>
               <th>Aseguradora</th>
@@ -1260,6 +1265,7 @@
             <button type="submit" class="success" id="btnBitacora">📝 Registrar Salida</button>
             <button type="button" class="secondary" onclick="limpiarFormBitacora()">🗑️ Limpiar</button>
             <button type="button" class="btn-small danger" onclick="enviarAlertaRetornoPendiente()" title="Enviar alerta de retorno pendiente">⚠️ Alerta</button>
+            <button type="button" class="btn-small" onclick="verificarEstadoBitacora()" title="Debug: Verificar estado actual" style="background:#6366f1;color:white">🔍 Debug</button>
           </div>
         </form>
         
@@ -1522,7 +1528,7 @@
               </div>
               <div class="form-group">
                 <label>Limpiaparabrisas</label>
-                <select id="rLimpiaparabrisas">
+                <select id="rLimpiapFisico">
                   <option value="1">✅ Buen Estado</option>
                   <option value="0">❌ Mal Estado</option>
                 </select>
@@ -1543,20 +1549,8 @@
                   <option value="0">❌ Mal Estado</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label>Nivel Combustible</label>
-                <select id="rNivelComb">
-                  <option value="vacio">Vacío (E)</option>
-                  <option value="1/4">1/4</option>
-                  <option value="1/2">1/2</option>
-                  <option value="3/4">3/4</option>
-                  <option value="lleno">Lleno (F)</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Kilometraje Actual</label>
-                <input id="rKm" type="number" min="0" required/>
-              </div>
+
+
             </div>
           </div>
           
@@ -2264,7 +2258,7 @@
 
   <script>
   // ====== API: Backend Python FastAPI ======
-  const API = "https://8000-i2csqmmo4txbkyhmexll8-6532622b.e2b.dev";
+  const API = "https://8001-i2csqmmo4txbkyhmexll8-6532622b.e2b.dev";
   const API_KEY = ""; // si activas API key, colócala aquí
 
   // ====== ESTADO ======
@@ -3138,10 +3132,13 @@
         const duenoValue = v.propietario || v.dueno || 'Hotel';
         const aseguradoraValue = v.seguro || v.aseguradora || '-';
         
+        const kmInicial = v.km_inicial || 0;
+        
         return `<tr>
           <td><strong>${v.placa}</strong></td>
           <td>${v.marca} ${v.modelo}</td>
           <td>${ano}</td>
+          <td><strong>${kmInicial.toLocaleString()} km</strong></td>
           <td>${tipo}</td>
           <td>👤 ${duenoValue}</td>
           <td>${aseguradoraValue}</td>
@@ -3154,7 +3151,7 @@
         </tr>`;
       })
       .join('');
-    byId('tblVeh').innerHTML = rows || '<tr><td colspan="8">Sin vehículos</td></tr>';
+    byId('tblVeh').innerHTML = rows || '<tr><td colspan="9">Sin vehículos</td></tr>';
   }
   function renderPolizas(){
     const mode=byId('fltPolVencer').value;
@@ -3418,7 +3415,8 @@
         color: byId('vColor').value||'No especificado',
         propietario: byId('vDueno').value||'Hotel',
         poliza: byId('vPoliza').value||null,
-        seguro: byId('vAseguradora').value||null
+        seguro: byId('vAseguradora').value||null,
+        km_inicial: parseInt(byId('vKmInicial').value) || 0
       };
       
       await apiPost('vehiculos', obj);
@@ -3435,7 +3433,7 @@
   }
   
   function limpiarFormVehiculo() {
-    ['vPlaca', 'vMarca', 'vModelo', 'vAnio', 'vDueno', 'vPoliza', 'vAseguradora', 'vColor'].forEach(id => {
+    ['vPlaca', 'vMarca', 'vModelo', 'vAnio', 'vKmInicial', 'vDueno', 'vPoliza', 'vAseguradora', 'vColor'].forEach(id => {
       const el = byId(id);
       if (el) el.value = '';
     });
@@ -3618,6 +3616,12 @@
     // Determinar aprobación general
     const aprobado = [estadoMotor, estadoFrenas, estadoLuces, estadoLlantas, estadoCarroceria].every(estado => estado !== 'malo');
     
+    // Recopilar datos del sistema eléctrico y exterior
+    const getSelectValue = (id) => {
+      const el = byId(id);
+      return el ? (el.value === '1' || el.value === 'true') : true;
+    };
+    
     const obj = {
       fecha: byId('rFecha').value,
       placa: placa,
@@ -3628,7 +3632,20 @@
       estado_llantas: estadoLlantas,
       estado_carroceria: estadoCarroceria,
       observaciones: byId('rObservaciones').value || '',
-      aprobado: aprobado
+      aprobado: aprobado,
+      // Nuevos campos del sistema eléctrico y exterior
+      luces_delanteras: getSelectValue('rLucesDelanteras'),
+      luces_traseras: getSelectValue('rLucesTraseras'),
+      luces_direccionales: getSelectValue('rLucesDireccionales'),
+      luces_freno: getSelectValue('rLucesFreno'),
+      luces_reversa: getSelectValue('rLucesReversa'),
+      espejos_laterales: getSelectValue('rEspejosLaterales'),
+      espejo_retrovisor: getSelectValue('rEspejoRetrovisor'),
+      limpiaparabrisas: getSelectValue('rLimpiapFisico'),
+      cinturones: getSelectValue('rCinturones'),
+      bocina: getSelectValue('rBocina'),
+      nivel_combustible: byId('rNivelComb')?.value || 'lleno',
+      kilometraje: parseInt(byId('rKm')?.value) || 0
     };
     
     try {
@@ -3653,7 +3670,10 @@
   // Función auxiliar para evaluar estado de luces
   function evaluarEstadoLuces() {
     const luces = ['rLucesDelanteras', 'rLucesTraseras', 'rLucesDireccionales', 'rLucesFreno'];
-    const funcionan = luces.map(id => byId(id)?.checked || false);
+    const funcionan = luces.map(id => {
+      const el = byId(id);
+      return el ? (el.value === '1') : true;
+    });
     const porcentajeFuncionando = funcionan.filter(Boolean).length / funcionan.length;
     
     if (porcentajeFuncionando >= 0.8) return 'bueno';
@@ -3678,7 +3698,7 @@
     
     // Desmarcar checkboxes
     ['rLucesDelanteras', 'rLucesTraseras', 'rLucesDireccionales', 'rLucesFreno', 
-     'rLucesReversa', 'rEspejosLaterales', 'rEspejoRetrovisor', 'rLimpiaparabrisas', 
+     'rLucesReversa', 'rEspejosLaterales', 'rEspejoRetrovisor', 'rLimpiapFisico', 
      'rCinturones', 'rBocina'].forEach(id => {
       const el = byId(id);
       if (el) el.checked = false;
@@ -4956,6 +4976,9 @@
     const fechaA = byId('repA').value || '2000-01-01';
     const fechaB = byId('repB').value || today();
     
+    // Generar y almacenar datos para uso posterior en email
+    currentReportData = generarDatosReporte(tipo, placa, fechaA, fechaB);
+    
     let contenido = '';
     let titulo = '';
     
@@ -5100,8 +5123,189 @@
     window.print();
   }
   
-  function enviarReporteEmail() {
-    alert('Funcionalidad de envío por email - Se puede integrar con un servicio de email');
+  async function enviarReporteEmail() {
+    try {
+      // Verificar que haya datos para enviar
+      if (!currentReportData || currentReportData.length === 0) {
+        alert('❌ Debe generar una vista previa del reporte antes de enviarlo por email');
+        return;
+      }
+      
+      // Obtener configuración de email
+      let emailConfig;
+      try {
+        emailConfig = await apiGet('config/email');
+      } catch (e) {
+        alert('❌ Error obteniendo configuración de email. Verifique que esté configurada en "Config. Alertas"');
+        return;
+      }
+      
+      if (!emailConfig.email_destino) {
+        alert('❌ No hay email de destino configurado. Configure primero en "Config. Alertas"');
+        return;
+      }
+      
+      const tipo = byId('repTipo').value;
+      const placa = byId('repPlaca').value || '';
+      const fechaInicio = byId('repA').value || '2000-01-01';
+      const fechaFin = byId('repB').value || today();
+      
+      // Generar título del reporte
+      const tipoTextos = {
+        'mantenimientos': '🔧 Mantenimientos',
+        'combustible': '⛽ Combustible',
+        'revisiones': '🔍 Revisiones',
+        'polizas_rtv': '🛡️ Pólizas & RTV',
+        'ficha_vehiculo': '📋 Ficha Técnica por Vehículo',
+        'resumen_costos': '💰 Resumen de Costos',
+        'alertas': '⚠️ Alertas y Vencimientos',
+        'resumen_general': '📊 Resumen General de Flota'
+      };
+      
+      const tituloReporte = tipoTextos[tipo] || 'Reporte';
+      const vehiculoTexto = placa ? ` - Vehículo ${placa}` : ' - Todos los vehículos';
+      const subject = `📊 ${tituloReporte}${vehiculoTexto} (${fechaInicio} a ${fechaFin})`;
+      
+      // Convertir datos a HTML para el email
+      const htmlTable = generateHtmlTable(currentReportData, tituloReporte);
+      
+      const emailData = {
+        destinatario: emailConfig.email_destino,
+        asunto: subject,
+        mensaje_html: `
+          <h2>📊 Sistema de Gestión Vehicular - Reporte</h2>
+          <p><strong>Tipo:</strong> ${tituloReporte}</p>
+          <p><strong>Período:</strong> ${fechaInicio} a ${fechaFin}</p>
+          <p><strong>Vehículo:</strong> ${placa || 'Todos los vehículos'}</p>
+          <p><strong>Fecha de generación:</strong> ${new Date().toLocaleString('es-CR')}</p>
+          <hr>
+          ${htmlTable}
+          <hr>
+          <p><small>Reporte generado automáticamente por el Sistema de Gestión Vehicular</small></p>
+        `
+      };
+      
+      const response = await fetch(`${API}/reportes/enviar-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailData)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`✅ Reporte enviado exitosamente a ${emailConfig.email_destino}`);
+      } else {
+        alert('❌ Error enviando reporte: ' + (result.message || 'Error desconocido'));
+      }
+      
+    } catch (e) {
+      alert('❌ Error enviando reporte por email: ' + e.message);
+      console.error('Error enviando reporte:', e);
+    }
+  }
+  
+  // Variable global para almacenar datos del reporte actual
+  let currentReportData = null;
+  
+  // Función para generar datos del reporte para email
+  function generarDatosReporte(tipo, placa, fechaA, fechaB) {
+    switch(tipo) {
+      case 'mantenimientos':
+        return Mantenimientos.filter(x=> 
+          x.fecha >= fechaA && x.fecha <= fechaB && 
+          (!placa || (vehById(x.vehiculo_id)?.placa||'') === placa)
+        ).map(m => ({
+          'Placa': vehById(m.vehiculo_id)?.placa || '',
+          'Fecha': m.fecha,
+          'Tipo': m.tipo,
+          'Costo (₡)': Number(m.costo || 0),
+          'Kilometraje': m.km_actual || '',
+          'Observaciones': m.observaciones || ''
+        }));
+        
+      case 'combustible':
+        return Combustible.filter(x=> 
+          x.fecha >= fechaA && x.fecha <= fechaB && 
+          (!placa || x.placa === placa)
+        ).map(c => ({
+          'Placa': c.placa,
+          'Fecha': c.fecha,
+          'Litros': Number(c.litros || 0),
+          'Costo (₡)': Number(c.costo || 0),
+          'Kilometraje': c.kilometraje || '',
+          'Estación': c.estacion || '',
+          'Tipo Combustible': c.tipo_combustible || ''
+        }));
+        
+      case 'revisiones':
+        return Revisiones.filter(x=> 
+          x.fecha >= fechaA && x.fecha <= fechaB && 
+          (!placa || x.placa === placa)
+        ).map(r => ({
+          'Placa': r.placa,
+          'Fecha': r.fecha,
+          'Inspector': r.inspector,
+          'Estado Motor': r.estado_motor,
+          'Estado Frenos': r.estado_frenos,
+          'Estado Luces': r.estado_luces,
+          'Estado Llantas': r.estado_llantas,
+          'Aprobado': r.aprobado ? 'Sí' : 'No',
+          'Observaciones': r.observaciones || ''
+        }));
+        
+      case 'polizas_rtv':
+        const polizasData = Polizas.map(p => ({
+          'Tipo': 'Póliza',
+          'Placa': p.placa,
+          'Número': p.numero_poliza,
+          'Aseguradora/Centro': p.aseguradora,
+          'Fecha Inicio': p.fecha_inicio,
+          'Fecha Vencimiento': p.fecha_vencimiento,
+          'Estado': p.estado
+        }));
+        const rtvData = RTV.map(r => ({
+          'Tipo': 'RTV',
+          'Placa': r.placa,
+          'Número': r.numero_cita,
+          'Aseguradora/Centro': r.centro_revision,
+          'Fecha Inicio': r.fecha_revision,
+          'Fecha Vencimiento': r.fecha_vencimiento,
+          'Estado': r.estado
+        }));
+        return [...polizasData, ...rtvData];
+        
+      default:
+        return [];
+    }
+  }
+  
+  // Función auxiliar para generar tabla HTML
+  function generateHtmlTable(data, titulo) {
+    if (!data || data.length === 0) return '<p>No hay datos para mostrar</p>';
+    
+    // Obtener las claves del primer objeto como cabeceras
+    const headers = Object.keys(data[0]);
+    
+    let html = `<table style="border-collapse: collapse; width: 100%; margin: 20px 0;">`;
+    html += `<thead><tr style="background-color: #f4f4f4;">`;
+    headers.forEach(header => {
+      html += `<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">${header}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    
+    data.forEach((row, index) => {
+      const bgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+      html += `<tr style="background-color: ${bgColor};">`;
+      headers.forEach(header => {
+        const value = row[header] || '';
+        html += `<td style="border: 1px solid #ddd; padding: 8px;">${value}</td>`;
+      });
+      html += `</tr>`;
+    });
+    
+    html += `</tbody></table>`;
+    return html;
   }
   
   function exportReportXLSX(){
@@ -6139,14 +6343,43 @@
   
   async function registrarRetorno() {
     try {
+      console.log('=== INICIANDO REGISTRO DE RETORNO ===');
+      console.log('currentBitacoraId:', currentBitacoraId);
+      console.log('Formulario en modo retorno:', !byId('retornoFields').classList.contains('hidden'));
+      console.log('Botón actual:', byId('btnBitacora').innerHTML);
+      
+      // Verificar que los elementos existan
+      const kmInput = byId('bKmRetorno');
+      const combustibleSelect = byId('bCombustibleRetorno');
+      const estadoSelect = byId('bEstadoRetorno');
+      const obsInput = byId('bObsRetorno');
+      
+      console.log('Elementos del formulario:', {
+        kmInput: !!kmInput,
+        combustibleSelect: !!combustibleSelect,
+        estadoSelect: !!estadoSelect,
+        obsInput: !!obsInput
+      });
+      
+      if (!kmInput || !combustibleSelect || !estadoSelect) {
+        alert('❌ Error: No se encontraron los campos del formulario de retorno');
+        return;
+      }
+      
       // Validar campos requeridos
-      const kmRetorno = byId('bKmRetorno').value;
-      const combustibleRetorno = byId('bCombustibleRetorno').value;
-      const estadoRetorno = byId('bEstadoRetorno').value;
+      const kmRetorno = kmInput.value;
+      const combustibleRetorno = combustibleSelect.value;
+      const estadoRetorno = estadoSelect.value;
+      
+      console.log('Valores del formulario:', {
+        kmRetorno,
+        combustibleRetorno,
+        estadoRetorno
+      });
       
       if (!kmRetorno || kmRetorno <= 0) {
         alert('❌ Por favor ingrese un kilometraje válido para el retorno');
-        byId('bKmRetorno').focus();
+        kmInput.focus();
         return;
       }
       
@@ -6159,7 +6392,7 @@
         km_retorno: parseInt(kmRetorno),
         nivel_combustible_retorno: combustibleRetorno,
         estado_vehiculo_retorno: estadoRetorno,
-        observaciones: byId('bObsRetorno').value || ''
+        observaciones: obsInput ? obsInput.value || '' : ''
       };
       
       console.log('Enviando retorno:', retorno, 'para bitácora ID:', currentBitacoraId);
@@ -6170,6 +6403,7 @@
         body: JSON.stringify(retorno)
       });
       
+      console.log('Response status:', response.status);
       const data = await response.json();
       console.log('Respuesta del servidor:', data);
       
@@ -6186,6 +6420,8 @@
         // Actualizar datos
         Bitacora = await apiGet('bitacora');
         renderBitacora();
+        
+        console.log('=== RETORNO COMPLETADO EXITOSAMENTE ===');
       } else {
         alert('❌ Error registrando retorno: ' + (data.message || data.detail || 'Error desconocido'));
       }
@@ -6259,36 +6495,79 @@
   
   async function enviarAlertaRetornoPendiente() {
     try {
-      // Buscar registros en curso (sin retorno)
-      const registrosPendientes = Bitacora.filter(b => b.estado === 'en_curso');
-      
-      if (registrosPendientes.length === 0) {
-        alert('✅ No hay vehículos con retorno pendiente');
+      // Verificar si hay un vehículo seleccionado para retorno
+      if (!currentBitacoraId) {
+        alert('❌ Primero debe seleccionar un vehículo haciendo clic en "Registrar Retorno" en la tabla');
         return;
       }
       
-      // Mostrar lista de pendientes y permitir seleccionar
-      const listaPendientes = registrosPendientes.map(r => 
-        `${r.placa} - ${r.chofer} (Salida: ${new Date(r.fecha_salida).toLocaleDateString()})`
-      ).join('\n');
+      // Buscar el registro específico seleccionado
+      const registroSeleccionado = Bitacora.find(b => b.id === currentBitacoraId);
+      
+      if (!registroSeleccionado) {
+        alert('❌ No se encontró el registro de bitácora seleccionado');
+        return;
+      }
+      
+      if (registroSeleccionado.estado !== 'en_curso') {
+        alert('❌ El vehículo seleccionado ya tiene retorno registrado');
+        return;
+      }
+      
+      const fechaSalida = new Date(registroSeleccionado.fecha_salida).toLocaleDateString();
+      const horasSalida = Math.floor((new Date() - new Date(registroSeleccionado.fecha_salida)) / (1000 * 60 * 60));
       
       const confirmar = confirm(
-        `⚠️ VEHÍCULOS CON RETORNO PENDIENTE:\n\n${listaPendientes}\n\n¿Enviar alerta por email para todos estos registros?`
+        `⚠️ ENVIAR ALERTA DE RETORNO PENDIENTE\n\n` +
+        `Vehículo: ${registroSeleccionado.placa}\n` +
+        `Chofer: ${registroSeleccionado.chofer}\n` +
+        `Salida: ${fechaSalida}\n` +
+        `Tiempo sin retorno: ${horasSalida} horas\n\n` +
+        `¿Enviar alerta por email?`
       );
       
       if (!confirmar) return;
       
-      // Enviar alerta por email
+      // Enviar alerta por email para este vehículo específico
       const response = await fetch(`${API}/bitacora/alerta-retorno-pendiente`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registros_pendientes: registrosPendientes })
+        body: JSON.stringify({ registros_pendientes: [registroSeleccionado] })
       });
       
       const data = await response.json();
       
       if (data.success) {
-        alert(`✅ Alerta enviada exitosamente!\n\nSe notificó sobre ${registrosPendientes.length} vehículo(s) con retorno pendiente.`);
+        alert(`✅ Alerta enviada exitosamente!\n\nSe notificó sobre el vehículo ${registroSeleccionado.placa} a cargo de ${registroSeleccionado.chofer}.`);
+        
+        // Asegurar que el formulario permanezca en modo retorno después de la alerta
+        if (currentBitacoraId && currentBitacoraId === registroSeleccionado.id) {
+          console.log('🔧 Restaurando modo retorno después de alerta...');
+          
+          // Encontrar el vehículo y reconfigurar el formulario
+          const vehiculo = Vehiculos.find(v => v.placa === registroSeleccionado.placa);
+          if (vehiculo) {
+            byId('bVeh').value = vehiculo.id;
+          }
+          byId('bChofer').value = registroSeleccionado.chofer;
+          
+          // Asegurar modo retorno
+          cambiarAModoRetorno();
+          
+          // Re-enfocar el campo de kilometraje y mostrar instrucciones
+          setTimeout(() => {
+            const kmField = byId('bKmRetorno');
+            if (kmField) {
+              kmField.focus();
+              console.log('✅ Formulario listo para registro de retorno');
+            }
+          }, 100);
+          
+          // Mostrar mensaje adicional
+          setTimeout(() => {
+            alert('📝 Ahora puede completar el registro de retorno del vehículo.');
+          }, 500);
+        }
       } else {
         alert('❌ Error enviando alerta: ' + (data.message || 'Error desconocido'));
       }
@@ -6297,6 +6576,17 @@
       alert('❌ Error enviando alerta: ' + e.message);
       console.error('Error enviando alerta de retorno pendiente:', e);
     }
+  }
+  
+  function verificarEstadoBitacora() {
+    console.log('=== ESTADO ACTUAL DE BITÁCORA ===');
+    console.log('currentBitacoraId:', currentBitacoraId);
+    console.log('Modo salida visible:', !byId('salidaFields').classList.contains('hidden'));
+    console.log('Modo retorno visible:', !byId('retornoFields').classList.contains('hidden'));
+    console.log('Texto del botón:', byId('btnBitacora').innerHTML);
+    console.log('Vehículo seleccionado:', byId('bVeh').value);
+    console.log('Chofer:', byId('bChofer').value);
+    console.log('===============================');
   }
   
   function verificarEstadoVehiculo() {

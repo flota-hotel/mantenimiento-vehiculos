@@ -6,7 +6,8 @@ FastAPI Backend para reemplazar Google Sheets
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import sqlite3
@@ -34,6 +35,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Servir archivos estáticos (CSS, JS, imágenes)
+app.mount("/static", StaticFiles(directory="."), name="static")
 
 # Base de datos SQLite
 DATABASE_PATH = "vehicular_system.db"
@@ -303,6 +307,7 @@ class VehiculoCreate(BaseModel):
     propietario: Optional[str] = "Hotel"
     poliza: Optional[str] = None
     seguro: Optional[str] = None
+    km_inicial: Optional[int] = 0
 
 class VehiculoUpdate(BaseModel):
     marca: Optional[str] = None
@@ -312,6 +317,7 @@ class VehiculoUpdate(BaseModel):
     propietario: Optional[str] = None
     poliza: Optional[str] = None
     seguro: Optional[str] = None
+    km_inicial: Optional[int] = None
 
 class MantenimientoCreate(BaseModel):
     fecha: str
@@ -397,7 +403,7 @@ class ConfigAlertas(BaseModel):
     dias_anticipacion_polizas: Optional[int] = 30
     dias_anticipacion_rtv: Optional[int] = 30
     dias_anticipacion_mantenimiento: Optional[int] = 30
-    km_diferencia_alerta: Optional[int] = 10
+    km_diferencia_alerta: Optional[int] = 1
 
 # Utilidades de base de datos
 def get_db_connection():
@@ -876,7 +882,12 @@ init_database()
 
 @app.get("/")
 async def root():
-    """Endpoint de prueba"""
+    """Servir la página principal del frontend"""
+    return FileResponse("index.html")
+
+@app.get("/api")
+async def api_status():
+    """Endpoint de estado de la API"""
     return {"message": "Sistema de Gestión Vehicular API", "status": "active"}
 
 # ================================
@@ -913,10 +924,10 @@ async def create_vehiculo(vehiculo: VehiculoCreate):
         propietario = vehiculo.propietario or "Hotel"
         
         cursor.execute('''
-            INSERT INTO vehiculos (placa, marca, modelo, ano, color, propietario, poliza, seguro)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO vehiculos (placa, marca, modelo, ano, color, propietario, poliza, seguro, km_inicial)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (placa, vehiculo.marca, vehiculo.modelo, vehiculo.ano, 
-              color, propietario, vehiculo.poliza, vehiculo.seguro))
+              color, propietario, vehiculo.poliza, vehiculo.seguro, vehiculo.km_inicial or 0))
         
         conn.commit()
         conn.close()
@@ -1171,12 +1182,25 @@ async def get_last_odometer(placa: str):
         ''', (placa.upper(),))
         
         result = cursor.fetchone()
-        conn.close()
         
         if result and result[0] is not None:
+            conn.close()
             return {"success": True, "data": {"kilometraje": result[0]}}
         else:
-            return {"success": True, "data": {"kilometraje": 0}}
+            # No hay registros de combustible, buscar el kilometraje inicial del vehículo
+            cursor.execute('''
+                SELECT km_inicial 
+                FROM vehiculos 
+                WHERE placa = ?
+            ''', (placa.upper(),))
+            
+            vehiculo_result = cursor.fetchone()
+            conn.close()
+            
+            if vehiculo_result and vehiculo_result[0] is not None:
+                return {"success": True, "data": {"kilometraje": vehiculo_result[0]}}
+            else:
+                return {"success": True, "data": {"kilometraje": 0}}
             
     except Exception as e:
         logger.error(f"Error al obtener último odómetro: {e}")
@@ -1573,13 +1597,27 @@ async def registrar_salida(salida: BitacoraSalida):
         
         if ultimo_registro and ultimo_registro['km_retorno']:
             diferencia = abs(salida.km_salida - ultimo_registro['km_retorno'])
-            # Si la diferencia es mayor a 10 km, enviar alerta
-            if diferencia > 10:
+            # Si la diferencia es mayor a 1 km, enviar alerta
+            if diferencia > 1:
                 alerta_km = True
                 asyncio.create_task(enviar_alerta_kilometraje(
                     salida.placa, salida.chofer, salida.km_salida, 
                     ultimo_registro['km_retorno'], ultimo_registro['chofer']
                 ))
+        else:
+            # No hay registros previos, comparar con kilometraje inicial del vehículo
+            cursor.execute("SELECT km_inicial FROM vehiculos WHERE placa = ?", (salida.placa,))
+            vehiculo = cursor.fetchone()
+            
+            if vehiculo and vehiculo['km_inicial'] and vehiculo['km_inicial'] > 0:
+                diferencia = abs(salida.km_salida - vehiculo['km_inicial'])
+                # Si la diferencia es mayor a 1 km, enviar alerta
+                if diferencia > 1:
+                    alerta_km = True
+                    asyncio.create_task(enviar_alerta_kilometraje(
+                        salida.placa, salida.chofer, salida.km_salida, 
+                        vehiculo['km_inicial'], "Sistema (KM Inicial)"
+                    ))
         
         # Insertar nuevo registro
         cursor.execute('''
@@ -1771,7 +1809,7 @@ async def get_config_alertas():
                     "dias_anticipacion_polizas": 30,
                     "dias_anticipacion_rtv": 30,
                     "dias_anticipacion_mantenimiento": 30,
-                    "km_diferencia_alerta": 10
+                    "km_diferencia_alerta": 1
                 }
             }
     except Exception as e:
@@ -1944,6 +1982,44 @@ async def test_smtp_connection(smtp_config: dict):
     except Exception as e:
         logger.error(f"Error probando conexión SMTP: {e}")
         return {"success": False, "error": f"Error inesperado: {str(e)}"}
+
+@app.post("/reportes/enviar-email")
+async def enviar_reporte_email(email_data: dict):
+    """Enviar reporte por email usando configuración de alertas"""
+    try:
+        # Obtener configuración de email de la base de datos
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM config_email WHERE activo = 1 ORDER BY id DESC LIMIT 1")
+        email_config = cursor.fetchone()
+        conn.close()
+        
+        if not email_config:
+            raise HTTPException(status_code=400, detail="No hay configuración de email activa")
+        
+        # Crear mensaje de email
+        msg = MIMEMultipart()
+        msg['From'] = email_config['email_remitente']
+        msg['To'] = email_data['destinatario']
+        msg['Subject'] = email_data['asunto']
+        
+        msg.attach(MIMEText(email_data['mensaje_html'], 'html'))
+        
+        # Enviar email usando la configuración de la base de datos
+        server = smtplib.SMTP(email_config['smtp_servidor'], email_config['smtp_puerto'])
+        server.starttls()
+        server.login(email_config['email_usuario'], email_config['email_password'])
+        text = msg.as_string()
+        server.sendmail(email_config['email_remitente'], email_data['destinatario'], text)
+        server.quit()
+        
+        logger.info(f"Reporte enviado por email a {email_data['destinatario']}")
+        return {"success": True, "message": "Reporte enviado exitosamente"}
+        
+    except Exception as e:
+        logger.error(f"Error enviando reporte por email: {e}")
+        return {"success": False, "message": f"Error enviando reporte: {str(e)}"}
 
 # Endpoint para obtener detalle de alertas para el frontend
 @app.get("/alertas/detalle")
