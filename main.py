@@ -1653,6 +1653,93 @@ async def enviar_alerta_kilometraje(placa, chofer_actual, km_actual, km_anterior
     except Exception as e:
         logger.error(f"Error enviando alerta de kilometraje: {e}")
 
+@app.post("/bitacora/alerta-retorno-pendiente")
+async def enviar_alerta_retorno_pendiente(request: dict):
+    """Enviar alerta por vehículos con retorno pendiente"""
+    try:
+        registros_pendientes = request.get('registros_pendientes', [])
+        
+        if not registros_pendientes:
+            return {"success": False, "message": "No hay registros pendientes para notificar"}
+        
+        # Crear HTML con la lista de vehículos pendientes
+        vehiculos_html = ""
+        for registro in registros_pendientes:
+            fecha_salida = datetime.fromisoformat(registro['fecha_salida'].replace('Z', '+00:00'))
+            dias_pendientes = (datetime.now() - fecha_salida).days
+            
+            vehiculos_html += f"""
+            <tr style="background-color: {'#ffebee' if dias_pendientes > 3 else '#fff3e0'};">
+                <td><strong>{registro['placa']}</strong></td>
+                <td>{registro['chofer']}</td>
+                <td>{fecha_salida.strftime('%d/%m/%Y %H:%M')}</td>
+                <td>{registro['km_salida']} km</td>
+                <td>{registro['nivel_combustible_salida']}</td>
+                <td style="color: {'red' if dias_pendientes > 3 else 'orange'};">
+                    <strong>{dias_pendientes} día{'s' if dias_pendientes != 1 else ''}</strong>
+                </td>
+            </tr>
+            """
+        
+        subject = f"🚨 ALERTA URGENTE: {len(registros_pendientes)} Vehículo(s) Sin Retorno"
+        
+        body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif;">
+            <h2 style="color: #d32f2f;">🚨 ALERTA: VEHÍCULOS SIN RETORNO</h2>
+            
+            <p>Se han detectado <strong>{len(registros_pendientes)} vehículo(s)</strong> que no han registrado su retorno:</p>
+            
+            <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+                <thead style="background-color: #f5f5f5;">
+                    <tr>
+                        <th>Placa</th>
+                        <th>Chofer Responsable</th>
+                        <th>Fecha/Hora Salida</th>
+                        <th>KM Salida</th>
+                        <th>Combustible Salida</th>
+                        <th>Días Pendientes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {vehiculos_html}
+                </tbody>
+            </table>
+            
+            <div style="background-color: #ffebee; padding: 15px; border-left: 4px solid #f44336; margin: 20px 0;">
+                <h3 style="color: #d32f2f; margin: 0 0 10px 0;">⚠️ ACCIÓN REQUERIDA</h3>
+                <ul>
+                    <li>Contactar inmediatamente a los choferes responsables</li>
+                    <li>Verificar el estado actual de los vehículos</li>
+                    <li>Registrar el retorno correspondiente en el sistema</li>
+                    <li>En caso de emergencia, reportar a supervisión</li>
+                </ul>
+            </div>
+            
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">
+                Alerta generada automáticamente el {datetime.now().strftime('%d/%m/%Y a las %H:%M')}<br>
+                Sistema de Gestión Vehicular - Hotel Arenal Manoa
+            </p>
+        </body>
+        </html>
+        """
+        
+        success = send_email_notification(subject, body)
+        
+        if success:
+            logger.info(f"Alerta de retorno pendiente enviada para {len(registros_pendientes)} vehículos")
+            return {
+                "success": True, 
+                "message": f"Alerta enviada exitosamente para {len(registros_pendientes)} vehículo(s)",
+                "count": len(registros_pendientes)
+            }
+        else:
+            return {"success": False, "message": "Error enviando la alerta por email"}
+            
+    except Exception as e:
+        logger.error(f"Error enviando alerta de retorno pendiente: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ================================
 # ENDPOINTS CONFIGURACIÓN DE ALERTAS
 # ================================

@@ -95,8 +95,8 @@
     button:active{transform:scale(0.95);background:var(--primary-hover)}
     button.secondary{background:#f8fafc;color:var(--ink);border:1px solid var(--line)}
     .btn-small{padding:6px 10px;font-size:12px;margin:2px;min-width:auto}
-    .btn-small.danger{background:var(--danger)}
-    .btn-small.danger:hover{background:#dc2626}
+    .btn-small.danger{background:var(--danger);color:white;border:none}
+    .btn-small.danger:hover{background:#dc2626;transform:translateY(-1px);box-shadow:0 2px 4px rgba(239, 68, 68, 0.3)}
     button.secondary:hover{background:#f1f5f9;border-color:var(--primary)}
     button.danger{background:var(--danger)}
     button.danger:hover{background:#dc2626}
@@ -339,6 +339,9 @@
     .form-group label{display:block;margin-bottom:8px;font-weight:600;color:var(--ink)}
     .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
     .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+    .smtp-config{border-left:4px solid #ffc107;background:#fffbee;padding:20px;border-radius:8px;margin:20px 0}
+    .smtp-config h4{color:#b45309;margin:0 0 16px 0}
+    .smtp-config small{color:#92400e;font-style:italic}
     
     /* Report preview */
     .report-preview{background:white;border:1px solid var(--line);border-radius:12px;padding:20px;margin-top:20px}
@@ -1256,6 +1259,7 @@
           <div style="margin-top:20px">
             <button type="submit" class="success" id="btnBitacora">📝 Registrar Salida</button>
             <button type="button" class="secondary" onclick="limpiarFormBitacora()">🗑️ Limpiar</button>
+            <button type="button" class="btn-small danger" onclick="enviarAlertaRetornoPendiente()" title="Enviar alerta de retorno pendiente">⚠️ Alerta</button>
           </div>
         </form>
         
@@ -6135,12 +6139,30 @@
   
   async function registrarRetorno() {
     try {
+      // Validar campos requeridos
+      const kmRetorno = byId('bKmRetorno').value;
+      const combustibleRetorno = byId('bCombustibleRetorno').value;
+      const estadoRetorno = byId('bEstadoRetorno').value;
+      
+      if (!kmRetorno || kmRetorno <= 0) {
+        alert('❌ Por favor ingrese un kilometraje válido para el retorno');
+        byId('bKmRetorno').focus();
+        return;
+      }
+      
+      if (!currentBitacoraId) {
+        alert('❌ Error: No hay un registro de bitácora seleccionado para completar');
+        return;
+      }
+      
       const retorno = {
-        km_retorno: parseInt(byId('bKmRetorno').value),
-        nivel_combustible_retorno: byId('bCombustibleRetorno').value,
-        estado_vehiculo_retorno: byId('bEstadoRetorno').value,
+        km_retorno: parseInt(kmRetorno),
+        nivel_combustible_retorno: combustibleRetorno,
+        estado_vehiculo_retorno: estadoRetorno,
         observaciones: byId('bObsRetorno').value || ''
       };
+      
+      console.log('Enviando retorno:', retorno, 'para bitácora ID:', currentBitacoraId);
       
       const response = await fetch(`${API}/bitacora/${currentBitacoraId}/retorno`, {
         method: 'PUT',
@@ -6149,20 +6171,26 @@
       });
       
       const data = await response.json();
+      console.log('Respuesta del servidor:', data);
       
       if (data.success) {
+        alert('✅ Retorno registrado exitosamente');
+        
         // Volver a modo salida
         cambiarAModoSalida();
         currentBitacoraId = null;
         
+        // Limpiar formulario
+        limpiarFormBitacora();
+        
         // Actualizar datos
         Bitacora = await apiGet('bitacora');
         renderBitacora();
-        limpiarFormBitacora();
-        
-        alert('✅ Retorno registrado exitosamente');
+      } else {
+        alert('❌ Error registrando retorno: ' + (data.message || data.detail || 'Error desconocido'));
       }
     } catch (e) {
+      console.error('Error en registrarRetorno:', e);
       alert('❌ Error registrando retorno: ' + e.message);
     }
   }
@@ -6211,11 +6239,64 @@
     }
     byId('bChofer').value = registro.chofer;
     
+    // Prellenar algunos campos del retorno con valores por defecto
+    byId('bKmRetorno').value = '';
+    byId('bCombustibleRetorno').value = '3/4';
+    byId('bEstadoRetorno').value = 'bueno';
+    byId('bObsRetorno').value = '';
+    
     currentBitacoraId = bitacoraId;
     cambiarAModoRetorno();
     
     // Scroll al formulario
     document.querySelector('#tab-bitacora .card').scrollIntoView({ behavior: 'smooth' });
+    
+    // Enfocar el campo de kilometraje
+    setTimeout(() => {
+      byId('bKmRetorno').focus();
+    }, 100);
+  }
+  
+  async function enviarAlertaRetornoPendiente() {
+    try {
+      // Buscar registros en curso (sin retorno)
+      const registrosPendientes = Bitacora.filter(b => b.estado === 'en_curso');
+      
+      if (registrosPendientes.length === 0) {
+        alert('✅ No hay vehículos con retorno pendiente');
+        return;
+      }
+      
+      // Mostrar lista de pendientes y permitir seleccionar
+      const listaPendientes = registrosPendientes.map(r => 
+        `${r.placa} - ${r.chofer} (Salida: ${new Date(r.fecha_salida).toLocaleDateString()})`
+      ).join('\n');
+      
+      const confirmar = confirm(
+        `⚠️ VEHÍCULOS CON RETORNO PENDIENTE:\n\n${listaPendientes}\n\n¿Enviar alerta por email para todos estos registros?`
+      );
+      
+      if (!confirmar) return;
+      
+      // Enviar alerta por email
+      const response = await fetch(`${API}/bitacora/alerta-retorno-pendiente`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registros_pendientes: registrosPendientes })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ Alerta enviada exitosamente!\n\nSe notificó sobre ${registrosPendientes.length} vehículo(s) con retorno pendiente.`);
+      } else {
+        alert('❌ Error enviando alerta: ' + (data.message || 'Error desconocido'));
+      }
+      
+    } catch (e) {
+      alert('❌ Error enviando alerta: ' + e.message);
+      console.error('Error enviando alerta de retorno pendiente:', e);
+    }
   }
   
   function verificarEstadoVehiculo() {
