@@ -2219,23 +2219,24 @@
   // ====== ESTADO ======
   let Vehiculos=[], Polizas=[], RTV=[], Mantenimientos=[], Combustible=[], Bitacora=[], Alertas=[], Revisiones=[];
   let currentUser = null;
+  let currentBitacoraId = null; // Para manejar retorno de vehículos
   
   // ====== SISTEMA DE ROLES Y LOGIN ======
   const ROLES = {
     admin: {
       name: 'Administrador',
       password: 'Admin',
-      permissions: ['dashboard', 'vehiculos', 'ficha-tecnica', 'polizas', 'mantenimientos', 'combustible', 'revision', 'reportes']
+      permissions: ['dashboard', 'vehiculos', 'ficha-tecnica', 'polizas', 'mantenimientos', 'combustible', 'bitacora', 'revision', 'alertas-config', 'reportes']
     },
     operador: {
       name: 'Operador',
       password: 'operador123', 
-      permissions: ['mantenimientos', 'combustible']
+      permissions: ['dashboard', 'mantenimientos', 'combustible', 'bitacora']
     },
     supervisor: {
       name: 'Supervisor',
       password: 'supervisor123',
-      permissions: ['revision']
+      permissions: ['dashboard', 'revision', 'bitacora']
     }
   };
   
@@ -2504,20 +2505,20 @@
       Revisiones = await apiGet('revisiones');
       Polizas = await apiGet('polizas');
       RTV = await apiGet('rtv');
+      Bitacora = await apiGet('bitacora');
       
       // Inicializar arrays vacíos para compatibilidad con el frontend
-      Bitacora = [];
       Alertas = [];
       
       fillVehSelects();
       fillPlacaFilters();
       render();
       
-      // Cargar configuración de email si es administrador
+      // Cargar configuración de alertas si es administrador
       if (currentUser && currentUser.role === 'admin') {
         setTimeout(() => {
-          if (typeof cargarConfigEmail === 'function') {
-            cargarConfigEmail();
+          if (typeof cargarConfigAlertas === 'function') {
+            cargarConfigAlertas();
           }
         }, 1000);
       }
@@ -2530,13 +2531,13 @@
   // ====== RENDER ======
   function render(){ 
     renderKpis(); 
-    renderAlertas(); 
     renderVehiculos(); 
     renderPolizas(); 
     renderRtv(); 
     renderMant(); 
     renderFuel(); 
     renderRevisiones(); 
+    renderBitacora();
     refreshHints(); 
   }
 
@@ -4096,7 +4097,7 @@
   function editarRevision(id) {
     console.log('Editando revisión ID:', id);
     
-    if (!hasPermission('revisiones')) {
+    if (!hasPermission('revision')) {
       alert('Sin permisos para editar revisiones');
       return;
     }
@@ -5986,6 +5987,414 @@
   let lastTouchEnd = 0;
   let mobileCompactMode = false;
   
+  // ===== FUNCIONES PARA BITÁCORA =====
+  function renderBitacora() {
+    const placaFlt = byId('fltBitacoraPlaca')?.value || '';
+    const estadoFlt = byId('fltBitacoraEstado')?.value || '';
+    
+    const rows = Bitacora
+      .filter(b => !placaFlt || b.placa.includes(placaFlt))
+      .filter(b => !estadoFlt || b.estado === estadoFlt)
+      .sort((a, b) => new Date(b.fecha_salida) - new Date(a.fecha_salida))
+      .map(b => {
+        const fechaSalida = new Date(b.fecha_salida).toLocaleString('es-CR');
+        const fechaRetorno = b.fecha_retorno ? new Date(b.fecha_retorno).toLocaleString('es-CR') : '-';
+        const estadoBadge = b.estado === 'en_curso' ? 
+          '<span class="pill warnP">🔄 En Curso</span>' : 
+          '<span class="pill ok">✅ Completado</span>';
+        
+        const acciones = b.estado === 'en_curso' ? 
+          `<button class="btn-small" onclick="completarRetorno(${b.id})">🔄 Registrar Retorno</button>` :
+          `<button class="btn-small secondary" onclick="verDetalleBitacora(${b.id})">👁️ Ver</button>`;
+        
+        return `<tr>
+          <td>${b.placa}</td>
+          <td>${b.chofer}</td>
+          <td>${fechaSalida}</td>
+          <td>${fechaRetorno}</td>
+          <td>${b.km_salida.toLocaleString()}</td>
+          <td>${b.km_retorno ? b.km_retorno.toLocaleString() : '-'}</td>
+          <td>${estadoBadge}</td>
+          <td>${acciones}</td>
+        </tr>`;
+      }).join('');
+    
+    const tbody = byId('tblBitacora');
+    if (tbody) {
+      tbody.innerHTML = rows || '<tr><td colspan="8">No hay registros de bitácora</td></tr>';
+    }
+  }
+  
+  async function procesarBitacora(e) {
+    e.preventDefault();
+    
+    const vehiculoId = byId('bVeh').value;
+    const chofer = byId('bChofer').value.trim();
+    
+    if (!vehiculoId || !chofer) {
+      alert('Debe seleccionar un vehículo e ingresar el nombre del chofer');
+      return;
+    }
+    
+    const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+    if (!vehiculo) {
+      alert('Vehículo no encontrado');
+      return;
+    }
+    
+    // Verificar si es una salida o retorno
+    const isRetorno = currentBitacoraId !== null;
+    
+    if (isRetorno) {
+      await registrarRetorno();
+    } else {
+      await registrarSalida(vehiculo.placa, chofer);
+    }
+  }
+  
+  async function registrarSalida(placa, chofer) {
+    try {
+      const salida = {
+        placa: placa,
+        chofer: chofer,
+        km_salida: parseInt(byId('bKmSalida').value),
+        nivel_combustible_salida: byId('bCombustibleSalida').value,
+        estado_vehiculo_salida: byId('bEstadoSalida').value,
+        observaciones: byId('bObsSalida').value || ''
+      };
+      
+      const response = await apiPost('bitacora/salida', salida);
+      
+      if (response.success) {
+        currentBitacoraId = response.bitacora_id;
+        
+        // Cambiar interfaz a modo retorno
+        cambiarAModoRetorno();
+        
+        // Actualizar datos
+        Bitacora = await apiGet('bitacora');
+        renderBitacora();
+        
+        let mensaje = '✅ Salida registrada exitosamente';
+        if (response.alerta_km) {
+          mensaje += '\n⚠️ Se detectó inconsistencia de kilometraje. Se ha enviado una alerta por email.';
+        }
+        alert(mensaje);
+      }
+    } catch (e) {
+      alert('❌ Error registrando salida: ' + e.message);
+    }
+  }
+  
+  async function registrarRetorno() {
+    try {
+      const retorno = {
+        km_retorno: parseInt(byId('bKmRetorno').value),
+        nivel_combustible_retorno: byId('bCombustibleRetorno').value,
+        estado_vehiculo_retorno: byId('bEstadoRetorno').value,
+        observaciones: byId('bObsRetorno').value || ''
+      };
+      
+      const response = await fetch(`${API}/bitacora/${currentBitacoraId}/retorno`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(retorno)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Volver a modo salida
+        cambiarAModoSalida();
+        currentBitacoraId = null;
+        
+        // Actualizar datos
+        Bitacora = await apiGet('bitacora');
+        renderBitacora();
+        limpiarFormBitacora();
+        
+        alert('✅ Retorno registrado exitosamente');
+      }
+    } catch (e) {
+      alert('❌ Error registrando retorno: ' + e.message);
+    }
+  }
+  
+  function cambiarAModoRetorno() {
+    byId('salidaFields').classList.add('hidden');
+    byId('retornoFields').classList.remove('hidden');
+    byId('btnBitacora').innerHTML = '🔄 Registrar Retorno';
+    byId('btnBitacora').className = 'success';
+  }
+  
+  function cambiarAModoSalida() {
+    byId('salidaFields').classList.remove('hidden');
+    byId('retornoFields').classList.add('hidden');
+    byId('btnBitacora').innerHTML = '📝 Registrar Salida';
+    byId('btnBitacora').className = 'success';
+  }
+  
+  function limpiarFormBitacora() {
+    ['bVeh', 'bChofer', 'bKmSalida', 'bCombustibleSalida', 'bEstadoSalida', 'bObsSalida',
+     'bKmRetorno', 'bCombustibleRetorno', 'bEstadoRetorno', 'bObsRetorno'].forEach(id => {
+      const el = byId(id);
+      if (el) {
+        if (el.tagName === 'SELECT') {
+          el.selectedIndex = 0;
+        } else {
+          el.value = '';
+        }
+      }
+    });
+    cambiarAModoSalida();
+    currentBitacoraId = null;
+  }
+  
+  function completarRetorno(bitacoraId) {
+    const registro = Bitacora.find(b => b.id === bitacoraId);
+    if (!registro) {
+      alert('Registro de bitácora no encontrado');
+      return;
+    }
+    
+    // Cargar datos en el formulario
+    const vehiculo = Vehiculos.find(v => v.placa === registro.placa);
+    if (vehiculo) {
+      byId('bVeh').value = vehiculo.id;
+    }
+    byId('bChofer').value = registro.chofer;
+    
+    currentBitacoraId = bitacoraId;
+    cambiarAModoRetorno();
+    
+    // Scroll al formulario
+    document.querySelector('#tab-bitacora .card').scrollIntoView({ behavior: 'smooth' });
+  }
+  
+  function verificarEstadoVehiculo() {
+    const vehiculoId = byId('bVeh').value;
+    if (!vehiculoId) return;
+    
+    // Verificar si hay registros en curso para este vehículo
+    const registroEnCurso = Bitacora.find(b => {
+      const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
+      return vehiculo && b.placa === vehiculo.placa && b.estado === 'en_curso';
+    });
+    
+    if (registroEnCurso) {
+      if (confirm('Este vehículo ya tiene una salida registrada sin retorno. ¿Desea completar el retorno?')) {
+        completarRetorno(registroEnCurso.id);
+      }
+    }
+  }
+  
+  function verDetalleBitacora(id) {
+    const registro = Bitacora.find(b => b.id === id);
+    if (!registro) return;
+    
+    const fechaSalida = new Date(registro.fecha_salida).toLocaleString('es-CR');
+    const fechaRetorno = registro.fecha_retorno ? new Date(registro.fecha_retorno).toLocaleString('es-CR') : 'N/A';
+    
+    const contenido = `
+      <h3>📝 Detalle de Bitácora - ${registro.placa}</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+        <div>
+          <h4>🚗 SALIDA</h4>
+          <p><strong>Chofer:</strong> ${registro.chofer}</p>  
+          <p><strong>Fecha:</strong> ${fechaSalida}</p>
+          <p><strong>Kilometraje:</strong> ${registro.km_salida.toLocaleString()} km</p>
+          <p><strong>Combustible:</strong> ${registro.nivel_combustible_salida}</p>
+          <p><strong>Estado:</strong> ${registro.estado_vehiculo_salida}</p>
+        </div>
+        <div>
+          <h4>🔄 RETORNO</h4>
+          <p><strong>Fecha:</strong> ${fechaRetorno}</p>
+          <p><strong>Kilometraje:</strong> ${registro.km_retorno ? registro.km_retorno.toLocaleString() + ' km' : 'N/A'}</p>
+          <p><strong>Combustible:</strong> ${registro.nivel_combustible_retorno || 'N/A'}</p>
+          <p><strong>Estado:</strong> ${registro.estado_vehiculo_retorno || 'N/A'}</p>
+        </div>
+      </div>
+      ${registro.observaciones ? `<p><strong>Observaciones:</strong> ${registro.observaciones}</p>` : ''}
+    `;
+    
+    mostrarModal('Detalle de Bitácora', contenido);
+  }
+  
+  function mostrarModal(titulo, contenido) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">${titulo}</h3>
+          <button class="close-btn" onclick="this.closest('.modal').remove()">×</button>
+        </div>
+        <div>${contenido}</div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+  }
+  
+  async function exportarBitacora() {
+    try {
+      const ws = XLSX.utils.json_to_sheet(Bitacora.map(b => ({
+        'Placa': b.placa,
+        'Chofer': b.chofer,
+        'Fecha Salida': new Date(b.fecha_salida).toLocaleString('es-CR'),
+        'Km Salida': b.km_salida,
+        'Combustible Salida': b.nivel_combustible_salida,
+        'Estado Salida': b.estado_vehiculo_salida,
+        'Fecha Retorno': b.fecha_retorno ? new Date(b.fecha_retorno).toLocaleString('es-CR') : '',
+        'Km Retorno': b.km_retorno || '',
+        'Combustible Retorno': b.nivel_combustible_retorno || '',
+        'Estado Retorno': b.estado_vehiculo_retorno || '',
+        'Observaciones': b.observaciones || '',
+        'Estado': b.estado
+      })));
+      
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Bitácora");
+      XLSX.writeFile(wb, `bitacora_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (e) {
+      alert('Error exportando: ' + e.message);
+    }
+  }
+  
+  // ===== FUNCIONES PARA CONFIGURACIÓN DE ALERTAS =====
+  async function cargarConfigAlertas() {
+    try {
+      const response = await fetch(`${API}/config/alertas`);
+      const data = await response.json();
+      
+      if (data.success) {
+        const config = data.config;
+        
+        // Cargar valores en el formulario
+        byId('alertaEmail').value = config.email_destino || '';
+        byId('alertaMant').checked = config.alertas_mantenimiento !== false;
+        byId('alertaPolizas').checked = config.alertas_polizas !== false;
+        byId('alertaRTV').checked = config.alertas_rtv !== false;
+        byId('alertaRevisiones').checked = config.alertas_revisiones !== false;
+        byId('alertaCombustible').checked = config.alertas_combustible !== false;
+        byId('alertaBitacora').checked = config.alertas_bitacora !== false;
+        byId('diasPolizas').value = config.dias_anticipacion_polizas || 30;
+        byId('diasRTV').value = config.dias_anticipacion_rtv || 30;
+        byId('diasMant').value = config.dias_anticipacion_mantenimiento || 30;
+        byId('kmDiferencia').value = config.km_diferencia_alerta || 10;
+        
+        actualizarEstadoAlertas();
+      }
+    } catch (e) {
+      console.error('Error cargando configuración de alertas:', e);
+    }
+  }
+  
+  async function guardarConfigAlertas(e) {
+    e.preventDefault();
+    
+    try {
+      const config = {
+        email_destino: byId('alertaEmail').value,
+        alertas_mantenimiento: byId('alertaMant').checked,
+        alertas_polizas: byId('alertaPolizas').checked,
+        alertas_rtv: byId('alertaRTV').checked,
+        alertas_revisiones: byId('alertaRevisiones').checked,
+        alertas_combustible: byId('alertaCombustible').checked,
+        alertas_bitacora: byId('alertaBitacora').checked,
+        dias_anticipacion_polizas: parseInt(byId('diasPolizas').value),
+        dias_anticipacion_rtv: parseInt(byId('diasRTV').value),
+        dias_anticipacion_mantenimiento: parseInt(byId('diasMant').value),
+        km_diferencia_alerta: parseInt(byId('kmDiferencia').value)
+      };
+      
+      const response = await fetch(`${API}/config/alertas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('✅ Configuración de alertas guardada exitosamente');
+        actualizarEstadoAlertas();
+      } else {
+        alert('❌ Error guardando configuración: ' + data.message);
+      }
+    } catch (e) {
+      alert('❌ Error: ' + e.message);
+    }
+  }
+  
+  function actualizarEstadoAlertas() {
+    const contenedor = byId('estadoAlertasContent');
+    if (!contenedor) return;
+    
+    const totalVehiculos = Vehiculos.length;
+    const alertasActivas = [
+      byId('alertaMant').checked,
+      byId('alertaPolizas').checked,
+      byId('alertaRTV').checked,
+      byId('alertaRevisiones').checked,
+      byId('alertaCombustible').checked,
+      byId('alertaBitacora').checked
+    ].filter(Boolean).length;
+    
+    contenedor.innerHTML = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px;">
+          <div style="font-size: 24px; font-weight: bold; color: var(--primary);">${totalVehiculos}</div>
+          <div style="font-size: 12px;">Vehículos Monitoreados</div>
+        </div>
+        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px;">
+          <div style="font-size: 24px; font-weight: bold; color: var(--success);">${alertasActivas}/6</div>
+          <div style="font-size: 12px;">Tipos de Alertas Activas</div>
+        </div>
+        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px;">
+          <div style="font-size: 24px; font-weight: bold; color: var(--warn);">${byId('alertaEmail').value ? '✅' : '❌'}</div>
+          <div style="font-size: 12px;">Email Configurado</div>
+        </div>
+      </div>
+    `;
+  }
+  
+  async function probarAlertas() {
+    try {
+      const response = await fetch(`${API}/config/email/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('✅ Email de prueba enviado exitosamente');
+      } else {
+        alert('❌ Error enviando email de prueba: ' + data.message);
+      }
+    } catch (e) {
+      alert('❌ Error: ' + e.message);
+    }
+  }
+  
+  async function verificarAlertasManual() {
+    try {
+      const response = await fetch(`${API}/alertas/verificar`);
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ Verificación completada.\n${data.message || 'Sin alertas pendientes'}`);
+      } else {
+        alert('❌ Error verificando alertas: ' + data.message);
+      }
+    } catch (e) {
+      alert('❌ Error: ' + e.message);
+    }
+  }
+  
   // ===== MODO COMPACTO MÓVIL =====
   function toggleMobileCompactMode() {
     mobileCompactMode = !mobileCompactMode;
@@ -6081,8 +6490,14 @@
     if (hasPermission('ficha-tecnica')) {
       navItems.push({ tab: 'ficha-tecnica', icon: '📋', text: 'Ficha Téc.' });
     }
+    if (hasPermission('bitacora')) {
+      navItems.push({ tab: 'bitacora', icon: '📝', text: 'Bitácora' });
+    }
     if (hasPermission('revision')) {
       navItems.push({ tab: 'revision', icon: '🔍', text: 'Revisión' });
+    }
+    if (hasPermission('alertas-config')) {
+      navItems.push({ tab: 'alertas-config', icon: '⚠️', text: 'Alertas' });
     }
     if (hasPermission('reportes')) {
       navItems.push({ tab: 'reportes', icon: '📈', text: 'Reportes' });
