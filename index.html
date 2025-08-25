@@ -1639,6 +1639,53 @@
             <input id="alertaEmail" type="email" placeholder="contabilidad2@arenalmanoa.com" required/>
           </div>
           
+          <!-- Configuración SMTP -->
+          <div class="card" style="background:#fff3cd;margin:20px 0;border-left:4px solid #ffc107">
+            <h4 style="margin:0 0 16px 0">🔧 Configuración del Servidor de Email (SMTP)</h4>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>📧 Email Remitente</label>
+                <input id="smtpEmail" type="email" placeholder="sistema.vehicular@arenalmanoa.com" required/>
+                <small style="color:var(--muted)">Email que aparecerá como remitente de las alertas</small>
+              </div>
+              <div class="form-group">
+                <label>🔑 Contraseña de Aplicación</label>
+                <input id="smtpPassword" type="password" placeholder="Contraseña de aplicación"/>
+                <small style="color:var(--muted)">Contraseña de aplicación (no la contraseña normal del email)</small>
+              </div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>🌐 Servidor SMTP</label>
+                <select id="smtpProvider" onchange="actualizarConfigSMTP()">
+                  <option value="gmail">Gmail (smtp.gmail.com)</option>
+                  <option value="outlook">Outlook (smtp-mail.outlook.com)</option>
+                  <option value="yahoo">Yahoo (smtp.mail.yahoo.com)</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>🖥️ Servidor (Host)</label>
+                <input id="smtpHost" type="text" value="smtp.gmail.com" required/>
+              </div>
+              <div class="form-group">
+                <label>🔌 Puerto</label>
+                <input id="smtpPort" type="number" value="587" min="1" max="65535" required/>
+              </div>
+            </div>
+            <div class="form-row">
+              <label style="display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="smtpTLS" checked/>
+                🔐 Usar TLS/STARTTLS (Recomendado)
+              </label>
+            </div>
+            <div class="form-row">
+              <button type="button" class="secondary" onclick="probarConexionSMTP()" style="margin-top:12px">
+                📧 Probar Conexión SMTP
+              </button>
+            </div>
+          </div>
+          
           <!-- Tipos de Alertas -->
           <div class="card" style="background:#f8fafc;margin:20px 0">
             <h4 style="margin:0 0 16px 0">📋 Tipos de Alertas a Enviar</h4>
@@ -6266,11 +6313,12 @@
   // ===== FUNCIONES PARA CONFIGURACIÓN DE ALERTAS =====
   async function cargarConfigAlertas() {
     try {
-      const response = await fetch(`${API}/config/alertas`);
-      const data = await response.json();
+      // Cargar configuración de alertas
+      const responseAlertas = await fetch(`${API}/config/alertas`);
+      const dataAlertas = await responseAlertas.json();
       
-      if (data.success) {
-        const config = data.config;
+      if (dataAlertas.success) {
+        const config = dataAlertas.config;
         
         // Cargar valores en el formulario
         byId('alertaEmail').value = config.email_destino || '';
@@ -6284,9 +6332,39 @@
         byId('diasRTV').value = config.dias_anticipacion_rtv || 30;
         byId('diasMant').value = config.dias_anticipacion_mantenimiento || 30;
         byId('kmDiferencia').value = config.km_diferencia_alerta || 10;
-        
-        actualizarEstadoAlertas();
       }
+      
+      // Cargar configuración de email/SMTP
+      const responseEmail = await fetch(`${API}/config/email`);
+      const dataEmail = await responseEmail.json();
+      
+      if (dataEmail.success) {
+        const emailConfig = dataEmail.config;
+        
+        // Cargar configuración SMTP
+        byId('smtpEmail').value = emailConfig.sender_email || '';
+        byId('smtpHost').value = emailConfig.smtp_server || 'smtp.gmail.com';
+        byId('smtpPort').value = emailConfig.smtp_port || 587;
+        byId('smtpTLS').checked = true; // Siempre recomendado
+        
+        // Detectar proveedor basado en el host
+        const host = emailConfig.smtp_server || '';
+        let provider = 'custom';
+        if (host.includes('gmail.com')) provider = 'gmail';
+        else if (host.includes('outlook.com')) provider = 'outlook';
+        else if (host.includes('yahoo.com')) provider = 'yahoo';
+        
+        byId('smtpProvider').value = provider;
+        
+        // Mostrar estado de contraseña
+        if (emailConfig.password_configured) {
+          byId('smtpPassword').placeholder = '••••••••• (configurada)';
+        } else {
+          byId('smtpPassword').placeholder = 'Ingrese contraseña de aplicación';
+        }
+      }
+      
+      actualizarEstadoAlertas();
     } catch (e) {
       console.error('Error cargando configuración de alertas:', e);
     }
@@ -6296,7 +6374,8 @@
     e.preventDefault();
     
     try {
-      const config = {
+      // Guardar configuración de alertas
+      const alertasConfig = {
         email_destino: byId('alertaEmail').value,
         alertas_mantenimiento: byId('alertaMant').checked,
         alertas_polizas: byId('alertaPolizas').checked,
@@ -6310,22 +6389,57 @@
         km_diferencia_alerta: parseInt(byId('kmDiferencia').value)
       };
       
-      const response = await fetch(`${API}/config/alertas`, {
+      const responseAlertas = await fetch(`${API}/config/alertas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(alertasConfig)
       });
       
-      const data = await response.json();
+      const dataAlertas = await responseAlertas.json();
       
-      if (data.success) {
-        alert('✅ Configuración de alertas guardada exitosamente');
-        actualizarEstadoAlertas();
-      } else {
-        alert('❌ Error guardando configuración: ' + data.message);
+      if (!dataAlertas.success) {
+        throw new Error('Error guardando configuración de alertas: ' + dataAlertas.message);
       }
+      
+      // Guardar configuración SMTP (solo si se proporcionó una nueva contraseña)
+      const smtpPassword = byId('smtpPassword').value;
+      if (smtpPassword && smtpPassword !== '' && !smtpPassword.includes('•')) {
+        const emailConfig = {
+          sender_email: byId('smtpEmail').value,
+          sender_password: smtpPassword,
+          smtp_server: byId('smtpHost').value,
+          smtp_port: parseInt(byId('smtpPort').value),
+          recipient_email: byId('alertaEmail').value,
+          use_tls: byId('smtpTLS').checked
+        };
+        
+        const responseEmail = await fetch(`${API}/config/email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailConfig)
+        });
+        
+        const dataEmail = await responseEmail.json();
+        
+        if (!dataEmail.success) {
+          console.warn('Warning: Error guardando configuración SMTP:', dataEmail.message);
+          alert('⚠️ Configuración de alertas guardada, pero hubo un problema con la configuración SMTP: ' + dataEmail.message);
+          return;
+        }
+      }
+      
+      alert('✅ Configuración completa guardada exitosamente');
+      actualizarEstadoAlertas();
+      
+      // Actualizar placeholder de contraseña
+      if (smtpPassword) {
+        byId('smtpPassword').value = '';
+        byId('smtpPassword').placeholder = '••••••••• (configurada)';
+      }
+      
     } catch (e) {
       alert('❌ Error: ' + e.message);
+      console.error('Error guardando configuración:', e);
     }
   }
   
@@ -6359,6 +6473,66 @@
         </div>
       </div>
     `;
+  }
+  
+  function actualizarConfigSMTP() {
+    const provider = byId('smtpProvider').value;
+    const hostField = byId('smtpHost');
+    const portField = byId('smtpPort');
+    const tlsField = byId('smtpTLS');
+    
+    const smtpConfigs = {
+      gmail: { host: 'smtp.gmail.com', port: 587, tls: true },
+      outlook: { host: 'smtp-mail.outlook.com', port: 587, tls: true },
+      yahoo: { host: 'smtp.mail.yahoo.com', port: 587, tls: true },
+      custom: { host: '', port: 587, tls: true }
+    };
+    
+    const config = smtpConfigs[provider];
+    if (config) {
+      if (provider !== 'custom') {
+        hostField.value = config.host;
+        portField.value = config.port;
+        tlsField.checked = config.tls;
+        hostField.readOnly = true;
+      } else {
+        hostField.readOnly = false;
+        hostField.placeholder = 'mail.tudominio.com';
+      }
+    }
+  }
+  
+  async function probarConexionSMTP() {
+    const smtpConfig = {
+      email: byId('smtpEmail').value,
+      password: byId('smtpPassword').value,
+      host: byId('smtpHost').value,
+      port: parseInt(byId('smtpPort').value),
+      use_tls: byId('smtpTLS').checked
+    };
+    
+    if (!smtpConfig.email || !smtpConfig.password || !smtpConfig.host) {
+      alert('Por favor complete todos los campos de configuración SMTP');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API}/config/email/test-smtp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(smtpConfig)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('✅ Conexión SMTP exitosa! La configuración es correcta.');
+      } else {
+        alert(`❌ Error en la conexión SMTP: ${data.error || 'Error desconocido'}`);
+      }
+    } catch (error) {
+      alert(`❌ Error probando conexión SMTP: ${error.message}`);
+    }
   }
   
   async function probarAlertas() {

@@ -1813,6 +1813,51 @@ async def test_email():
         logger.error(f"Error probando email: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Endpoint para probar conexión SMTP con configuración personalizada
+@app.post("/config/email/test-smtp")
+async def test_smtp_connection(smtp_config: dict):
+    """Probar conexión SMTP con configuración personalizada"""
+    try:
+        email = smtp_config.get("email")
+        password = smtp_config.get("password")
+        host = smtp_config.get("host")
+        port = smtp_config.get("port", 587)
+        use_tls = smtp_config.get("use_tls", True)
+        
+        if not all([email, password, host]):
+            return {"success": False, "error": "Faltan campos requeridos: email, password, host"}
+        
+        # Probar conexión SMTP
+        server = smtplib.SMTP(host, port)
+        if use_tls:
+            server.starttls()
+        server.login(email, password)
+        server.quit()
+        
+        logger.info(f"Conexión SMTP exitosa para {email} en {host}:{port}")
+        return {
+            "success": True, 
+            "message": f"Conexión SMTP exitosa a {host}:{port}",
+            "config": {
+                "host": host,
+                "port": port,
+                "email": email,
+                "tls": use_tls
+            }
+        }
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"Error de autenticación SMTP: {e}")
+        return {"success": False, "error": "Error de autenticación. Verifique email y contraseña de aplicación."}
+    except smtplib.SMTPConnectError as e:
+        logger.error(f"Error de conexión SMTP: {e}")
+        return {"success": False, "error": f"No se pudo conectar al servidor {host}:{port}"}
+    except smtplib.SMTPException as e:
+        logger.error(f"Error SMTP: {e}")
+        return {"success": False, "error": f"Error SMTP: {str(e)}"}
+    except Exception as e:
+        logger.error(f"Error probando conexión SMTP: {e}")
+        return {"success": False, "error": f"Error inesperado: {str(e)}"}
+
 # Endpoint para obtener detalle de alertas para el frontend
 @app.get("/alertas/detalle")
 async def get_alertas_detalle():
