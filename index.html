@@ -61,7 +61,7 @@
     .topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:16px 24px}
     .brand{font-weight:700;font-size:18px;color:var(--primary);display:flex;align-items:center;gap:8px}
     .brand-icon{font-size:24px}
-    .search{flex:1;display:flex;gap:8px;max-width:400px}
+
     .user-info{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
     .logout-btn{background:var(--danger);color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px}
     .logout-btn:hover{background:#dc2626}
@@ -229,13 +229,7 @@
       gap: 6px;
       font-size: 11px;
     }
-    .mobile-compact .search {
-      order: 0; /* Búsqueda arriba */
-    }
-    .mobile-compact .search input {
-      padding: 8px 12px;
-      font-size: 14px;
-    }
+
     
     /* Mejorar cards en modo compacto */
     .mobile-compact .card {
@@ -357,23 +351,29 @@
       
       /* Header y navegación móvil */
       .topbar { 
-        flex-direction: column; 
-        gap: 12px; 
-        padding: 12px 16px;
+        flex-direction: row; 
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px; 
+        padding: 8px 12px;
       }
       .brand { 
-        font-size: 16px;
-        text-align: center;
+        font-size: 14px;
+        flex: none;
       }
-      .search { 
-        max-width: none; 
-        order: 1;
-      }
+
       .user-info { 
-        flex-direction: column; 
-        gap: 8px; 
-        font-size: 12px;
-        text-align: center;
+        gap: 6px; 
+        font-size: 11px;
+        flex: none;
+      }
+      .user-info > span {
+        display: none; /* Ocultar texto de rol en móvil */
+      }
+      .user-info button {
+        padding: 6px 8px;
+        font-size: 11px;
+        min-height: 32px;
       }
       
       /* Mostrar botón móvil */
@@ -651,10 +651,7 @@
         <span class="brand-icon">🚗</span>
         Sistema de Gestión Vehicular
       </div>
-      <div class="search">
-        <input id="qPlaca" type="text" placeholder="Buscar por placa (ej. ABC123)…"/>
-        <button class="secondary" onclick="buscarPlaca()">🔍 Buscar</button>
-      </div>
+
       <div class="user-info">
         <span>👤 <span id="currentUserRole"></span></span>
         <button id="mobileToggle" class="secondary mobile-only" onclick="toggleMobileCompactMode()" title="Modo Compacto Móvil">📱 Compacto</button>
@@ -3883,7 +3880,7 @@
       }
     });
   }
-  function buscarPlaca(){ const v=byId('qPlaca').value.trim().toUpperCase(); if(!v) return; const sel = byId('fltVehPlaca'); if(sel){ sel.value=v; } setTab('vehiculos'); renderVehiculos(); }
+
   function exportarVehiculo(){ const placa = byId('fltVehPlaca').value; if(!placa) return alert('Seleccione una placa en el filtro'); exportFichaExcel(placa); }
   function autoProximoKm(){ const tipo = byId('mTipo').value; if(tipo !== 'cambio_aceite') { alert('Aplica solo a "Cambio de aceite"'); return; } const km = parseInt(byId('mKm').value||'0',10); if(!km || Number.isNaN(km) || km<0){ alert('Ingrese km actual válido'); return; } byId('mProx').value = km + 5000; }
   
@@ -5943,16 +5940,7 @@
       // Inicializar campos de mantenimiento
       toggleMaintenanceFields();
       
-      // UX: Enter en buscador = buscar
-      const q = byId('qPlaca');
-      if(q){ 
-        q.addEventListener('keydown', (e)=>{ 
-          if(e.key==='Enter'){ 
-            e.preventDefault(); 
-            buscarPlaca(); 
-          } 
-        }); 
-      }
+
       
       // Cerrar modales al hacer click fuera o con ESC
       document.addEventListener('click', (e) => {
@@ -6258,9 +6246,18 @@
           '<span class="pill warnP">🔄 En Curso</span>' : 
           '<span class="pill ok">✅ Completado</span>';
         
-        const acciones = b.estado === 'en_curso' ? 
-          `<button class="btn-small" onclick="completarRetorno(${b.id})">🔄 Registrar Retorno</button>` :
-          `<button class="btn-small secondary" onclick="verDetalleBitacora(${b.id})">👁️ Ver</button>`;
+        let acciones = '';
+        
+        if (b.estado === 'en_curso') {
+          acciones = `<button class="btn-small" onclick="completarRetorno(${b.id})">🔄 Registrar Retorno</button>`;
+        } else {
+          acciones = `<button class="btn-small secondary" onclick="verDetalleBitacora(${b.id})">👁️ Ver</button>`;
+        }
+        
+        // Agregar botón de eliminar para administradores
+        if (currentUser && currentUser.role === 'admin') {
+          acciones += ` <button class="btn-small danger" onclick="eliminarBitacora(${b.id})" title="Eliminar registro">🗑️</button>`;
+        }
         
         return `<tr>
           <td>${b.placa}</td>
@@ -6280,6 +6277,53 @@
     }
   }
   
+  async function eliminarBitacora(bitacoraId) {
+    if (!hasPermission('bitacora') || !currentUser || currentUser.role !== 'admin') {
+      alert('❌ Sin permisos para eliminar registros de bitácora');
+      return;
+    }
+    
+    const registro = Bitacora.find(b => b.id === bitacoraId);
+    if (!registro) {
+      alert('❌ Registro no encontrado');
+      return;
+    }
+    
+    const confirmar = confirm(
+      `⚠️ ELIMINAR REGISTRO DE BITÁCORA\n\n` +
+      `Vehículo: ${registro.placa}\n` +
+      `Chofer: ${registro.chofer}\n` +
+      `Fecha: ${new Date(registro.fecha_salida).toLocaleString('es-CR')}\n` +
+      `Estado: ${registro.estado}\n\n` +
+      `¿Está seguro de eliminar este registro?\n` +
+      `Esta acción NO se puede deshacer.`
+    );
+    
+    if (!confirmar) return;
+    
+    try {
+      const response = await fetch(`${API}/bitacora/${bitacoraId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('✅ Registro de bitácora eliminado exitosamente');
+        
+        // Actualizar datos
+        Bitacora = await apiGet('bitacora');
+        renderBitacora();
+      } else {
+        alert('❌ Error eliminando registro: ' + (data.message || 'Error desconocido'));
+      }
+    } catch (e) {
+      alert('❌ Error eliminando registro: ' + e.message);
+      console.error('Error eliminando bitácora:', e);
+    }
+  }
+
   async function procesarBitacora(e) {
     e.preventDefault();
     

@@ -1778,6 +1778,36 @@ async def enviar_alerta_retorno_pendiente(request: dict):
         logger.error(f"Error enviando alerta de retorno pendiente: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.delete("/bitacora/{bitacora_id}")
+async def eliminar_bitacora(bitacora_id: int):
+    """Eliminar registro de bitácora (solo para administradores)"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que el registro existe
+        cursor.execute("SELECT id FROM bitacora WHERE id = ?", (bitacora_id,))
+        registro = cursor.fetchone()
+        
+        if not registro:
+            raise HTTPException(status_code=404, detail="Registro de bitácora no encontrado")
+        
+        # Eliminar el registro
+        cursor.execute("DELETE FROM bitacora WHERE id = ?", (bitacora_id,))
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="No se pudo eliminar el registro")
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Registro de bitácora {bitacora_id} eliminado exitosamente")
+        return {"success": True, "message": "Registro eliminado exitosamente"}
+        
+    except Exception as e:
+        logger.error(f"Error al eliminar registro de bitácora {bitacora_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ================================
 # ENDPOINTS CONFIGURACIÓN DE ALERTAS
 # ================================
@@ -2166,4 +2196,4 @@ async def get_alertas_detalle():
 if __name__ == "__main__":
     init_database()
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="info")
