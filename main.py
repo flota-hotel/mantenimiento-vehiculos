@@ -56,22 +56,50 @@ EMAIL_PROVIDERS = {
     "gmail": {
         "smtp_server": "smtp.gmail.com",
         "smtp_port": 587,
-        "use_tls": True
+        "use_tls": True,
+        "description": "Gmail / Google Workspace (requiere contraseña de aplicación)"
     },
     "outlook": {
+        "smtp_server": "smtp.office365.com", 
+        "smtp_port": 587,
+        "use_tls": True,
+        "description": "Outlook / Microsoft 365"
+    },
+    "outlook_legacy": {
         "smtp_server": "smtp-mail.outlook.com", 
         "smtp_port": 587,
-        "use_tls": True
+        "use_tls": True,
+        "description": "Outlook (servidor legacy)"
     },
     "yahoo": {
         "smtp_server": "smtp.mail.yahoo.com",
         "smtp_port": 587, 
-        "use_tls": True
+        "use_tls": True,
+        "description": "Yahoo Mail"
+    },
+    "zoho": {
+        "smtp_server": "smtp.zoho.com",
+        "smtp_port": 587,
+        "use_tls": True,
+        "description": "Zoho Mail"
+    },
+    "cpanel": {
+        "smtp_server": "mail.arenalmanoa.com",
+        "smtp_port": 587,
+        "use_tls": True,
+        "description": "Servidor cPanel (hosting compartido)"
+    },
+    "cpanel_ssl": {
+        "smtp_server": "mail.arenalmanoa.com",
+        "smtp_port": 465,
+        "use_tls": False,
+        "description": "Servidor cPanel con SSL directo"
     },
     "custom": {
-        "smtp_server": "mail.arenalmanoa.com",  # Su servidor personalizado
+        "smtp_server": "mail.arenalmanoa.com",
         "smtp_port": 587,
-        "use_tls": True
+        "use_tls": True,
+        "description": "Servidor personalizado"
     }
 }
 
@@ -981,18 +1009,33 @@ async def delete_vehiculo(placa: str):
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Verificar que el vehículo existe
+        cursor.execute("SELECT placa FROM vehiculos WHERE placa = ?", (placa,))
+        vehiculo = cursor.fetchone()
+        
+        if not vehiculo:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+        
+        # Eliminar el vehículo
         cursor.execute("DELETE FROM vehiculos WHERE placa = ?", (placa,))
         
         if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+            conn.close()
+            raise HTTPException(status_code=404, detail="No se pudo eliminar el vehículo")
         
         conn.commit()
         conn.close()
         
+        logger.info(f"Vehículo {placa} eliminado exitosamente")
         return {"success": True, "message": "Vehículo eliminado exitosamente"}
+        
+    except HTTPException:
+        # Re-raise HTTPExceptions to maintain proper status codes
+        raise
     except Exception as e:
-        logger.error(f"Error al eliminar vehículo: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error al eliminar vehículo {placa}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 # ================================
 # ENDPOINTS MANTENIMIENTOS
@@ -1790,12 +1833,14 @@ async def eliminar_bitacora(bitacora_id: int):
         registro = cursor.fetchone()
         
         if not registro:
+            conn.close()
             raise HTTPException(status_code=404, detail="Registro de bitácora no encontrado")
         
         # Eliminar el registro
         cursor.execute("DELETE FROM bitacora WHERE id = ?", (bitacora_id,))
         
         if cursor.rowcount == 0:
+            conn.close()
             raise HTTPException(status_code=404, detail="No se pudo eliminar el registro")
         
         conn.commit()
@@ -1804,9 +1849,12 @@ async def eliminar_bitacora(bitacora_id: int):
         logger.info(f"Registro de bitácora {bitacora_id} eliminado exitosamente")
         return {"success": True, "message": "Registro eliminado exitosamente"}
         
+    except HTTPException:
+        # Re-raise HTTPExceptions to maintain proper status codes
+        raise
     except Exception as e:
         logger.error(f"Error al eliminar registro de bitácora {bitacora_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 # ================================
 # ENDPOINTS CONFIGURACIÓN DE ALERTAS
@@ -1982,36 +2030,87 @@ async def test_smtp_connection(smtp_config: dict):
         if not all([email, password, host]):
             return {"success": False, "error": "Faltan campos requeridos: email, password, host"}
         
-        # Probar conexión SMTP
-        server = smtplib.SMTP(host, port)
-        if use_tls:
-            server.starttls()
-        server.login(email, password)
-        server.quit()
+        logger.info(f"Probando conexión SMTP: {email} en {host}:{port} (TLS: {use_tls})")
         
-        logger.info(f"Conexión SMTP exitosa para {email} en {host}:{port}")
-        return {
-            "success": True, 
-            "message": f"Conexión SMTP exitosa a {host}:{port}",
-            "config": {
-                "host": host,
-                "port": port,
-                "email": email,
-                "tls": use_tls
-            }
-        }
+        # Intentar diferentes métodos de conexión
+        methods_to_try = []
+        
+        if port == 587:
+            methods_to_try.append(("SMTP con STARTTLS", lambda: connect_smtp_starttls(host, port, email, password)))
+        elif port == 465:
+            methods_to_try.append(("SMTP_SSL", lambda: connect_smtp_ssl(host, port, email, password)))
+        elif port == 25:
+            methods_to_try.append(("SMTP sin cifrado", lambda: connect_smtp_plain(host, port, email, password)))
+        else:
+            # Puerto personalizado, intentar ambos métodos
+            methods_to_try.extend([
+                ("SMTP con STARTTLS", lambda: connect_smtp_starttls(host, port, email, password)),
+                ("SMTP_SSL", lambda: connect_smtp_ssl(host, port, email, password))
+            ])
+        
+        last_error = None
+        for method_name, connect_func in methods_to_try:
+            try:
+                logger.info(f"Intentando {method_name}...")
+                connect_func()
+                logger.info(f"✅ Conexión exitosa con {method_name}")
+                return {
+                    "success": True, 
+                    "message": f"Conexión SMTP exitosa a {host}:{port} usando {method_name}",
+                    "method": method_name,
+                    "config": {
+                        "host": host,
+                        "port": port,
+                        "email": email,
+                        "tls": use_tls
+                    }
+                }
+            except Exception as e:
+                last_error = e
+                logger.warning(f"❌ {method_name} falló: {str(e)}")
+                continue
+        
+        # Si llegamos aquí, todos los métodos fallaron
+        raise last_error
+        
     except smtplib.SMTPAuthenticationError as e:
+        error_msg = "Error de autenticación SMTP. Verifique:\n"
+        error_msg += "• Email y contraseña correctos\n"
+        error_msg += "• Para Gmail: usar contraseña de aplicación\n"
+        error_msg += "• Para Outlook: verificar que la autenticación esté habilitada"
         logger.error(f"Error de autenticación SMTP: {e}")
-        return {"success": False, "error": "Error de autenticación. Verifique email y contraseña de aplicación."}
+        return {"success": False, "error": error_msg}
     except smtplib.SMTPConnectError as e:
         logger.error(f"Error de conexión SMTP: {e}")
-        return {"success": False, "error": f"No se pudo conectar al servidor {host}:{port}"}
+        return {"success": False, "error": f"No se pudo conectar al servidor {host}:{port}. Verifique host y puerto."}
     except smtplib.SMTPException as e:
         logger.error(f"Error SMTP: {e}")
         return {"success": False, "error": f"Error SMTP: {str(e)}"}
     except Exception as e:
         logger.error(f"Error probando conexión SMTP: {e}")
-        return {"success": False, "error": f"Error inesperado: {str(e)}"}
+        return {"success": False, "error": f"Error: {str(e)}"}
+
+def connect_smtp_starttls(host, port, email, password):
+    """Conectar usando SMTP con STARTTLS"""
+    server = smtplib.SMTP(host, port, timeout=10)
+    server.set_debuglevel(0)
+    server.starttls()
+    server.login(email, password)
+    server.quit()
+
+def connect_smtp_ssl(host, port, email, password):
+    """Conectar usando SMTP_SSL"""
+    server = smtplib.SMTP_SSL(host, port, timeout=10)
+    server.set_debuglevel(0)
+    server.login(email, password)
+    server.quit()
+
+def connect_smtp_plain(host, port, email, password):
+    """Conectar usando SMTP sin cifrado"""
+    server = smtplib.SMTP(host, port, timeout=10)
+    server.set_debuglevel(0)
+    server.login(email, password)
+    server.quit()
 
 @app.post("/reportes/enviar-email")
 async def enviar_reporte_email(email_data: dict):
@@ -2192,6 +2291,84 @@ async def get_alertas_detalle():
     except Exception as e:
         logger.error(f"Error obteniendo detalle de alertas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ================================
+# SISTEMA DE BACKUP DE BASE DE DATOS
+# ================================
+
+try:
+    from backup_system import DatabaseBackupManager
+    
+    @app.post("/admin/backup/create")
+    async def create_manual_backup(backup_data: dict = None):
+        """Crear backup manual de la base de datos"""
+        try:
+            if not backup_data:
+                backup_data = {}
+            
+            description = backup_data.get("description", f"Backup manual - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            backup_manager = DatabaseBackupManager()
+            backup_path = backup_manager.create_backup("manual", description)
+            
+            if backup_path:
+                return {
+                    "success": True,
+                    "message": "Backup creado exitosamente",
+                    "backup_path": backup_path,
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                return {"success": False, "error": "Error creando backup"}
+                
+        except Exception as e:
+            logger.error(f"Error en backup manual: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/admin/backup/list")
+    async def list_backups():
+        """Listar todos los backups disponibles"""
+        try:
+            backup_manager = DatabaseBackupManager()
+            backups = backup_manager.list_backups()
+            
+            return {
+                "success": True,
+                "backups": backups,
+                "total": len(backups)
+            }
+        except Exception as e:
+            logger.error(f"Error listando backups: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/admin/backup/restore")
+    async def restore_backup(restore_data: dict):
+        """Restaurar base de datos desde backup"""
+        try:
+            backup_path = restore_data.get("backup_path")
+            if not backup_path:
+                raise HTTPException(status_code=400, detail="backup_path requerido")
+            
+            backup_manager = DatabaseBackupManager()
+            success = backup_manager.restore_backup(backup_path)
+            
+            if success:
+                return {
+                    "success": True,
+                    "message": "Base de datos restaurada exitosamente",
+                    "restored_from": backup_path
+                }
+            else:
+                return {"success": False, "error": "Error restaurando backup"}
+                
+        except Exception as e:
+            logger.error(f"Error restaurando backup: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    logger.info("✅ Endpoints de backup cargados correctamente")
+    
+except ImportError as e:
+    logger.warning(f"⚠️ Sistema de backup no disponible: {e}")
 
 if __name__ == "__main__":
     init_database()

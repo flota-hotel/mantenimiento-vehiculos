@@ -17,6 +17,10 @@
   </script>
 
   <style>
+    /* ========================================
+       MOBILE-FIRST RESPONSIVE DESIGN
+       ======================================== */
+    
     :root{ 
       --bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
       --card: #ffffff;
@@ -31,579 +35,1315 @@
       --line: #e2e8f0;
       --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      
+      /* Mobile-first spacing variables */
+      --spacing-xs: 8px;
+      --spacing-sm: 12px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+      
+      /* Touch-friendly sizes */
+      --touch-target: 48px;
+      --button-height: 52px;
+      --input-height: 56px;
     }
-    *{box-sizing:border-box}
-    html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;color:var(--ink);background:var(--bg)}
     
-    /* Login Screen */
-    .login-screen{position:fixed;top:0;left:0;width:100%;height:100vh;height:calc(var(--vh, 1vh) * 100);background:linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);display:flex;align-items:center;justify-content:center;z-index:1000}
-    .login-card{background:white;padding:40px;border-radius:20px;box-shadow:var(--shadow-lg);width:100%;max-width:400px;text-align:center}
-    .login-title{font-size:24px;font-weight:700;margin-bottom:8px;color:var(--ink)}
-    .login-subtitle{color:var(--muted);margin-bottom:32px}
-    .login-form{display:flex;flex-direction:column;gap:20px}
-    .role-card{border:2px solid var(--line);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;user-select:none;-webkit-tap-highlight-color:transparent;min-height:80px;display:flex;flex-direction:column;justify-content:center}
-    .role-card:hover{border-color:var(--primary);transform:translateY(-2px)}
-    .role-card:active{transform:scale(0.98)}
-    .role-card.selected{border-color:var(--primary);background:rgba(30, 64, 175, 0.05);box-shadow:0 0 0 2px rgba(30, 64, 175, 0.2)}
-    .role-title{font-weight:600;margin-bottom:4px}
-    .role-desc{font-size:14px;color:var(--muted)}
-    .password-field{margin-top:20px}
-    .password-field input{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;font-size:16px}
-    .login-btn{background:var(--primary);color:white;border:none;padding:12px 24px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:background 0.2s}
-    .login-btn:hover{background:var(--primary-hover)}
-    .login-btn:disabled{opacity:0.5;cursor:not-allowed}
+    /* RESET & BASE - Mobile First */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     
-    /* Main App */
-    .app{display:none}
-    .app.logged-in{display:block}
+    html {
+      font-size: 16px; /* Base font size for rem calculations */
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
     
-    header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);z-index:5;box-shadow:var(--shadow)}
-    .topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:16px 24px}
-    .brand{font-weight:700;font-size:18px;color:var(--primary);display:flex;align-items:center;gap:8px}
-    .brand-icon{font-size:24px}
-
-    .user-info{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
-    .logout-btn{background:var(--danger);color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px}
-    .logout-btn:hover{background:#dc2626}
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.6;
+      overflow-x: hidden; /* Prevent horizontal scroll */
+      width: 100vw;
+      max-width: 100%;
+    }
     
-    input, select{width:100%;padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:14px;transition:border-color 0.2s, box-shadow 0.2s;-webkit-appearance:none;-moz-appearance:none;appearance:none}
-    input:focus, select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(30, 64, 175, 0.1)}
+    /* ========================================
+       LOGIN SCREEN - Mobile Optimized
+       ======================================== */
+    .login-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: var(--spacing-md);
+    }
     
-    /* Mejoras específicas para móvil */
+    .login-card {
+      background: white;
+      padding: var(--spacing-lg);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    
+    .login-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-xs);
+      color: var(--ink);
+    }
+    
+    .login-subtitle {
+      color: var(--muted);
+      margin-bottom: var(--spacing-lg);
+      font-size: 0.9rem;
+    }
+    
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+    
+    .role-card {
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: var(--spacing-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      min-height: var(--touch-target);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+    
+    .role-card:hover, .role-card:focus {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+    
+    .role-card:active {
+      transform: scale(0.98);
+    }
+    
+    .role-card.selected {
+      border-color: var(--primary);
+      background: rgba(30, 64, 175, 0.05);
+      box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.2);
+    }
+    
+    .role-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .role-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    
+    .password-field {
+      margin-top: var(--spacing-md);
+    }
+    
+    .login-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: var(--button-height);
+      touch-action: manipulation;
+    }
+    
+    .login-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    
+    .login-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* ========================================
+       MAIN APP LAYOUT - Mobile First
+       ======================================== */
+    .app {
+      display: none;
+      width: 100vw;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    
+    .app.logged-in {
+      display: block;
+    }
+    
+    /* HEADER - Mobile Optimized */
+    header {
+      position: sticky;
+      top: 0;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+      z-index: 100;
+      box-shadow: var(--shadow);
+      width: 100%;
+    }
+    
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-sm) var(--spacing-md);
+      gap: var(--spacing-sm);
+      min-height: 60px;
+    }
+    
+    .brand {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      flex-shrink: 0;
+    }
+    
+    .brand-icon {
+      font-size: 1.25rem;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+    
+    .user-info > span {
+      display: none; /* Hidden on mobile by default */
+    }
+    
+    /* NAVIGATION - Mobile First */
+    .tabs {
+      display: flex;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      width: 100%;
+    }
+    
+    .tabs::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .tab {
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-height: var(--touch-target);
+      font-size: 0.85rem;
+      touch-action: manipulation;
+    }
+    
+    .tab:hover, .tab:focus {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+    
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: var(--shadow);
+    }
+    
+    .tab:active {
+      transform: scale(0.96);
+    }
+    
+    /* CONTAINER - Mobile First */
+    .container {
+      width: 100%;
+      max-width: 100vw;
+      padding: var(--spacing-md);
+      margin: 0;
+      overflow-x: hidden;
+    }
+    
+    /* GRID SYSTEM - Mobile First with Flexbox fallback */
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      width: 100%;
+    }
+    
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--spacing-sm);
+      width: 100%;
+    }
+    
+    .row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      width: 100%;
+    }
+    
+    .row-3 {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      width: 100%;
+    }
+    
+    /* CARDS - Mobile Optimized */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: var(--spacing-md);
+      box-shadow: var(--shadow);
+      transition: all 0.2s ease;
+      width: 100%;
+      overflow: hidden;
+    }
+    
+    .card:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .card h3 {
+      margin: 0 0 var(--spacing-sm) 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .big {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    
+    .kpi-icon {
+      font-size: 1.5rem;
+      margin-bottom: var(--spacing-xs);
+      opacity: 0.7;
+    }
+    
+    /* ========================================
+       FORMS & INPUTS - Touch Optimized
+       ======================================== */
+    .form-group {
+      margin-bottom: var(--spacing-md);
+      width: 100%;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: var(--spacing-xs);
+      font-weight: 600;
+      color: var(--ink);
+      font-size: 0.9rem;
+    }
+    
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      width: 100%;
+    }
+    
+    .form-row-3 {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      width: 100%;
+    }
+    
+    input, select, textarea {
+      width: 100%;
+      padding: var(--spacing-md);
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      font-size: 1rem; /* Prevents zoom on iOS */
+      transition: all 0.2s ease;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      min-height: var(--input-height);
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+    }
+    
+    select {
+      background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23666" d="m0 1h4l-2 2z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right var(--spacing-md) center;
+      background-size: 12px;
+      padding-right: calc(var(--spacing-md) * 3);
+    }
+    
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    /* ========================================
+       BUTTONS - Touch Optimized
+       ======================================== */
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: var(--spacing-md) var(--spacing-lg);
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-xs);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      min-height: var(--button-height);
+      touch-action: manipulation;
+      font-family: inherit;
+    }
+    
+    button:hover, button:focus {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+    
+    button:active {
+      transform: scale(0.96);
+    }
+    
+    button.secondary {
+      background: #f8fafc;
+      color: var(--ink);
+      border: 2px solid var(--line);
+    }
+    
+    button.secondary:hover {
+      background: #f1f5f9;
+      border-color: var(--primary);
+    }
+    
+    button.danger {
+      background: var(--danger);
+    }
+    
+    button.danger:hover {
+      background: #dc2626;
+    }
+    
+    button.success {
+      background: var(--success);
+    }
+    
+    button.success:hover {
+      background: #059669;
+    }
+    
+    .btn-small {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: 0.8rem;
+      margin: 2px;
+      min-height: 36px;
+      min-width: auto;
+    }
+    
+    .logout-btn {
+      background: var(--danger);
+      color: white;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      min-height: 36px;
+    }
+    
+    /* ========================================
+       TABLES - Mobile Optimized (No Horizontal Scroll)
+       ======================================== */
+    .table-container {
+      width: 100%;
+      overflow: hidden; /* No horizontal scroll */
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      font-size: 0.85rem;
+    }
+    
+    th, td {
+      padding: var(--spacing-sm);
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      background: #f8fafc;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.75rem;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    
+    tr:hover {
+      background: #f8fafc;
+    }
+    
+    /* Mobile table optimization - Stack on small screens */
     @media (max-width: 768px) {
-      input, select, textarea {
-        font-size:16px !important; /* Previene zoom en iOS */
-        padding:14px 16px;
-        border-width:2px;
-        border-radius:8px;
+      .table-container {
+        overflow-x: visible;
       }
-      input[type="date"], input[type="datetime-local"], input[type="time"] {
-        font-size:16px !important;
-        min-height:48px;
+      
+      table, thead, tbody, th, td, tr {
+        display: block;
       }
-      select {
-        background-image:url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23666" d="m0 1h4l-2 2z"/></svg>');
-        background-repeat:no-repeat;
-        background-position:right 12px center;
-        background-size:12px;
-        padding-right:40px;
+      
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+      
+      tr {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin-bottom: var(--spacing-sm);
+        background: white;
+        padding: var(--spacing-sm);
+      }
+      
+      td {
+        border: none;
+        border-bottom: 1px solid var(--line);
+        position: relative;
+        padding-left: 30%;
+        padding-right: var(--spacing-sm);
+        padding-top: var(--spacing-xs);
+        padding-bottom: var(--spacing-xs);
+      }
+      
+      td:before {
+        content: attr(data-label) ": ";
+        position: absolute;
+        left: var(--spacing-sm);
+        width: 25%;
+        text-align: left;
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+      }
+      
+      td:last-child {
+        border-bottom: none;
       }
     }
     
-    button{border:0;border-radius:10px;padding:12px 20px;background:var(--primary);color:#fff;cursor:pointer;font-weight:600;font-size:14px;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;user-select:none;-webkit-tap-highlight-color:transparent;min-height:40px}
-    button:hover{background:var(--primary-hover);transform:translateY(-1px);box-shadow:var(--shadow)}
-    button:active{transform:scale(0.95);background:var(--primary-hover)}
-    button.secondary{background:#f8fafc;color:var(--ink);border:1px solid var(--line)}
-    .btn-small{padding:6px 10px;font-size:12px;margin:2px;min-width:auto}
-    .btn-small.danger{background:var(--danger);color:white;border:none}
-    .btn-small.danger:hover{background:#dc2626;transform:translateY(-1px);box-shadow:0 2px 4px rgba(239, 68, 68, 0.3)}
-    button.secondary:hover{background:#f1f5f9;border-color:var(--primary)}
-    button.danger{background:var(--danger)}
-    button.danger:hover{background:#dc2626}
-    button.success{background:var(--success)}
-    button.success:hover{background:#059669}
-    
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:16px 24px;background:rgba(255,255,255,0.5);backdrop-filter:blur(10px);position:relative;transition:all 0.3s ease}
-    .tab{padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;user-select:none;-webkit-tap-highlight-color:transparent}
-    .tab:hover{background:var(--primary);color:#fff;border-color:transparent;transform:translateY(-1px)}
-    .tab.active{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow)}
-    .tab:active{transform:scale(0.95)} /* Feedback táctil */
-    
-    .container{max-width:1400px;margin:0 auto;padding:24px}
-    .grid{display:grid;gap:20px}
-    .kpis{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow);transition:transform 0.2s, box-shadow 0.2s}
-    .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
-    .card h3{margin:0 0 12px 0;font-size:14px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
-    .big{font-size:32px;font-weight:800;color:var(--primary)}
-    .kpi-icon{font-size:24px;margin-bottom:8px;opacity:0.7}
-    
-    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;min-width:600px}
-    th,td{padding:12px 16px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
-    th{color:var(--muted);font-weight:600;background:#f8fafc;text-transform:uppercase;letter-spacing:0.5px;font-size:12px;position:sticky;top:0;z-index:2}
-    tr:hover{background:#f8fafc}
-    .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;box-shadow:var(--shadow);position:relative}
-    .table-container::-webkit-scrollbar{height:8px}
-    .table-container::-webkit-scrollbar-track{background:#f1f1f1;border-radius:4px}
-    .table-container::-webkit-scrollbar-thumb{background:#c1c1c1;border-radius:4px}
-    .table-container::-webkit-scrollbar-thumb:hover{background:#a1a1a1}
-    
-    /* Indicador de scroll para móvil */
-    @media (max-width: 768px) {
-      .table-container::after{
-        content:'← Deslizar para ver más →';
-        position:absolute;
-        bottom:0;
-        right:0;
-        background:rgba(0,0,0,0.7);
-        color:white;
-        padding:4px 8px;
-        font-size:10px;
-        border-radius:4px 0 0 0;
-        pointer-events:none;
-        opacity:0.8;
-      }
-      .table-container::-webkit-scrollbar{height:6px}
-    }
-    
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-    .row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600}
-    .ok{background:#10b9811a;color:#065f46;border:1px solid #10b98140}
-    .warnP{background:#f59e0b1a;color:#7c2d12;border:1px solid #f59e0b40}
-    .dangerP{background:#ef44441a;color:#7f1d1d;border:1px solid #ef444440}
-    
-    .hidden{display:none !important}
-    .mobile-only{display:none}
-    
-    /* Estilos para modo compacto móvil */
-    .mobile-compact .tabs {
+    /* ========================================
+       UTILITY CLASSES
+       ======================================== */
+    .hidden {
       display: none !important;
     }
-    .mobile-compact .mobile-nav {
-      display: block !important;
+    
+    .mobile-only {
+      display: block;
     }
+    
+    .desktop-only {
+      display: none;
+    }
+    
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .ok {
+      background: #10b9811a;
+      color: #065f46;
+      border: 1px solid #10b98140;
+    }
+    
+    .warnP {
+      background: #f59e0b1a;
+      color: #7c2d12;
+      border: 1px solid #f59e0b40;
+    }
+    
+    .dangerP {
+      background: #ef44441a;
+      color: #7f1d1d;
+      border: 1px solid #ef444440;
+    }
+    
+    /* ========================================
+       RESPONSIVE BREAKPOINTS - Mobile First
+       ======================================== */
+    
+    /* TABLET - 768px and up */
+    @media (min-width: 768px) {
+      .container {
+        padding: var(--spacing-lg);
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      
+      .topbar {
+        padding: var(--spacing-md) var(--spacing-lg);
+      }
+      
+      .brand {
+        font-size: 1.125rem;
+      }
+      
+      .user-info > span {
+        display: inline; /* Show role text on tablet+ */
+      }
+      
+      .user-info {
+        font-size: 0.9rem;
+        gap: var(--spacing-sm);
+      }
+      
+      .tabs {
+        padding: var(--spacing-md) var(--spacing-lg);
+        justify-content: flex-start;
+        overflow-x: visible;
+      }
+      
+      .tab {
+        font-size: 0.9rem;
+      }
+      
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+      }
+      
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-lg);
+      }
+      
+      .row-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-lg);
+      }
+      
+      .kpis {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+      }
+      
+      .card {
+        padding: var(--spacing-lg);
+      }
+      
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-md);
+      }
+      
+      .form-row-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-md);
+      }
+      
+      /* Tables back to normal on tablet+ */
+      .table-container {
+        overflow-x: auto;
+      }
+      
+      table, thead, tbody, th, td, tr {
+        display: table;
+      }
+      
+      table {
+        display: table;
+      }
+      
+      thead {
+        display: table-header-group;
+      }
+      
+      tbody {
+        display: table-row-group;
+      }
+      
+      tr {
+        display: table-row;
+        border: none;
+        margin: 0;
+        background: transparent;
+        padding: 0;
+      }
+      
+      th {
+        display: table-cell;
+      }
+      
+      td {
+        display: table-cell;
+        border-bottom: 1px solid var(--line);
+        padding: var(--spacing-sm) var(--spacing-md);
+        position: static;
+        padding-left: var(--spacing-md);
+      }
+      
+      td:before {
+        content: none;
+      }
+      
+      .mobile-only {
+        display: none;
+      }
+      
+      .desktop-only {
+        display: block;
+      }
+    }
+    
+    /* DESKTOP - 1024px and up */
+    @media (min-width: 1024px) {
+      .container {
+        max-width: 1400px;
+        padding: var(--spacing-xl);
+      }
+      
+      .topbar {
+        padding: var(--spacing-lg) var(--spacing-xl);
+      }
+      
+      .brand {
+        font-size: 1.25rem;
+      }
+      
+      .brand-icon {
+        font-size: 1.5rem;
+      }
+      
+      .tabs {
+        padding: var(--spacing-lg) var(--spacing-xl);
+      }
+      
+      .kpis {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+      
+      .big {
+        font-size: 2.5rem;
+      }
+      
+      .card h3 {
+        font-size: 1rem;
+      }
+      
+      .kpi-icon {
+        font-size: 2rem;
+      }
+      
+      /* Enhanced hover effects on desktop */
+      .card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+      }
+      
+      button:hover {
+        transform: translateY(-1px);
+      }
+      
+      .tab:hover {
+        transform: translateY(-1px);
+      }
+    }
+    
+    /* LARGE DESKTOP - 1440px and up */
+    @media (min-width: 1440px) {
+      .container {
+        max-width: 1600px;
+      }
+      
+      .grid {
+        gap: var(--spacing-xl);
+      }
+      
+      .row, .row-3 {
+        gap: var(--spacing-xl);
+      }
+    }
+    
+    /* ========================================
+       MOBILE COMPACT MODE - Enhanced
+       ======================================== */
+    
+    /* Mobile Navigation Bottom Bar */
     .mobile-nav {
       display: none;
-      background: white;
-      border-top: 1px solid var(--line);
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      z-index: 100;
-      padding: 8px;
-      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-top: 2px solid var(--primary);
+      z-index: 1000;
+      padding: var(--spacing-xs);
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      safe-area-inset-bottom: env(safe-area-inset-bottom, 0);
     }
+    
     .mobile-nav-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 4px;
       max-width: 100%;
     }
-    .mobile-nav-item {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 8px 4px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      min-height: 60px;
-      justify-content: center;
-    }
-    .mobile-nav-item:hover, .mobile-nav-item.active {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-    }
-    .mobile-nav-item .nav-icon {
-      font-size: 16px;
-      display: block;
-    }
-    .mobile-nav-item .nav-text {
-      font-size: 9px;
-      font-weight: 600;
-      line-height: 1.2;
-    }
     
-    /* Ajustes para modo compacto */
-    .mobile-compact .container {
-      padding-bottom: 90px; /* Espacio para la nav bottom */
-    }
-    .mobile-compact .sticky-actions {
-      display: none; /* Ocultar botones flotantes */
-    }
-    .mobile-compact .topbar {
-      padding: 8px 12px; /* Header más compacto */
-    }
-    .mobile-compact .brand {
-      font-size: 14px; /* Logo más pequeño */
-    }
-    .mobile-compact .user-info {
-      gap: 6px;
-      font-size: 11px;
-    }
-
-    
-    /* Mejorar cards en modo compacto */
-    .mobile-compact .card {
-      padding: 12px;
-      margin-bottom: 8px;
-    }
-    .mobile-compact .card h3 {
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-    .mobile-compact .big {
-      font-size: 20px;
-    }
-    
-    /* KPIs más compactos */
-    .mobile-compact .kpis {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-    .mobile-compact .kpis .card {
-      padding: 8px;
-      min-height: 80px;
-    }
-    
-    /* Navegación móvil mejorada */
-    .mobile-nav {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-top: 2px solid var(--primary);
-    }
     .mobile-nav-item {
       background: transparent;
       border: none;
+      border-radius: 12px;
+      padding: var(--spacing-xs);
+      text-align: center;
+      cursor: pointer;
       transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-height: var(--touch-target);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
+    
     .mobile-nav-item:hover, .mobile-nav-item.active {
       background: var(--primary);
       color: white;
       transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(30, 64, 175, 0.3);
+      box-shadow: 0 4px 12px rgba(30, 64, 175, 0.4);
     }
+    
     .mobile-nav-item .nav-icon {
+      font-size: 1.2rem;
       transition: transform 0.3s ease;
     }
-    .mobile-nav-item:hover .nav-icon, .mobile-nav-item.active .nav-icon {
-      transform: scale(1.2);
+    
+    .mobile-nav-item:hover .nav-icon, 
+    .mobile-nav-item.active .nav-icon {
+      transform: scale(1.15);
     }
     
-    /* Asegurar que los modales estén ocultos por defecto */
-    .modal.hidden{visibility:hidden;opacity:0}
-    .modal{visibility:hidden;opacity:0;transition:opacity 0.3s ease, visibility 0.3s ease}
-    .modal:not(.hidden){visibility:visible;opacity:1}
-    .sticky-actions{position:fixed;right:24px;bottom:24px;display:flex;flex-direction:column;gap:12px;z-index:10}
-    .footer{padding:24px;color:var(--muted);font-size:12px;text-align:center;background:var(--card);margin-top:40px;border-top:1px solid var(--line)}
-    .tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:white}
-    .test{font-size:12px;color:var(--ink)}
-    .test .pass{color:#059669}
-    .test .fail{color:#b91c1c}
+    .mobile-nav-item .nav-text {
+      font-size: 0.65rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
     
-    /* highlight bitácora */
-    .flash{transition:background 0.4s}
-    .flash td{background:inherit}
-    .flash-ret{background:#fff7ed !important}
-    .flash-ent{background:#eef2ff !important}
-    .newtag{display:inline-block;margin-right:6px;font-size:12px}
+    /* Compact Mode Activation */
+    .mobile-compact .tabs {
+      display: none !important;
+    }
     
-    /* Action buttons */
-    .action-btn{padding:6px 12px;font-size:12px;margin:0 2px}
-    .edit-btn{background:var(--warn);color:white}
-    .edit-btn:hover{background:#d97706}
-    .delete-btn{background:var(--danger);color:white}
-    .delete-btn:hover{background:#dc2626}
-    .export-btn{background:var(--success);color:white}
-    .export-btn:hover{background:#059669}
+    .mobile-compact .mobile-nav {
+      display: block !important;
+    }
     
-    /* Modal styles */
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer;padding:20px;box-sizing:border-box}
-    .modal-content{background:white;padding:24px;border-radius:16px;max-width:800px;width:90%;max-height:90%;overflow-y:auto;cursor:default;position:relative}
+    .mobile-compact .container {
+      padding-bottom: calc(var(--touch-target) + var(--spacing-lg) + env(safe-area-inset-bottom, 0));
+    }
     
+    .mobile-compact .sticky-actions {
+      display: none;
+    }
+    
+    /* Compact Mode Layout Optimizations */
+    .mobile-compact .topbar {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      min-height: 50px;
+    }
+    
+    .mobile-compact .brand {
+      font-size: 0.9rem;
+    }
+    
+    .mobile-compact .brand-icon {
+      font-size: 1rem;
+    }
+    
+    .mobile-compact .user-info {
+      gap: 4px;
+      font-size: 0.7rem;
+    }
+    
+    .mobile-compact .user-info button {
+      padding: 4px 8px;
+      font-size: 0.7rem;
+      min-height: 28px;
+    }
+    
+    .mobile-compact .container {
+      padding: var(--spacing-xs);
+    }
+    
+    .mobile-compact .grid {
+      gap: var(--spacing-sm);
+    }
+    
+    .mobile-compact .card {
+      padding: var(--spacing-sm);
+      margin-bottom: var(--spacing-xs);
+      border-radius: 8px;
+    }
+    
+    .mobile-compact .card h3 {
+      font-size: 0.8rem;
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .mobile-compact .big {
+      font-size: 1.5rem;
+    }
+    
+    .mobile-compact .kpi-icon {
+      font-size: 1.25rem;
+      margin-bottom: 4px;
+    }
+    
+    .mobile-compact .kpis {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-xs);
+    }
+    
+    .mobile-compact .kpis .card {
+      padding: var(--spacing-xs);
+      min-height: 70px;
+    }
+    
+    .mobile-compact .row {
+      gap: var(--spacing-sm);
+    }
+    
+    .mobile-compact .row-3 {
+      gap: var(--spacing-sm);
+    }
+    
+    /* Compact Forms */
+    .mobile-compact input,
+    .mobile-compact select,
+    .mobile-compact textarea {
+      padding: var(--spacing-sm);
+      font-size: 0.9rem;
+      min-height: var(--touch-target);
+    }
+    
+    .mobile-compact button {
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-size: 0.85rem;
+      min-height: 44px;
+    }
+    
+    .mobile-compact .form-group {
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .mobile-compact .form-group label {
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+    }
+    
+    /* Compact Tables */
+    .mobile-compact table {
+      font-size: 0.8rem;
+    }
+    
+    .mobile-compact th,
+    .mobile-compact td {
+      padding: var(--spacing-xs);
+    }
+    
+    /* Hide desktop elements in compact mode */
     @media (max-width: 768px) {
-      .modal{
-        align-items:flex-start;
-        padding:10px;
+      .mobile-compact .desktop-only {
+        display: none !important;
       }
-      .modal-content{
-        width:100%;
-        max-width:100%;
-        margin-top:20px;
-        border-radius:12px;
-        padding:16px;
-        max-height:calc(100vh - 40px);
+      
+      .mobile-compact .mobile-only {
+        display: block !important;
       }
     }
-    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
-    .modal-title{font-size:20px;font-weight:700;color:var(--ink)}
-    .close-btn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all 0.2s}
-    .close-btn:hover{background:var(--line);color:var(--ink);transform:scale(1.1)}
     
-    /* Form improvements */
-    .form-group{margin-bottom:20px}
-    .form-group label{display:block;margin-bottom:8px;font-weight:600;color:var(--ink)}
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-    .smtp-config{border-left:4px solid #ffc107;background:#fffbee;padding:20px;border-radius:8px;margin:20px 0}
-    .smtp-config h4{color:#b45309;margin:0 0 16px 0}
-    .smtp-config small{color:#92400e;font-style:italic}
+    /* ========================================
+       MODALS - Mobile Optimized
+       ======================================== */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: var(--spacing-md);
+      box-sizing: border-box;
+      visibility: hidden;
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
     
-    /* Report preview */
-    .report-preview{background:white;border:1px solid var(--line);border-radius:12px;padding:20px;margin-top:20px}
-    .report-header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--primary)}
-    .report-title{font-size:24px;font-weight:700;color:var(--primary);margin-bottom:8px}
-    .report-date{color:var(--muted);font-size:14px}
+    .modal:not(.hidden) {
+      visibility: visible;
+      opacity: 1;
+    }
     
+    .modal.hidden {
+      visibility: hidden;
+      opacity: 0;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: var(--spacing-lg);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--line);
+    }
+    
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 0;
+      width: var(--touch-target);
+      height: var(--touch-target);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+    }
+    
+    .close-btn:hover {
+      background: var(--line);
+      color: var(--ink);
+      transform: scale(1.05);
+    }
+    
+    /* ========================================
+       STICKY ACTIONS & UI ELEMENTS
+       ======================================== */
+    .sticky-actions {
+      position: fixed;
+      right: var(--spacing-lg);
+      bottom: var(--spacing-lg);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      z-index: 50;
+    }
+    
+    .footer {
+      padding: var(--spacing-lg);
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+      background: var(--card);
+      margin-top: var(--spacing-xl);
+      border-top: 1px solid var(--line);
+    }
+    
+    .tag {
+      font-size: 0.75rem;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 4px var(--spacing-sm);
+      background: white;
+      display: inline-flex;
+      align-items: center;
+    }
+    
+    /* ========================================
+       SPECIALIZED COMPONENTS
+       ======================================== */
+    
+    /* Action Buttons */
+    .action-btn {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: 0.8rem;
+      margin: 2px;
+      min-height: 32px;
+      border-radius: 8px;
+    }
+    
+    .edit-btn {
+      background: var(--warn);
+      color: white;
+    }
+    
+    .edit-btn:hover {
+      background: #d97706;
+    }
+    
+    .delete-btn {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .delete-btn:hover {
+      background: #dc2626;
+    }
+    
+    .export-btn {
+      background: var(--success);
+      color: white;
+    }
+    
+    .export-btn:hover {
+      background: #059669;
+    }
+    
+    /* Bitácora Highlighting */
+    .flash {
+      transition: background 0.4s ease;
+    }
+    
+    .flash td {
+      background: inherit;
+    }
+    
+    .flash-ret {
+      background: #fff7ed !important;
+    }
+    
+    .flash-ent {
+      background: #eef2ff !important;
+    }
+    
+    .newtag {
+      display: inline-block;
+      margin-right: 6px;
+      font-size: 0.75rem;
+    }
+    
+    /* Test Results */
+    .test {
+      font-size: 0.8rem;
+      color: var(--ink);
+    }
+    
+    .test .pass {
+      color: var(--success);
+      font-weight: 600;
+    }
+    
+    .test .fail {
+      color: #b91c1c;
+      font-weight: 600;
+    }
+    
+    /* SMTP Configuration */
+    .smtp-config {
+      border-left: 4px solid var(--warn);
+      background: #fffbee;
+      padding: var(--spacing-md);
+      border-radius: 8px;
+      margin: var(--spacing-md) 0;
+    }
+    
+    .smtp-config h4 {
+      color: #b45309;
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: 1rem;
+    }
+    
+    .smtp-config small {
+      color: #92400e;
+      font-style: italic;
+      font-size: 0.8rem;
+    }
+    
+    /* Report Preview */
+    .report-preview {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: var(--spacing-md);
+      margin-top: var(--spacing-md);
+    }
+    
+    .report-header {
+      text-align: center;
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 2px solid var(--primary);
+    }
+    
+    .report-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .report-date {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    
+    /* ========================================
+       FINAL MOBILE OPTIMIZATIONS
+       ======================================== */
+    
+    /* Mobile Modal Adjustments */
     @media (max-width: 768px) {
-      /* Layout ajustes */
-      .row, .row-3, .form-row, .form-row-3 { grid-template-columns: 1fr; }
-      .kpis { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-      .container { padding: 12px 8px; }
-      
-      /* Header y navegación móvil */
-      .topbar { 
-        flex-direction: row; 
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px; 
-        padding: 8px 12px;
-      }
-      .brand { 
-        font-size: 14px;
-        flex: none;
-      }
-
-      .user-info { 
-        gap: 6px; 
-        font-size: 11px;
-        flex: none;
-      }
-      .user-info > span {
-        display: none; /* Ocultar texto de rol en móvil */
-      }
-      .user-info button {
-        padding: 6px 8px;
-        font-size: 11px;
-        min-height: 32px;
+      .modal {
+        align-items: flex-start;
+        padding: var(--spacing-sm);
       }
       
-      /* Mostrar botón móvil */
-      .mobile-only {
-        display: inline-flex !important;
-      }
-      
-      /* Tabs más grandes para móvil */
-      .tabs { 
-        padding: 8px 12px; 
-        gap: 6px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-        position: relative;
-      }
-      .tabs::-webkit-scrollbar {
-        height: 4px;
-      }
-      .tabs::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.1);
-        border-radius: 2px;
-      }
-      .tabs::-webkit-scrollbar-thumb {
-        background: var(--primary);
-        border-radius: 2px;
-      }
-      .tab { 
-        padding: 12px 16px; 
-        font-size: 14px;
-        white-space: nowrap;
-        min-width: fit-content;
-        flex-shrink: 0;
-      }
-      
-      /* Formularios móviles */
-      input, select, textarea { 
-        font-size: 16px; /* Previene zoom en iOS */
-        padding: 14px 16px;
-      }
-      button { 
-        padding: 14px 20px; 
-        font-size: 16px;
-        min-height: 48px; /* Mejor área táctil */
-      }
-      .btn-small {
-        padding: 10px 14px;
-        font-size: 14px;
-        min-height: 40px;
-      }
-      
-      /* Cards más compactas */
-      .card { 
-        padding: 16px; 
-        margin-bottom: 12px;
-      }
-      .card h3 { 
-        font-size: 14px; 
-        margin-bottom: 12px;
-      }
-      
-      /* Tablas responsivas */
-      table { 
-        font-size: 12px; 
-        overflow-x: auto;
-        display: block;
-        white-space: nowrap;
-      }
-      thead, tbody, tr { 
-        display: table; 
+      .modal-content {
         width: 100%;
-        table-layout: fixed;
-      }
-      th, td { 
-        padding: 8px 4px; 
-        font-size: 11px;
-      }
-      
-      /* KPIs más compactos */
-      .big { 
-        font-size: 24px; 
-      }
-      .kpi-icon { 
-        font-size: 20px; 
+        max-width: 100%;
+        margin-top: var(--spacing-md);
+        max-height: calc(100vh - 2 * var(--spacing-md));
+        border-radius: 12px;
       }
       
-      /* Modales móviles */
-      .modal-content { 
-        width: 95%; 
-        max-width: 95%; 
-        margin: 20px auto;
-        max-height: 85vh;
-        padding: 16px;
-      }
-      .modal-header {
-        padding-bottom: 12px;
-        margin-bottom: 16px;
-      }
-      .modal-title { 
-        font-size: 18px; 
+      .modal-title {
+        font-size: 1.125rem;
       }
       
-      /* Botones flotantes */
-      .sticky-actions { 
-        right: 12px; 
-        bottom: 12px; 
-        gap: 8px;
-      }
-      .sticky-actions button { 
-        font-size: 14px; 
-        padding: 12px 16px;
+      /* Ensure no horizontal scroll on mobile */
+      .login-card {
+        margin: var(--spacing-md);
+        width: calc(100% - 2 * var(--spacing-md));
       }
       
-      /* Login móvil */
-      .login-card { 
-        padding: 24px; 
-        margin: 20px;
-        width: calc(100% - 40px);
-      }
-      .login-title { 
-        font-size: 20px; 
-      }
-      .role-card { 
-        padding: 16px; 
-        margin-bottom: 12px;
+      /* Sticky actions mobile positioning */
+      .sticky-actions {
+        right: var(--spacing-md);
+        bottom: var(--spacing-md);
+        gap: var(--spacing-xs);
       }
       
-      /* Alertas y pills más pequeños */
-      .pill { 
-        font-size: 10px; 
-        padding: 4px 8px;
-        margin: 1px;
-      }
-      
-      /* Ajustes para campos específicos */
-      .form-group label { 
-        font-size: 14px; 
-        margin-bottom: 6px;
-        font-weight: 600;
-      }
-      
-      /* Mejoras para filtros */
-      .form-row {
-        gap: 12px;
-      }
-      
-      /* Botones más accesibles */
-      .export-btn { 
-        font-size: 12px; 
-        padding: 8px 12px;
+      /* Enhanced touch targets for mobile */
+      .btn-small {
         min-height: 40px;
-      }
-      
-      /* Mejoras para ficha técnica */
-      #fichaTecnicaContent .card { 
-        margin-bottom: 8px; 
-      }
-      
-      /* Email config móvil */
-      .card[data-roles="admin"] { 
-        padding: 12px; 
-      }
-      .card[data-roles="admin"] h3 { 
-        font-size: 16px; 
-      }
-      
-      /* Mejoras específicas para dashboard */
-      .kpis .card {
-        min-height: 120px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        text-align: center;
-      }
-      
-      /* Mejor separación visual */
-      .card + .card {
-        margin-top: 12px;
-      }
-      
-      /* Acciones más grandes */
-      .action-btn {
-        min-height: 36px;
-        padding: 6px 10px;
-        font-size: 12px;
-      }
-      
-      /* Mejora para elementos de búsqueda */
-      .search input {
-        font-size: 14px;
-        padding: 10px 12px;
-      }
-      
-      /* Tags y elementos informativos */
-      .tag {
-        font-size: 11px;
-        padding: 3px 8px;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      /* Pantallas muy pequeñas */
-      .container { 
-        padding: 8px 4px; 
-      }
-      .topbar { 
-        padding: 8px 12px; 
-      }
-      .brand { 
-        font-size: 14px; 
-      }
-      .big { 
-        font-size: 20px; 
-      }
-      .modal-content { 
-        width: 98%; 
-        padding: 12px;
-        margin: 10px auto;
-      }
-      table { 
-        font-size: 10px; 
-      }
-      th, td { 
-        padding: 6px 2px; 
-      }
-      .card { 
-        padding: 12px; 
-      }
-      input, select, textarea, button { 
-        font-size: 14px; 
+        padding: var(--spacing-xs) var(--spacing-sm);
       }
     }
   </style>
@@ -976,11 +1716,15 @@
               <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-bottom: 12px;">
                 <div>
                   <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Proveedor de email:</label>
-                  <select id="configProvider" style="font-size: 0.9em;">
-                    <option value="gmail">Gmail / Google Workspace</option>
-                    <option value="outlook">Outlook / Microsoft 365</option>
-                    <option value="yahoo">Yahoo Mail</option>
-                    <option value="custom">Servidor personalizado</option>
+                  <select id="configProvider" style="font-size: 0.9em;" onchange="updateProviderInfo()">
+                    <option value="gmail">📧 Gmail / Google Workspace</option>
+                    <option value="outlook">📧 Outlook / Microsoft 365</option>
+                    <option value="outlook_legacy">📧 Outlook (Legacy)</option>
+                    <option value="yahoo">📧 Yahoo Mail</option>
+                    <option value="zoho">📧 Zoho Mail</option>
+                    <option value="cpanel">🏢 Hosting cPanel (puerto 587)</option>
+                    <option value="cpanel_ssl">🏢 Hosting cPanel SSL (puerto 465)</option>
+                    <option value="custom">⚙️ Servidor personalizado</option>
                   </select>
                 </div>
                 <div>
@@ -991,6 +1735,16 @@
               <div style="margin-bottom: 12px;" id="customServerFields" class="hidden">
                 <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Servidor SMTP personalizado:</label>
                 <input id="configSmtpServer" type="text" placeholder="mail.arenalmanoa.com" style="font-size: 0.9em;">
+              </div>
+              
+              <!-- Información de ayuda por proveedor -->
+              <div id="providerHelp" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-top: 12px; font-size: 0.85em;">
+                <div id="helpContent">
+                  <strong>📧 Gmail / Google Workspace:</strong><br>
+                  • Debe usar <strong>contraseña de aplicación</strong>, no su contraseña normal<br>
+                  • Configure la verificación en 2 pasos primero<br>
+                  • Genere contraseña de aplicación en su cuenta de Google
+                </div>
               </div>
             </div>
             
@@ -2262,6 +3016,8 @@
   let Vehiculos=[], Polizas=[], RTV=[], Mantenimientos=[], Combustible=[], Bitacora=[], Alertas=[], Revisiones=[];
   let currentUser = null;
   let currentBitacoraId = null; // Para manejar retorno de vehículos
+  let sessionTimeout = null; // Timer para timeout de sesión
+  let lastActivity = Date.now(); // Última actividad del usuario
   
   // ====== SISTEMA DE ROLES Y LOGIN ======
   const ROLES = {
@@ -2283,6 +3039,72 @@
   };
   
   let selectedRole = null;
+
+  // ====== MANEJO DE SESIÓN ======
+  const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutos en milisegundos
+  
+  function saveSession() {
+    if (currentUser) {
+      const sessionData = {
+        user: currentUser,
+        timestamp: Date.now(),
+        role: selectedRole
+      };
+      localStorage.setItem('vehicularSession', JSON.stringify(sessionData));
+      console.log('💾 Sesión guardada');
+    }
+  }
+  
+  function loadSession() {
+    try {
+      const sessionData = JSON.parse(localStorage.getItem('vehicularSession'));
+      if (sessionData) {
+        const now = Date.now();
+        const sessionAge = now - sessionData.timestamp;
+        
+        if (sessionAge < SESSION_TIMEOUT) {
+          currentUser = sessionData.user;
+          selectedRole = sessionData.role;
+          lastActivity = now;
+          
+          console.log('🔄 Sesión restaurada:', currentUser.name);
+          return true;
+        } else {
+          console.log('⏰ Sesión expirada');
+          localStorage.removeItem('vehicularSession');
+        }
+      }
+    } catch (e) {
+      console.log('❌ Error cargando sesión:', e);
+    }
+    return false;
+  }
+  
+  function updateActivity() {
+    lastActivity = Date.now();
+    if (currentUser) {
+      saveSession(); // Actualizar timestamp de sesión
+    }
+  }
+  
+  function startSessionTimer() {
+    if (sessionTimeout) clearTimeout(sessionTimeout);
+    
+    sessionTimeout = setTimeout(() => {
+      const timeSinceActivity = Date.now() - lastActivity;
+      if (timeSinceActivity >= SESSION_TIMEOUT) {
+        alert('⏰ Sesión expirada por inactividad. Debe volver a iniciar sesión.');
+        logout();
+      } else {
+        startSessionTimer(); // Reiniciar timer
+      }
+    }, SESSION_TIMEOUT);
+  }
+  
+  // Detectar actividad del usuario
+  document.addEventListener('click', updateActivity);
+  document.addEventListener('keypress', updateActivity);
+  document.addEventListener('scroll', updateActivity);
   
   function selectRole(role) {
     selectedRole = role;
@@ -2339,6 +3161,12 @@
       // Actualizar UI según rol
       updateUIForRole();
       
+      // Guardar sesión
+      saveSession();
+      
+      // Iniciar timer de sesión
+      startSessionTimer();
+      
       // Cargar datos
       loadAll();
       
@@ -2351,8 +3179,18 @@
   
   function logout() {
     if (confirm('¿Está seguro que desea cerrar sesión?')) {
+      // Limpiar sesión
       currentUser = null;
       selectedRole = null;
+      localStorage.removeItem('vehicularSession');
+      
+      if (sessionTimeout) {
+        clearTimeout(sessionTimeout);
+        sessionTimeout = null;
+      }
+      
+      console.log('🔒 Sesión cerrada');
+      
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('mainApp').classList.remove('logged-in');
       document.getElementById('loginPassword').value = '';
@@ -2470,12 +3308,36 @@
   }
 
   // ====== API CLIENT PARA FASTAPI ======
+  
+  // Función de retry automático para manejar errores de red
+  async function retryOperation(operation, maxRetries = 3, delay = 1000) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        const isRetryable = error.message.includes('502') || 
+                           error.message.includes('503') || 
+                           error.message.includes('Failed to fetch');
+        
+        if (!isRetryable || attempt === maxRetries) {
+          throw error;
+        }
+        
+        console.log(`🔄 Reintentando ${attempt}/${maxRetries} después de error:`, error.message);
+        
+        // Delay progresivo: 500ms, 1s, 1.5s
+        await new Promise(resolve => setTimeout(resolve, delay * attempt * 0.5));
+      }
+    }
+  }
+
   async function apiGet(table){
     const endpoint = table.toLowerCase();
     const url = `${API}/${endpoint}`;
-    console.log('API GET:', url); // Debug log
     
-    try {
+    return await retryOperation(async () => {
+      console.log('API GET:', url);
+      
       const r = await fetch(url, { 
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
@@ -2487,58 +3349,119 @@
       }
       
       const j = await r.json();
-      console.log('API Response:', j); // Debug log
+      console.log('API Response:', j);
       
       if(!j.success) throw new Error(j.error||'GET error');
       return j.data;
-    } catch (error) {
-      console.error('API GET Error:', error);
-      throw error;
-    }
+    }, 3, 500);
   }
   
   async function apiPost(table, data, action=null){
     const endpoint = table.toLowerCase();
     const url = `${API}/${endpoint}`;
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-      cache: 'no-store'
-    });
-    const j = await r.json();
-    if(!j.success) throw new Error(j.error||'POST error');
-    return j;
+    
+    return await retryOperation(async () => {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        cache: 'no-store'
+      });
+      
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      }
+      
+      const contentType = r.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const j = await r.json();
+        if (!j.success) {
+          throw new Error(j.message || j.detail || j.error || 'POST error');
+        }
+        return j;
+      } else {
+        return { success: true, message: 'Operación completada exitosamente' };
+      }
+    }, 2, 1000); // Solo 2 intentos para POST (no queremos duplicar datos)
   }
   
   async function apiPut(table, id, data){
     const endpoint = table.toLowerCase();
     const url = `${API}/${endpoint}/${id}`;
-    const r = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-      cache: 'no-store'
-    });
-    const j = await r.json();
-    if(!j.success) throw new Error(j.error||'PUT error');
-    return j;
+    
+    try {
+      const r = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        cache: 'no-store'
+      });
+      
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      }
+      
+      const contentType = r.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const j = await r.json();
+        if (!j.success) {
+          throw new Error(j.message || j.detail || j.error || 'PUT error');
+        }
+        return j;
+      } else {
+        return { success: true, message: 'Actualización completada exitosamente' };
+      }
+    } catch (error) {
+      console.error('API PUT Error:', error);
+      if (error.message.includes('Unexpected token')) {
+        throw new Error('Error del servidor: Respuesta inválida');
+      }
+      throw error;
+    }
   }
   
   async function apiDelete(table, id){
     const endpoint = table.toLowerCase();
     const url = `${API}/${endpoint}/${id}`;
-    const r = await fetch(url, {
-      method: 'DELETE',
-      cache: 'no-store'
-    });
-    const j = await r.json();
-    if(!j.success) throw new Error(j.error||'DELETE error');
-    return j;
+    
+    try {
+      const r = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-store'
+      });
+      
+      // Check if the response is ok
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      }
+      
+      // Try to parse JSON
+      const contentType = r.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const j = await r.json();
+        if (!j.success) {
+          throw new Error(j.message || j.detail || 'DELETE error');
+        }
+        return j;
+      } else {
+        // If not JSON, it was successful (some endpoints might return text)
+        return { success: true, message: 'Eliminado exitosamente' };
+      }
+    } catch (error) {
+      // If it's a JSON parsing error, provide more context
+      if (error.message.includes('Unexpected token')) {
+        throw new Error('Error del servidor: Respuesta inválida');
+      }
+      throw error;
+    }
   }
 
   // ====== CARGA INICIAL ======
   async function loadAll(){
+    console.log('🔄 Cargando todos los datos...');
     try{
       // Cargar datos del nuevo backend
       Vehiculos = await apiGet('vehiculos');
@@ -2552,9 +3475,8 @@
       // Inicializar arrays vacíos para compatibilidad con el frontend
       Alertas = [];
       
-      fillVehSelects();
-      fillPlacaFilters();
-      render();
+      // Actualizar todas las vistas
+      refreshAllViews();
       
       // Cargar configuración de alertas si es administrador
       if (currentUser && currentUser.role === 'admin') {
@@ -2564,9 +3486,29 @@
           }
         }, 1000);
       }
+      
+      console.log('✅ Datos cargados exitosamente');
     }catch(e){
-      alert('Error cargando datos: '+e.message);
-      console.error(e);
+      console.error('❌ Error cargando datos:', e);
+      alert('⚠️ Error cargando datos: ' + e.message + '\n\n🔄 Reintentando en unos segundos...');
+      
+      // Reintentar después de 3 segundos
+      setTimeout(() => {
+        loadAll();
+      }, 3000);
+    }
+  }
+  
+  // Función para actualizar todas las vistas después de cambios
+  function refreshAllViews() {
+    try {
+      fillVehSelects();
+      fillPlacaFilters();
+      render(); // Llama a la función render existente
+      
+      console.log('🔄 Vistas actualizadas automáticamente');
+    } catch (error) {
+      console.error('❌ Error actualizando vistas:', error);
     }
   }
 
@@ -3387,7 +4329,15 @@
   // ====== FORM HANDLERS ======
   async function guardarVehiculo(e){
     e.preventDefault();
-    if(!hasPermission('vehiculos')) return alert('Sin permisos para crear vehículos');
+    
+    console.log('🚗 Iniciando creación de vehículo...');
+    console.log('👤 Usuario actual:', currentUser);
+    console.log('🔐 Permisos:', currentUser ? currentUser.permissions : 'No logueado');
+    
+    if(!hasPermission('vehiculos')) {
+      alert('⚠️ ACCESO DENEGADO\n\nDebe iniciar sesión como ADMINISTRADOR para crear vehículos.\n\n🔓 Para loguearse:\n1. Seleccione rol "Administrador"\n2. Contraseña: "Admin"\n3. Haga clic en "Iniciar Sesión"');
+      return;
+    }
     
     try{
       // Validaciones básicas
@@ -3416,14 +4366,31 @@
         km_inicial: parseInt(byId('vKmInicial').value) || 0
       };
       
+      console.log('📤 Enviando datos al servidor:', obj);
       await apiPost('vehiculos', obj);
-      Vehiculos = await apiGet('vehiculos');
-      fillVehSelects(); 
-      fillPlacaFilters(); 
-      renderVehiculos(); 
-      renderKpis();
-      limpiarFormVehiculo();
-      alert('✅ Vehículo creado exitosamente');
+      console.log('✅ Vehículo creado en servidor');
+      
+      // Actualizar datos automáticamente
+      try {
+        Vehiculos = await apiGet('vehiculos');
+        refreshAllViews();
+        limpiarFormVehiculo();
+        alert('✅ Vehículo creado exitosamente');
+      } catch (refreshError) {
+        console.log('⚠️ Error al actualizar vista, pero vehículo creado:', refreshError.message);
+        limpiarFormVehiculo();
+        alert('✅ Vehículo creado exitosamente\n⚠️ Los datos se actualizarán automáticamente');
+        
+        // Forzar actualización después de delay
+        setTimeout(async () => {
+          try {
+            Vehiculos = await apiGet('vehiculos');
+            refreshAllViews();
+          } catch (e) {
+            console.error('Error en actualización diferida:', e);
+          }
+        }, 2000);
+      }
     }catch(e2){ 
       alert('❌ Error: '+e2.message); 
     }
@@ -4562,8 +5529,12 @@
   
   // Funciones de eliminación (solo para admin)
   async function eliminarVehiculo(id) {
-    if (currentUser.role !== 'admin') {
-      alert('Solo el administrador puede eliminar vehículos');
+    console.log('🗑️ Iniciando eliminación de vehículo, ID:', id);
+    console.log('👤 Usuario actual:', currentUser);
+    console.log('🔐 Role actual:', currentUser ? currentUser.role : 'No logueado');
+    
+    if (!currentUser || currentUser.role !== 'admin') {
+      alert('⚠️ ACCESO DENEGADO\n\nSolo el ADMINISTRADOR puede eliminar vehículos.\n\n🔓 Para loguearse como admin:\n1. Seleccione rol "Administrador"\n2. Contraseña: "Admin"\n3. Haga clic en "Iniciar Sesión"');
       return;
     }
     
@@ -4572,12 +5543,29 @@
     
     if (confirm(`¿Está seguro de eliminar el vehículo ${vehiculo.placa}?`)) {
       try {
+        console.log('📤 Enviando eliminación de vehículo:', vehiculo.placa);
         await apiDelete('vehiculos', vehiculo.placa);
-        Vehiculos = await apiGet('vehiculos');
-        fillVehSelects();
-        fillPlacaFilters();
-        renderVehiculos();
-        alert('✅ Vehículo eliminado exitosamente');
+        console.log('✅ Vehículo eliminado del servidor');
+        
+        // Actualizar datos automáticamente
+        try {
+          Vehiculos = await apiGet('vehiculos');
+          refreshAllViews();
+          alert('✅ Vehículo eliminado exitosamente');
+        } catch (refreshError) {
+          console.log('⚠️ Error al actualizar vista, pero vehículo eliminado:', refreshError.message);
+          alert('✅ Vehículo eliminado exitosamente\n⚠️ Los datos se actualizarán automáticamente');
+          
+          // Forzar actualización después de delay
+          setTimeout(async () => {
+            try {
+              Vehiculos = await apiGet('vehiculos');
+              refreshAllViews();
+            } catch (e) {
+              console.error('Error en actualización diferida:', e);
+            }
+          }, 2000);
+        }
       } catch (e) {
         alert('❌ Error: ' + e.message);
       }
@@ -6027,6 +7015,64 @@
     }
   }
   
+  function updateProviderInfo() {
+    const provider = byId('configProvider')?.value;
+    const helpContent = byId('helpContent');
+    const customFields = byId('customServerFields');
+    const portField = byId('configSmtpPort');
+    
+    // Mostrar/ocultar campos personalizados
+    if (provider === 'custom') {
+      customFields?.classList.remove('hidden');
+    } else {
+      customFields?.classList.add('hidden');
+    }
+    
+    // Actualizar puerto y ayuda según proveedor
+    const providerInfo = {
+      gmail: {
+        port: 587,
+        help: '<strong>📧 Gmail / Google Workspace:</strong><br>• Debe usar <strong>contraseña de aplicación</strong>, no su contraseña normal<br>• Configure la verificación en 2 pasos primero<br>• Genere contraseña de aplicación en Configuración → Seguridad → Google'
+      },
+      outlook: {
+        port: 587,
+        help: '<strong>📧 Outlook / Microsoft 365:</strong><br>• Use su email y contraseña normales<br>• Asegúrese que la autenticación SMTP esté habilitada<br>• Servidor: smtp.office365.com'
+      },
+      outlook_legacy: {
+        port: 587,
+        help: '<strong>📧 Outlook (Legacy):</strong><br>• Para cuentas Outlook más antiguas<br>• Servidor: smtp-mail.outlook.com<br>• Use su email y contraseña normales'
+      },
+      yahoo: {
+        port: 587,
+        help: '<strong>📧 Yahoo Mail:</strong><br>• Debe generar una contraseña de aplicación<br>• Vaya a Configuración → Seguridad de la cuenta<br>• Genere nueva contraseña de aplicación'
+      },
+      zoho: {
+        port: 587,
+        help: '<strong>📧 Zoho Mail:</strong><br>• Use su email y contraseña normales<br>• Servidor: smtp.zoho.com<br>• Puede requerir autenticación en 2 pasos'
+      },
+      cpanel: {
+        port: 587,
+        help: '<strong>🏢 Hosting cPanel:</strong><br>• Use el email completo como usuario<br>• Contraseña del email en cPanel<br>• Servidor: mail.sudominio.com (o según su hosting)'
+      },
+      cpanel_ssl: {
+        port: 465,
+        help: '<strong>🏢 Hosting cPanel SSL:</strong><br>• Conexión SSL directa (puerto 465)<br>• Use el email completo como usuario<br>• Contraseña del email en cPanel'
+      },
+      custom: {
+        port: 587,
+        help: '<strong>⚙️ Servidor personalizado:</strong><br>• Consulte con su proveedor de hosting/email<br>• Puertos comunes: 25, 587 (STARTTLS), 465 (SSL)<br>• Configure servidor, puerto y credenciales manualmente'
+      }
+    };
+    
+    const info = providerInfo[provider];
+    if (info && helpContent) {
+      helpContent.innerHTML = info.help;
+      if (portField && provider !== 'custom') {
+        portField.value = info.port;
+      }
+    }
+  }
+  
   async function guardarConfigEmail() {
     try {
       const statusEl = byId('alertaStatus');
@@ -6309,17 +7355,19 @@
       
       const data = await response.json();
       
-      if (data.success) {
+      if (response.ok && data.success) {
         alert('✅ Registro de bitácora eliminado exitosamente');
         
         // Actualizar datos
         Bitacora = await apiGet('bitacora');
         renderBitacora();
       } else {
-        alert('❌ Error eliminando registro: ' + (data.message || 'Error desconocido'));
+        // Handle both API error formats
+        const errorMessage = data.detail || data.message || `HTTP ${response.status}: Error desconocido`;
+        alert('❌ Error eliminando registro: ' + errorMessage);
       }
     } catch (e) {
-      alert('❌ Error eliminando registro: ' + e.message);
+      alert('❌ Error eliminando registro: HTTP 502 - Error de conexión con el servidor');
       console.error('Error eliminando bitácora:', e);
     }
   }
@@ -6931,6 +7979,12 @@
       return;
     }
     
+    // Mostrar indicador de carga
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = '🔄 Probando conexión...';
+    button.disabled = true;
+    
     try {
       const response = await fetch(`${API}/config/email/test-smtp`, {
         method: 'POST',
@@ -6941,12 +7995,31 @@
       const data = await response.json();
       
       if (data.success) {
-        alert('✅ Conexión SMTP exitosa! La configuración es correcta.');
+        let message = '✅ ¡Conexión SMTP exitosa!\n\n';
+        message += `📧 Servidor: ${smtpConfig.host}:${smtpConfig.port}\n`;
+        message += `👤 Email: ${smtpConfig.email}\n`;
+        if (data.method) {
+          message += `🔧 Método: ${data.method}\n`;
+        }
+        message += '\n✅ La configuración es correcta y está lista para enviar alertas.';
+        alert(message);
       } else {
-        alert(`❌ Error en la conexión SMTP: ${data.error || 'Error desconocido'}`);
+        let message = '❌ Error en la conexión SMTP\n\n';
+        message += `${data.error}\n\n`;
+        message += '💡 Sugerencias:\n';
+        message += '• Verifique que email y contraseña sean correctos\n';
+        message += '• Para Gmail: use contraseña de aplicación (no la normal)\n';
+        message += '• Para Outlook: verifique que la autenticación esté habilitada\n';
+        message += '• Pruebe diferentes puertos (587, 465, 25)\n';
+        message += '• Consulte con su proveedor de hosting/email';
+        alert(message);
       }
     } catch (error) {
-      alert(`❌ Error probando conexión SMTP: ${error.message}`);
+      alert(`❌ Error de conexión: ${error.message}\n\nVerifique su conexión a internet y que el servidor backend esté funcionando.`);
+    } finally {
+      // Restaurar botón
+      button.textContent = originalText;
+      button.disabled = false;
     }
   }
   
@@ -7145,6 +8218,28 @@
   
   // Cargar preferencia de modo compacto al iniciar
   document.addEventListener('DOMContentLoaded', function() {
+    // Intentar restaurar sesión
+    if (loadSession()) {
+      // Sesión restaurada, mostrar app
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').classList.add('logged-in');
+      updateUIForRole();
+      startSessionTimer();
+      
+      // Ir a la primera pestaña disponible
+      const firstAvailableTab = currentUser.permissions[0] || 'dashboard';
+      setTab(firstAvailableTab);
+      
+      // Cargar datos
+      loadAll();
+      
+      console.log('✅ Sesión restaurada automáticamente');
+    } else {
+      // No hay sesión válida, mostrar login
+      document.getElementById('loginScreen').style.display = 'flex';
+      console.log('🔐 Mostrando pantalla de login');
+    }
+    
     // Cargar preferencia guardada
     try {
       const savedMode = localStorage.getItem('mobileCompactMode');
