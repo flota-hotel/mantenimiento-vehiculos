@@ -2,3 +2,10 @@
 📁 Serving files from: /home/user/webapp/dist
 ✅ Server running at http://0.0.0.0:8080
 🔗 Use GetServiceUrl tool to get public URL
+[28/Aug/2025 19:54:26] "GET / HTTP/1.1" 200 -
+[28/Aug/2025 19:54:26] code 404, message File not found
+[28/Aug/2025 19:54:26] "GET /sw.js HTTP/1.1" 404 -
+[28/Aug/2025 19:54:27] code 404, message File not found
+[28/Aug/2025 19:54:27] "GET /favicon.ico HTTP/1.1" 404 -
+[28/Aug/2025 19:54:27] code 404, message File not found
+[28/Aug/2025 19:54:27] "GET /manifest.webmanifest HTTP/1.1" 404 -
