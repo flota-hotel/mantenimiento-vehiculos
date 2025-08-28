@@ -1,0 +1,12 @@
+name = "sistema-vehicular"
+compatibility_date = "2024-08-28"
+account_id = "e3f61cc1b17d25d4dbd6fa9cfb5c86e9"
+pages_build_output_dir = "dist"
+
+[env.production]
+# Environment variables for production
+vars = { ENVIRONMENT = "production" }
+
+[env.preview] 
+# Environment variables for preview
+vars = { ENVIRONMENT = "preview" }

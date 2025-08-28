@@ -1,0 +1,6 @@
+# Redirects for Cloudflare Pages
+# Redirect all API calls to backend service
+/api/* https://vehicular-backend.herokuapp.com/api/:splat 200
+
+# Handle SPA routing - redirect all non-asset requests to index.html
+/* /index.html 200
