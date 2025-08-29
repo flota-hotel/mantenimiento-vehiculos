@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login - Sistema Vehicular</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .role-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 12px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .role-card:hover {
+            border-color: #1e40af;
+            background: rgba(30, 64, 175, 0.05);
+        }
+        .role-card.selected {
+            border-color: #1e40af;
+            background: rgba(30, 64, 175, 0.1);
+        }
+        .role-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .role-desc {
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin: 16px 0;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 12px;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+        }
+        .success {
+            background: #dcfce7;
+            border: 1px solid #16a34a;
+            color: #15803d;
+        }
+        .error {
+            background: #fee2e2;
+            border: 1px solid #dc2626;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1>🚗 Test Login Sistema Vehicular</h1>
+        <p>Prueba de funcionalidad de login</p>
+        
+        <form id="loginForm">
+            <div class="role-card" data-role="admin" onclick="selectRole('admin')">
+                <div class="role-title">👨‍💼 Administrador</div>
+                <div class="role-desc">Acceso completo - Contraseña: Admin</div>
+            </div>
+            
+            <div class="role-card" data-role="operador" onclick="selectRole('operador')">
+                <div class="role-title">🔧 Operador</div>
+                <div class="role-desc">Operaciones básicas - Contraseña: operador123</div>
+            </div>
+            
+            <div class="role-card" data-role="supervisor" onclick="selectRole('supervisor')">
+                <div class="role-title">👁️ Supervisor</div>
+                <div class="role-desc">Solo lectura - Contraseña: supervisor123</div>
+            </div>
+            
+            <input type="password" id="password" placeholder="Ingrese su contraseña" autocomplete="current-password">
+            
+            <button type="submit" id="loginBtn" disabled>Probar Login</button>
+        </form>
+        
+        <div id="result" class="result">
+            <div id="resultText"></div>
+        </div>
+        
+        <div style="margin-top: 20px; font-size: 0.9em; color: #64748b;">
+            <strong>Credenciales de prueba:</strong><br>
+            Admin: <code>Admin</code><br>
+            Operador: <code>operador123</code><br>
+            Supervisor: <code>supervisor123</code>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de roles (igual que en la app principal)
+        const ROLES = {
+            admin: {
+                name: 'Administrador',
+                password: 'Admin',
+                permissions: ['dashboard', 'vehiculos', 'ficha-tecnica', 'polizas', 'mantenimientos', 'combustible', 'bitacora', 'revision', 'alertas-config', 'reportes']
+            },
+            operador: {
+                name: 'Operador',
+                password: 'operador123',
+                permissions: ['dashboard', 'mantenimientos', 'combustible', 'bitacora']
+            },
+            supervisor: {
+                name: 'Supervisor',
+                password: 'supervisor123',
+                permissions: ['dashboard', 'revision', 'bitacora']
+            }
+        };
+
+        let selectedRole = null;
+
+        function selectRole(role) {
+            selectedRole = role;
+            
+            // Remover selección anterior
+            document.querySelectorAll('.role-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Agregar selección actual
+            document.querySelector(`[data-role="${role}"]`).classList.add('selected');
+            
+            // Habilitar botón
+            document.getElementById('loginBtn').disabled = false;
+            
+            // Enfocar contraseña
+            document.getElementById('password').focus();
+            
+            showResult(`Rol seleccionado: ${ROLES[role].name}`, 'info');
+        }
+
+        function showResult(message, type = 'success') {
+            const result = document.getElementById('result');
+            const resultText = document.getElementById('resultText');
+            
+            resultText.innerHTML = message;
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+        }
+
+        function attemptLogin(event) {
+            if (event) event.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            
+            if (!selectedRole) {
+                showResult('❌ Por favor seleccione un rol', 'error');
+                return false;
+            }
+            
+            if (!password) {
+                showResult('❌ Por favor ingrese la contraseña', 'error');
+                return false;
+            }
+            
+            console.log('Intentando login:', {
+                role: selectedRole,
+                password: password,
+                expectedPassword: ROLES[selectedRole]?.password
+            });
+            
+            if (ROLES[selectedRole] && ROLES[selectedRole].password === password) {
+                const user = {
+                    role: selectedRole,
+                    name: ROLES[selectedRole].name,
+                    permissions: ROLES[selectedRole].permissions
+                };
+                
+                showResult(`✅ Login exitoso!<br>
+                           👤 Usuario: ${user.name}<br>
+                           🔑 Rol: ${user.role}<br>
+                           📋 Permisos: ${user.permissions.length} módulos<br>
+                           ⏰ Hora: ${new Date().toLocaleTimeString()}<br><br>
+                           🎉 <strong>El login funciona correctamente</strong>`, 'success');
+                
+                console.log('✅ Login exitoso:', user);
+                return true;
+            } else {
+                showResult(`❌ Contraseña incorrecta para ${ROLES[selectedRole]?.name || 'el rol seleccionado'}<br>
+                           💡 Contraseña correcta: <code>${ROLES[selectedRole]?.password}</code>`, 'error');
+                
+                console.log('❌ Login fallido:', {
+                    role: selectedRole,
+                    providedPassword: password,
+                    correctPassword: ROLES[selectedRole]?.password
+                });
+                return false;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('loginForm').addEventListener('submit', attemptLogin);
+        
+        document.getElementById('password').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && selectedRole) {
+                attemptLogin();
+            }
+        });
+
+        // Test automático al cargar
+        window.addEventListener('load', () => {
+            console.log('🧪 Test Login cargado');
+            console.log('📋 Roles disponibles:', Object.keys(ROLES));
+            showResult('Seleccione un rol y pruebe las credenciales', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "vehicular-system-frontend",
+  "version": "1.0.0",
+  "description": "Sistema de Control Vehicular - Frontend",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Static frontend - no build process needed'",
+    "deploy": "wrangler pages deploy . --project-name vehicular-system",
+    "dev": "python3 -m http.server 3000",
+    "preview": "wrangler pages dev ."
+  },
+  "keywords": [
+    "vehicular",
+    "management",
+    "system"
+  ],
+  "author": "Sistema Vehicular",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.114.14"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
