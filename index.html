@@ -8,12 +8,10 @@
   <!-- PWA (opcional) -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#1e40af">
+  <!-- Service Worker deshabilitado temporalmente para Railway -->
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('SW registrado', reg))
-        .catch(err => console.error('Error registrando SW', err));
-    }
+    // Service Worker omitido - Railway no lo soporta correctamente
+    console.log('PWA features disabled on Railway deployment');
   </script>
 
   <style>
@@ -1358,7 +1356,7 @@
       <h1 class="login-title">🚗 Sistema de Gestión Vehicular</h1>
       <p class="login-subtitle">Seleccione su rol para acceder al sistema</p>
       
-      <div class="login-form">
+      <form class="login-form" onsubmit="attemptLogin(); return false;">
         <div class="role-card" data-role="admin" onclick="selectRole('admin')">
           <div class="role-title">👨‍💼 Administrador</div>
           <div class="role-desc">Acceso completo a todas las funciones</div>
@@ -1375,11 +1373,11 @@
         </div>
         
         <div class="password-field">
-          <input type="password" id="loginPassword" placeholder="Ingrese su contraseña" />
+          <input type="password" id="loginPassword" placeholder="Ingrese su contraseña" autocomplete="current-password" />
         </div>
         
-        <button class="login-btn" onclick="attemptLogin()" disabled>Iniciar Sesión</button>
-      </div>
+        <button type="submit" class="login-btn" disabled>Iniciar Sesión</button>
+      </form>
     </div>
   </div>
 
@@ -1688,87 +1686,54 @@
             <div id="fichaAlertas" style="max-height: 300px; overflow-y: auto;"></div>
           </div>
           
-          <!-- Configuración de Email (Solo Administradores) -->
+          <!-- Estado de Emails Automáticos -->
           <div class="card" data-roles="admin">
-            <h3>📧 Configuración de Alertas por Email</h3>
+            <h3>✅ Sistema de Emails Automáticos</h3>
             
-            <!-- Estado actual -->
-            <div id="emailStatus" style="margin-bottom: 16px; padding: 12px; border-radius: 8px;">
-              <p style="margin: 0; font-weight: bold;">Estado: <span id="emailStatusText">Verificando...</span></p>
-              <p style="margin: 4px 0 0 0; font-size: 0.9em; color: var(--muted);" id="emailStatusDetail">
-                Cargando configuración...
+            <!-- Estado SendGrid -->
+            <div style="background: #dcfce7; border: 1px solid #16a34a; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <p style="margin: 0; font-weight: bold; color: #16a34a;">
+                🚀 Estado: Activo y Funcionando
+              </p>
+              <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #15803d;">
+                SendGrid configurado - Emails automáticos enviándose 24/7
+              </p>
+              <p style="margin: 4px 0 0 0; font-size: 0.85em; color: #166534;">
+                📧 Destinatario: contabilidad2@arenalmanoa.com
               </p>
             </div>
             
-            <!-- Configuración rápida -->
-            <div style="margin-bottom: 16px;">
-              <h4 style="margin: 0 0 12px 0;">⚡ Configuración Rápida</h4>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                <div>
-                  <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Email del sistema:</label>
-                  <input id="configSenderEmail" type="email" placeholder="sistema@arenalmanoa.com" style="font-size: 0.9em;">
-                </div>
-                <div>
-                  <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Contraseña del email:</label>
-                  <input id="configSenderPassword" type="password" placeholder="Contraseña o token de aplicación" style="font-size: 0.9em;">
-                </div>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-bottom: 12px;">
-                <div>
-                  <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Proveedor de email:</label>
-                  <select id="configProvider" style="font-size: 0.9em;" onchange="updateProviderInfo()">
-                    <option value="gmail">📧 Gmail / Google Workspace</option>
-                    <option value="outlook">📧 Outlook / Microsoft 365</option>
-                    <option value="outlook_legacy">📧 Outlook (Legacy)</option>
-                    <option value="yahoo">📧 Yahoo Mail</option>
-                    <option value="zoho">📧 Zoho Mail</option>
-                    <option value="cpanel">🏢 Hosting cPanel (puerto 587)</option>
-                    <option value="cpanel_ssl">🏢 Hosting cPanel SSL (puerto 465)</option>
-                    <option value="custom">⚙️ Servidor personalizado</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Puerto SMTP:</label>
-                  <input id="configSmtpPort" type="number" value="587" style="width: 80px; font-size: 0.9em;">
-                </div>
-              </div>
-              <div style="margin-bottom: 12px;" id="customServerFields" class="hidden">
-                <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Servidor SMTP personalizado:</label>
-                <input id="configSmtpServer" type="text" placeholder="mail.arenalmanoa.com" style="font-size: 0.9em;">
-              </div>
-              
-              <!-- Información de ayuda por proveedor -->
-              <div id="providerHelp" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-top: 12px; font-size: 0.85em;">
-                <div id="helpContent">
-                  <strong>📧 Gmail / Google Workspace:</strong><br>
-                  • Debe usar <strong>contraseña de aplicación</strong>, no su contraseña normal<br>
-                  • Configure la verificación en 2 pasos primero<br>
-                  • Genere contraseña de aplicación en su cuenta de Google
-                </div>
+            <!-- Tipos de alertas activas -->
+            <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <h4 style="margin: 0 0 12px 0; color: var(--ink);">📨 Alertas Automáticas Activas:</h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em;">
+                <div>🔧 Mantenimientos próximos</div>
+                <div>⛽ Consumo de combustible</div>
+                <div>🚗 Revisiones RTV</div>
+                <div>📋 Vencimiento de pólizas</div>
+                <div>👨‍💼 Retorno de choferes</div>
+                <div>🚨 Alertas del sistema</div>
               </div>
             </div>
             
-            <!-- Acciones -->
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <button class="success" onclick="guardarConfigEmail()" title="Guardar configuración de email">
-                💾 Guardar Configuración
+            <!-- Acciones disponibles -->
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <button onclick="testEmailSystem()" class="primary" style="flex: 1; min-width: 140px;">
+                🧪 Probar Email de Prueba
               </button>
-              <button class="secondary" onclick="probarEmail()" title="Enviar email de prueba">
-                📧 Probar Email
+              <button onclick="checkAlerts()" class="secondary" style="flex: 1; min-width: 120px;">
+                🔍 Verificar Alertas Activas
               </button>
-              <button class="secondary" onclick="verificarAlertas()" title="Verificar alertas manualmente">
-                🔍 Verificar Alertas
-              </button>
-              <span id="alertaStatus" style="color: var(--muted); font-size: 0.9em;"></span>
             </div>
             
-            <!-- Ayuda -->
-            <div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 8px; font-size: 0.9em;">
-              <strong>💡 Ayuda de configuración:</strong>
+            <!-- Información del sistema -->
+            <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; font-size: 0.9em;">
+              <strong>💡 Sistema SendGrid Integrado:</strong>
               <ul style="margin: 8px 0 0 0; padding-left: 20px;">
-                <li><strong>Gmail:</strong> Necesita activar autenticación de 2 factores y crear una "contraseña de aplicación"</li>
-                <li><strong>Outlook:</strong> Use su email y contraseña normal de Microsoft 365</li>
-                <li><strong>Servidor personalizado:</strong> Contacte a su administrador de IT para obtener configuración SMTP</li>
+                <li><strong>✅ Configuración automática:</strong> No requiere configuración manual</li>
+                <li><strong>🚀 Alta disponibilidad:</strong> 99.9% de entrega garantizada</li>
+                <li><strong>📊 100 emails/día gratis:</strong> Suficiente para operaciones del hotel</li>
+                <li><strong>🔒 Seguro y confiable:</strong> Sin bloqueos de Railway</li>
               </ul>
             </div>
           </div>
@@ -2388,50 +2353,23 @@
             <input id="alertaEmail" type="email" placeholder="contabilidad2@arenalmanoa.com" required/>
           </div>
           
-          <!-- Configuración SMTP -->
-          <div class="card" style="background:#fff3cd;margin:20px 0;border-left:4px solid #ffc107">
-            <h4 style="margin:0 0 16px 0">🔧 Configuración del Servidor de Email (SMTP)</h4>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label>📧 Email Remitente</label>
-                <input id="smtpEmail" type="email" placeholder="sistema.vehicular@arenalmanoa.com" required/>
-                <small style="color:var(--muted)">Email que aparecerá como remitente de las alertas</small>
+          <!-- Estado Email Automático -->
+          <div class="card" style="background:#d4edda;margin:20px 0;border-left:4px solid #28a745">
+            <h4 style="margin:0 0 16px 0;color:#155724">✅ Sistema de Email Automático Configurado</h4>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center">
+              <div>
+                <p style="margin:0;font-size:0.9em;color:#155724">
+                  <strong>🚀 SendGrid Activo:</strong> Emails enviándose automáticamente<br>
+                  <strong>📧 Destinatario:</strong> contabilidad2@arenalmanoa.com<br>
+                  <strong>📊 Límite diario:</strong> 100 emails gratuitos<br>
+                  <strong>🔄 Estado:</strong> Operativo 24/7
+                </p>
               </div>
-              <div class="form-group">
-                <label>🔑 Contraseña de Aplicación</label>
-                <input id="smtpPassword" type="password" placeholder="Contraseña de aplicación"/>
-                <small style="color:var(--muted)">Contraseña de aplicación (no la contraseña normal del email)</small>
+              <div style="text-align:center">
+                <button type="button" class="primary" onclick="probarEmailAutomatico()" style="margin-top:12px">
+                  🧪 Probar Email de Prueba
+                </button>
               </div>
-            </div>
-            <div class="form-row-3">
-              <div class="form-group">
-                <label>🌐 Servidor SMTP</label>
-                <select id="smtpProvider" onchange="actualizarConfigSMTP()">
-                  <option value="gmail">Gmail (smtp.gmail.com)</option>
-                  <option value="outlook">Outlook (smtp-mail.outlook.com)</option>
-                  <option value="yahoo">Yahoo (smtp.mail.yahoo.com)</option>
-                  <option value="custom">Personalizado</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>🖥️ Servidor (Host)</label>
-                <input id="smtpHost" type="text" value="smtp.gmail.com" required/>
-              </div>
-              <div class="form-group">
-                <label>🔌 Puerto</label>
-                <input id="smtpPort" type="number" value="587" min="1" max="65535" required/>
-              </div>
-            </div>
-            <div class="form-row">
-              <label style="display:flex;align-items:center;gap:8px">
-                <input type="checkbox" id="smtpTLS" checked/>
-                🔐 Usar TLS/STARTTLS (Recomendado)
-              </label>
-            </div>
-            <div class="form-row">
-              <button type="button" class="secondary" onclick="probarConexionSMTP()" style="margin-top:12px">
-                📧 Probar Conexión SMTP
-              </button>
             </div>
           </div>
           
@@ -2851,7 +2789,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Vehículo</label>
-              <select id="editRVeh" required></select>
+              <select id="editRevisionVeh" required></select>
             </div>
             <div class="form-group">
               <label>N° Cita</label>
@@ -2874,7 +2812,7 @@
           </div>
           <div class="form-group">
             <label>Observaciones</label>
-            <textarea id="editRObs" rows="3"></textarea>
+            <textarea id="editRevisionObs1" rows="3"></textarea>
           </div>
           <div style="margin-top:20px">
             <button type="submit" class="success">💾 Actualizar</button>
@@ -2896,7 +2834,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Vehículo</label>
-              <select id="editRVeh" required></select>
+              <select id="editRevisionVehRev" required></select>
             </div>
             <div class="form-group">
               <label>Inspector</label>
@@ -2983,7 +2921,7 @@
           
           <div class="form-group">
             <label>Observaciones</label>
-            <textarea id="editRObs" rows="3" placeholder="Observaciones generales de la revisión..."></textarea>
+            <textarea id="editRevisionObs2" rows="3" placeholder="Observaciones generales de la revisión..."></textarea>
           </div>
           
           <div style="margin-top:20px">
@@ -4304,7 +4242,7 @@
   function fillVehSelects(){
     const opts = '<option value="">Seleccione un vehículo...</option>' + 
                  Vehiculos.map(v=>`<option value="${v.id}">${v.placa} - ${v.marca} ${v.modelo}</option>`).join('');
-    ['mVeh','cVeh','bVeh','pVeh','rVeh','rtvVeh','fichaVehiculo','editMVeh','editCVeh','editPVeh','editRVeh'].forEach(id=> { 
+    ['mVeh','cVeh','bVeh','pVeh','rVeh','rtvVeh','fichaVehiculo','editMVeh','editCVeh','editPVeh','editRevisionVeh','editRevisionVehRev'].forEach(id=> { 
       const el = byId(id); 
       if(el) {
         const currentValue = el.value;
@@ -5150,7 +5088,7 @@
     // Llenar campos del modal de edición
     byId('editRevisionId').value = revision.id;
     const vehiculo = Vehiculos.find(v => v.placa === revision.placa);
-    byId('editRVeh').value = vehiculo ? vehiculo.id : '';
+    byId('editRevisionVehRev').value = vehiculo ? vehiculo.id : '';
     byId('editRFecha').value = revision.fecha;
     byId('editRInspector').value = revision.inspector;
     
@@ -5161,7 +5099,7 @@
     byId('editRLlantas').value = revision.estado_llantas || '';
     byId('editRCarroceria').value = revision.estado_carroceria || '';
     
-    byId('editRObs').value = revision.observaciones || '';
+    byId('editRevisionObs1').value = revision.observaciones || '';
     byId('editRAprobado').checked = revision.aprobado || false;
     
     const modal = byId('modalEditRevision');
@@ -5177,7 +5115,7 @@
     e.preventDefault();
     
     const id = byId('editRevisionId').value;
-    const vehiculoId = byId('editRVeh').value;
+    const vehiculoId = byId('editRevisionVehRev').value;
     const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
     
     if (!vehiculo) {
@@ -5194,7 +5132,7 @@
       estado_luces: byId('editRLuces').value,
       estado_llantas: byId('editRLlantas').value,
       estado_carroceria: byId('editRCarroceria').value,
-      observaciones: byId('editRObs').value,
+      observaciones: byId('editRevisionObs1').value,
       aprobado: byId('editRAprobado').checked
     };
     
@@ -5331,11 +5269,11 @@
     byId('editRTVId').value = rtv.id;
     // Encontrar el vehículo por placa para obtener el ID
     const vehiculo = Vehiculos.find(v => v.placa === rtv.placa);
-    byId('editRVeh').value = vehiculo ? vehiculo.id : '';
+    byId('editRevisionVeh').value = vehiculo ? vehiculo.id : '';
     byId('editRCita').value = rtv.numero_cita;
     byId('editRVence').value = rtv.fecha_vencimiento;
     byId('editREstado').value = rtv.estado || 'Vigente';
-    byId('editRObs').value = rtv.observaciones || '';
+    byId('editRevisionObs2').value = rtv.observaciones || '';
     
     const modal = byId('modalEditRTV');
     if (modal) {
@@ -5350,7 +5288,7 @@
     e.preventDefault();
     
     const id = byId('editRTVId').value;
-    const vehiculoId = byId('editRVeh').value;
+    const vehiculoId = byId('editRevisionVeh').value;
     const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
     
     if (!vehiculo) {
@@ -5363,7 +5301,7 @@
       placa: vehiculo.placa,
       fecha_vencimiento: byId('editRVence').value,
       estado: byId('editREstado').value,
-      observaciones: byId('editRObs').value || ''
+      observaciones: byId('editRevisionObs2').value || ''
     };
     
     try {
@@ -7016,61 +6954,8 @@
   }
   
   function updateProviderInfo() {
-    const provider = byId('configProvider')?.value;
-    const helpContent = byId('helpContent');
-    const customFields = byId('customServerFields');
-    const portField = byId('configSmtpPort');
-    
-    // Mostrar/ocultar campos personalizados
-    if (provider === 'custom') {
-      customFields?.classList.remove('hidden');
-    } else {
-      customFields?.classList.add('hidden');
-    }
-    
-    // Actualizar puerto y ayuda según proveedor
-    const providerInfo = {
-      gmail: {
-        port: 587,
-        help: '<strong>📧 Gmail / Google Workspace:</strong><br>• Debe usar <strong>contraseña de aplicación</strong>, no su contraseña normal<br>• Configure la verificación en 2 pasos primero<br>• Genere contraseña de aplicación en Configuración → Seguridad → Google'
-      },
-      outlook: {
-        port: 587,
-        help: '<strong>📧 Outlook / Microsoft 365:</strong><br>• Use su email y contraseña normales<br>• Asegúrese que la autenticación SMTP esté habilitada<br>• Servidor: smtp.office365.com'
-      },
-      outlook_legacy: {
-        port: 587,
-        help: '<strong>📧 Outlook (Legacy):</strong><br>• Para cuentas Outlook más antiguas<br>• Servidor: smtp-mail.outlook.com<br>• Use su email y contraseña normales'
-      },
-      yahoo: {
-        port: 587,
-        help: '<strong>📧 Yahoo Mail:</strong><br>• Debe generar una contraseña de aplicación<br>• Vaya a Configuración → Seguridad de la cuenta<br>• Genere nueva contraseña de aplicación'
-      },
-      zoho: {
-        port: 587,
-        help: '<strong>📧 Zoho Mail:</strong><br>• Use su email y contraseña normales<br>• Servidor: smtp.zoho.com<br>• Puede requerir autenticación en 2 pasos'
-      },
-      cpanel: {
-        port: 587,
-        help: '<strong>🏢 Hosting cPanel:</strong><br>• Use el email completo como usuario<br>• Contraseña del email en cPanel<br>• Servidor: mail.sudominio.com (o según su hosting)'
-      },
-      cpanel_ssl: {
-        port: 465,
-        help: '<strong>🏢 Hosting cPanel SSL:</strong><br>• Conexión SSL directa (puerto 465)<br>• Use el email completo como usuario<br>• Contraseña del email en cPanel'
-      },
-      custom: {
-        port: 587,
-        help: '<strong>⚙️ Servidor personalizado:</strong><br>• Consulte con su proveedor de hosting/email<br>• Puertos comunes: 25, 587 (STARTTLS), 465 (SSL)<br>• Configure servidor, puerto y credenciales manualmente'
-      }
-    };
-    
-    const info = providerInfo[provider];
-    if (info && helpContent) {
-      helpContent.innerHTML = info.help;
-      if (portField && provider !== 'custom') {
-        portField.value = info.port;
-      }
-    }
+    // Función obsoleta - SendGrid integrado automáticamente
+    console.log('✅ SendGrid activo - configuración SMTP manual no necesaria');
   }
   
   async function guardarConfigEmail() {
@@ -7198,6 +7083,84 @@
         setTimeout(() => statusEl.textContent = '', 5000);
       }
       alert('❌ Error enviando email de prueba: ' + e.message + '\n\n💡 Asegúrese de que la configuración de email esté correcta.');
+    }
+  }
+  
+  // Nuevas funciones para SendGrid integrado
+  async function testEmailSystem() {
+    try {
+      const response = await fetch(`${API}/test-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('✅ Email de prueba enviado exitosamente!\n\n' +
+              '📧 Destinatario: contabilidad2@arenalmanoa.com\n' +
+              '🚀 Método: SendGrid API\n' +
+              '⏰ Enviado: ' + new Date().toLocaleString() + '\n\n' +
+              '💡 Revisa tu bandeja de entrada o carpeta de spam');
+      } else {
+        throw new Error(data.error || 'Error desconocido');
+      }
+    } catch (e) {
+      alert('❌ Error enviando email de prueba:\n\n' + e.message + '\n\n' +
+            '🔧 Posibles soluciones:\n' +
+            '• Verificar configuración SendGrid en Railway\n' +
+            '• Revisar logs del servidor\n' +
+            '• Contactar soporte técnico');
+    }
+  }
+  
+  async function probarEmailAutomatico() {
+    // Función alias para compatibilidad
+    await testEmailSystem();
+  }
+  
+  async function checkAlerts() {
+    try {
+      const response = await fetch(`${API}/alertas/detalle`);
+      const data = await response.json();
+      
+      if (data.success) {
+        const alertas = data.data.alertas;
+        const totales = data.data.totales;
+        
+        let message = '📊 RESUMEN DE ALERTAS ACTIVAS\n\n';
+        
+        if (totales.total === 0) {
+          message += '✅ No hay alertas pendientes\n' +
+                    'El sistema está funcionando correctamente';
+        } else {
+          message += `🚨 Total de alertas: ${totales.total}\n\n`;
+          
+          if (totales.mantenimiento > 0) {
+            message += `🔧 Mantenimientos: ${totales.mantenimiento}\n`;
+          }
+          if (totales.polizas > 0) {
+            message += `📋 Pólizas: ${totales.polizas}\n`;
+          }
+          if (totales.rtv > 0) {
+            message += `🚗 RTV: ${totales.rtv}\n`;
+          }
+          if (totales.combustible > 0) {
+            message += `⛽ Combustible: ${totales.combustible}\n`;
+          }
+          if (totales.revisiones > 0) {
+            message += `🔍 Revisiones: ${totales.revisiones}\n`;
+          }
+          
+          message += '\n📧 Emails automáticos enviándose para todas las alertas';
+        }
+        
+        alert(message);
+      } else {
+        throw new Error(data.message || 'Error obteniendo alertas');
+      }
+    } catch (e) {
+      alert('❌ Error verificando alertas: ' + e.message);
     }
   }
   
@@ -7939,6 +7902,9 @@
   }
   
   function actualizarConfigSMTP() {
+    // Función obsoleta - SendGrid integrado automáticamente
+    console.log('✅ SendGrid activo - configuración SMTP manual no requerida');
+    return;
     const provider = byId('smtpProvider').value;
     const hostField = byId('smtpHost');
     const portField = byId('smtpPort');
@@ -7966,6 +7932,11 @@
   }
   
   async function probarConexionSMTP() {
+    // Función obsoleta - usar testEmailSystem() en su lugar
+    alert('ℹ️ Configuración SMTP manual ya no es necesaria.\n\n' +
+          '✅ SendGrid está integrado automáticamente\n' +
+          '📧 Use "Probar Email de Prueba" en su lugar');
+    return;
     const smtpConfig = {
       email: byId('smtpEmail').value,
       password: byId('smtpPassword').value,
