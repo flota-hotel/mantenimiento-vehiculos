@@ -15,9 +15,21 @@ import json
 from datetime import datetime, date, timedelta
 import os
 import logging
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+try:
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+except ImportError:
+    pass  # SMTP opcional
+
+# Importar SendGrid como sistema principal de email
+try:
+    from sendgrid_email import send_system_email, send_alert_notification
+    EMAIL_METHOD = "SENDGRID"
+    logger.info("✅ SendGrid email service loaded")
+except ImportError:
+    logger.warning("⚠️ SendGrid not available, using SMTP fallback")
+    EMAIL_METHOD = "SMTP"
 import asyncio
 
 # Configurar logging
@@ -413,20 +425,31 @@ def get_db_connection():
     return conn
 
 def send_email_notification(subject: str, body: str, recipient: str = None):
-    """Enviar notificación por email"""
+    """Enviar notificación por email - Compatible con SendGrid y SMTP"""
     try:
-        if not EMAIL_CONFIG["sender_password"]:
-            logger.warning("Email no configurado - no se envía notificación")
-            return False
+        recipient = recipient or EMAIL_CONFIG.get("recipient_email", "contabilidad2@arenalmanoa.com")
+        
+        if EMAIL_METHOD == "SENDGRID":
+            # Usar SendGrid API (funciona en Railway)
+            result = send_system_email(recipient, subject, body)
+            if result["success"]:
+                logger.info(f"✅ Email automático SendGrid enviado a {recipient}")
+                return True
+            else:
+                logger.error(f"❌ Error SendGrid: {result['error']}")
+                return False
+        else:
+            # Fallback SMTP (puede no funcionar en Railway)  
+            if not EMAIL_CONFIG.get("sender_password"):
+                logger.warning("Email SMTP no configurado - usar SendGrid")
+                return False
+                
+            msg = MIMEMultipart()
+            msg['From'] = EMAIL_CONFIG["sender_email"]
+            msg['To'] = recipient
+            msg['Subject'] = subject
             
-        recipient = recipient or EMAIL_CONFIG["recipient_email"]
-        
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_CONFIG["sender_email"]
-        msg['To'] = recipient
-        msg['Subject'] = subject
-        
-        msg.attach(MIMEText(body, 'html'))
+            msg.attach(MIMEText(body, 'html'))
         
         try:
             server = smtplib.SMTP(EMAIL_CONFIG["smtp_server"], EMAIL_CONFIG["smtp_port"])
