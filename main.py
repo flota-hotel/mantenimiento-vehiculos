@@ -2246,18 +2246,29 @@ async def test_email():
             # Email de prueba
             test_data = {
                 "tipo": "test",
+                "subject": "✅ PRUEBA: Sistema de Emails Automáticos Funcional",
                 "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "mensaje": "✅ Sistema de emails automáticos funcionando correctamente",
-                "detalles": [
-                    "🔧 SendGrid API configurado",
-                    "📧 Emails de mantenimiento listos", 
-                    "⛽ Alerts de combustible activas",
-                    "🚗 Notificaciones RTV operativas",
-                    "👨‍💼 Alertas de choferes funcionando"
-                ]
+                "mensaje": "🎉 ¡El sistema de emails automáticos está funcionando correctamente!",
+                "content": """
+                <div class="alert">
+                    <h3>🎯 PRUEBA EXITOSA</h3>
+                    <p><strong>✅ SendGrid API:</strong> Configurado y funcionando</p>
+                    <p><strong>📧 Emails automáticos:</strong> Activos 24/7</p>
+                    <p><strong>🚀 Sistema listo para:</strong></p>
+                    <ul>
+                        <li>🔧 Alertas de mantenimiento</li>
+                        <li>⛽ Monitoreo de combustible</li>
+                        <li>🚗 Notificaciones RTV</li>
+                        <li>📋 Vencimiento de pólizas</li>
+                        <li>👨‍💼 Gestión de choferes</li>
+                    </ul>
+                    <p><strong>📍 Destinatario:</strong> contabilidad2@arenalmanoa.com</p>
+                    <p><strong>⏰ Enviado:</strong> {fecha}</p>
+                </div>
+                """.format(fecha=datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
             }
             
-            resultado = service.send_alert_email(test_data)
+            resultado = service.send_alert_email(test_data, to_email="contabilidad2@arenalmanoa.com")
             
             if resultado.get("success"):
                 logger.info("✅ Email de prueba SendGrid enviado exitosamente")
@@ -2292,6 +2303,117 @@ async def test_email():
                 "4. Revisar logs de Railway para más detalles"
             ]
         }
+
+# ===== ENDPOINTS DE BACKUP Y EXPORT =====
+@app.post("/backup/create")
+async def create_backup():
+    """Crear backup completo de la base de datos"""
+    try:
+        from backup_manager import DatabaseBackupManager
+        manager = DatabaseBackupManager()
+        
+        result = manager.create_full_backup("manual", include_export=True)
+        
+        if "error" not in result:
+            logger.info("✅ Backup manual creado exitosamente")
+            return {
+                "success": True,
+                "message": "Backup creado exitosamente",
+                "backup_info": result,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise Exception(result["error"])
+            
+    except Exception as e:
+        logger.error(f"❌ Error creando backup: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/backup/export")
+async def export_database():
+    """Exportar base de datos en múltiples formatos (JSON, CSV, SQL)"""
+    try:
+        from backup_manager import export_database_now
+        
+        result = export_database_now()
+        
+        if result.get("success"):
+            logger.info("✅ Export de base de datos completado")
+            return {
+                "success": True,
+                "message": "Base de datos exportada exitosamente",
+                "export_info": result,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise Exception(result.get("error", "Error desconocido en export"))
+            
+    except Exception as e:
+        logger.error(f"❌ Error exportando base de datos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/backup/list")
+async def list_backups():
+    """Listar todos los backups disponibles"""
+    try:
+        from backup_manager import DatabaseBackupManager
+        manager = DatabaseBackupManager()
+        
+        backups = manager.list_backups()
+        stats = manager.get_database_stats()
+        
+        return {
+            "success": True,
+            "current_stats": stats,
+            "backups": backups,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error listando backups: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/backup/emergency")
+async def emergency_backup():
+    """Crear backup de emergencia inmediato"""
+    try:
+        from backup_manager import create_emergency_backup
+        
+        result = create_emergency_backup()
+        
+        if "error" not in result:
+            logger.info("🚨 Backup de emergencia creado")
+            return {
+                "success": True,
+                "message": "Backup de emergencia creado",
+                "backup_info": result,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise Exception(result["error"])
+            
+    except Exception as e:
+        logger.error(f"❌ Error en backup de emergencia: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/backup/stats")
+async def backup_stats():
+    """Obtener estadísticas actuales de la base de datos"""
+    try:
+        from backup_manager import DatabaseBackupManager
+        manager = DatabaseBackupManager()
+        
+        stats = manager.get_database_stats()
+        
+        return {
+            "success": True,
+            "stats": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error obteniendo estadísticas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     init_database()

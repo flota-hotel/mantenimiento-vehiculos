@@ -18,7 +18,8 @@ class SendGridEmailService:
     def __init__(self, api_key=None):
         self.api_key = api_key or os.environ.get('SENDGRID_API_KEY')
         self.base_url = "https://api.sendgrid.com/v3"
-        self.from_email = "sistema@vehicular-app.com"  # Cambiar por tu dominio
+        self.from_email = os.environ.get('SENDGRID_FROM_EMAIL', 'contabilidad2@arenalmanoa.com')
+        self.from_name = os.environ.get('SENDGRID_FROM_NAME', 'Sistema Vehicular Hotel Arenal')
         
     def send_email(self, to_email, subject, html_content, text_content=None):
         """Enviar email usando SendGrid API"""
@@ -35,7 +36,7 @@ class SendGridEmailService:
                     "subject": subject
                 }
             ],
-            "from": {"email": self.from_email, "name": "Sistema Vehicular"},
+            "from": {"email": self.from_email, "name": self.from_name},
             "content": [
                 {
                     "type": "text/html",
@@ -75,8 +76,12 @@ class SendGridEmailService:
             logger.error(f"❌ Error enviando email: {e}")
             return {"success": False, "error": str(e)}
     
-    def send_alert_email(self, alert_data):
+    def send_alert_email(self, alert_data, to_email=None):
         """Enviar email de alerta del sistema vehicular"""
+        
+        # Email de destino por defecto
+        if not to_email:
+            to_email = os.environ.get('SENDGRID_TO_EMAIL', 'contabilidad2@arenalmanoa.com')
         
         # HTML template para alertas
         html_template = f"""
@@ -121,7 +126,7 @@ class SendGridEmailService:
         """
         
         return self.send_email(
-            to_email=alert_data.get('recipient', 'contabilidad2@arenalmanoa.com'),
+            to_email=to_email,
             subject=alert_data.get('subject', '🚨 Alerta Sistema Vehicular'),
             html_content=html_template
         )
