@@ -2228,6 +2228,70 @@ async def get_alertas_detalle():
         logger.error(f"Error obteniendo detalle de alertas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ===== ENDPOINT DE PRUEBA PARA EMAILS =====
+@app.post("/test-email")
+async def test_email():
+    """
+    Endpoint para probar que los emails automáticos funcionan correctamente.
+    Envía un email de prueba usando SendGrid.
+    """
+    try:
+        if EMAIL_METHOD == "SENDGRID":
+            # Probar SendGrid
+            from sendgrid_email import SendGridEmailService
+            
+            service = SendGridEmailService()
+            
+            # Email de prueba
+            test_data = {
+                "tipo": "test",
+                "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "mensaje": "✅ Sistema de emails automáticos funcionando correctamente",
+                "detalles": [
+                    "🔧 SendGrid API configurado",
+                    "📧 Emails de mantenimiento listos", 
+                    "⛽ Alerts de combustible activas",
+                    "🚗 Notificaciones RTV operativas",
+                    "👨‍💼 Alertas de choferes funcionando"
+                ]
+            }
+            
+            resultado = service.send_alert_email(test_data)
+            
+            if resultado.get("success"):
+                logger.info("✅ Email de prueba SendGrid enviado exitosamente")
+                return {
+                    "success": True,
+                    "method": "SendGrid",
+                    "message": "Email de prueba enviado correctamente",
+                    "email_id": resultado.get("email_id"),
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                raise Exception(f"SendGrid error: {resultado.get('error')}")
+                
+        else:
+            # Fallback SMTP (probablemente fallará en Railway)
+            return {
+                "success": False,
+                "method": "SMTP",
+                "message": "SendGrid no configurado, SMTP no disponible en Railway",
+                "instructions": "Configurar SENDGRID_API_KEY en variables de entorno"
+            }
+            
+    except Exception as e:
+        logger.error(f"❌ Error en test de email: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "instructions": [
+                "1. Verificar SENDGRID_API_KEY en Railway variables",
+                "2. Verificar SENDGRID_FROM_EMAIL configurado", 
+                "3. Verificar Single Sender Authentication en SendGrid",
+                "4. Revisar logs de Railway para más detalles"
+            ]
+        }
+
 if __name__ == "__main__":
     init_database()
     import uvicorn
