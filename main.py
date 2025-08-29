@@ -15,6 +15,12 @@ import json
 from datetime import datetime, date, timedelta
 import os
 import logging
+import asyncio
+
+# Configurar logging PRIMERO
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 try:
     import smtplib
     from email.mime.text import MIMEText
@@ -30,11 +36,6 @@ try:
 except ImportError:
     logger.warning("⚠️ SendGrid not available, using SMTP fallback")
     EMAIL_METHOD = "SMTP"
-import asyncio
-
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Crear aplicación FastAPI
 app = FastAPI(title="Sistema de Gestión Vehicular", version="1.0.0")
