@@ -484,3 +484,5 @@ Servidor corriendo en puerto 3000
 24/Aug/2025 23:15:20 - "GET /icons/icon-192.png HTTP/1.1" 404 -
 24/Aug/2025 23:15:22 - code 404, message File not found
 24/Aug/2025 23:15:22 - "GET /icons/icon-192.png HTTP/1.1" 404 -
+Servidor corriendo en puerto 3000
+28/Aug/2025 19:28:26 - "GET / HTTP/1.1" 200 -
