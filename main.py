@@ -37,24 +37,26 @@ except ImportError:
     logger.warning("⚠️ SendGrid not available, using SMTP fallback")
     EMAIL_METHOD = "SMTP"
 
-# Importar sistema de backup automático a GitHub
+# Importar sistema de backup automático a GitHub (opcional)
 try:
     from github_backup_system import GitHubBackupSystem
     backup_system = GitHubBackupSystem()
     AUTO_BACKUP_ENABLED = True
     logger.info("✅ GitHub backup system loaded")
-except ImportError:
+except Exception as e:
     AUTO_BACKUP_ENABLED = False
-    logger.warning("⚠️ GitHub backup system not available")
+    backup_system = None
+    logger.warning(f"⚠️ GitHub backup system not available: {e}")
 
-# Importar sistema de preservación de datos
+# Importar sistema de preservación de datos (opcional)
 try:
     from data_preservation_system import preservation_system, protect_data_operation
     DATA_PRESERVATION_ENABLED = True
     logger.info("✅ Data preservation system loaded")
-except ImportError:
+except Exception as e:
     DATA_PRESERVATION_ENABLED = False
-    logger.warning("⚠️ Data preservation system not available")
+    preservation_system = None
+    logger.warning(f"⚠️ Data preservation system not available: {e}")
     
     # Crear decorador dummy si no está disponible
     def protect_data_operation(description):
@@ -931,7 +933,7 @@ def dict_from_row(row):
 
 def trigger_auto_backup(operation_type="data_change"):
     """Ejecutar backup automático después de cambios en la base de datos"""
-    if AUTO_BACKUP_ENABLED:
+    if AUTO_BACKUP_ENABLED and backup_system:
         try:
             # Ejecutar backup en background para no bloquear la respuesta API
             asyncio.create_task(backup_system.create_and_upload_backup("auto_" + operation_type))
@@ -939,7 +941,7 @@ def trigger_auto_backup(operation_type="data_change"):
         except Exception as e:
             logger.warning(f"⚠️ Error programando backup automático: {e}")
     else:
-        logger.debug("Backup automático deshabilitado")
+        logger.debug("Backup automático deshabilitado o no disponible")
 
 # Inicializar base de datos al iniciar
 init_database()
@@ -2474,10 +2476,13 @@ async def backup_stats():
 async def data_preservation_status():
     """Obtener estado del sistema de preservación de datos"""
     try:
-        if not DATA_PRESERVATION_ENABLED:
+        if not DATA_PRESERVATION_ENABLED or not preservation_system:
             return {
                 "success": False,
-                "message": "Sistema de preservación de datos no disponible"
+                "message": "Sistema de preservación de datos no disponible",
+                "preservation_enabled": False,
+                "github_backup_enabled": AUTO_BACKUP_ENABLED,
+                "system_status": "⚠️ BÁSICO - Sistema funcionando sin preservación avanzada"
             }
         
         # Obtener conteos actuales
@@ -2493,20 +2498,25 @@ async def data_preservation_status():
             "current_data_counts": current_counts,
             "available_backups": len(available_backups),
             "latest_backup": available_backups[0] if available_backups else None,
-            "total_records": sum(current_counts.values()),
+            "total_records": sum(current_counts.values()) if current_counts else 0,
             "system_status": "✅ PROTEGIDO - Todos los datos están respaldados automáticamente",
             "last_check": datetime.now().isoformat()
         }
         
     except Exception as e:
         logger.error(f"Error obteniendo estado de preservación: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "success": False,
+            "message": f"Error en sistema de preservación: {str(e)}",
+            "preservation_enabled": False,
+            "system_status": "⚠️ ERROR - Revisar logs del sistema"
+        }
 
 @app.post("/data-preservation/manual-backup")
 async def create_manual_preservation_backup():
     """Crear backup manual de preservación"""
     try:
-        if not DATA_PRESERVATION_ENABLED:
+        if not DATA_PRESERVATION_ENABLED or not preservation_system:
             raise HTTPException(status_code=503, detail="Sistema de preservación no disponible")
         
         backup_path, metadata = preservation_system.create_pre_change_backup("Backup manual solicitado por usuario")
@@ -2529,7 +2539,7 @@ async def create_manual_preservation_backup():
 async def list_preservation_backups():
     """Listar todos los backups de preservación disponibles"""
     try:
-        if not DATA_PRESERVATION_ENABLED:
+        if not DATA_PRESERVATION_ENABLED or not preservation_system:
             raise HTTPException(status_code=503, detail="Sistema de preservación no disponible")
         
         backups = preservation_system.get_available_backups()

@@ -11,10 +11,10 @@ import base64
 import subprocess
 import zipfile
 import shutil
+import csv
 from datetime import datetime, timedelta
 import logging
 import hashlib
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -147,13 +147,16 @@ class GitHubBackupSystem:
             csv_dir = f"{temp_backup_dir}/csv_exports"
             os.makedirs(csv_dir, exist_ok=True)
             
-            conn = sqlite3.connect(self.db_path)
+            # Exportar cada tabla a CSV usando módulo csv nativo
             for table_name, table_info in database_json["tables"].items():
                 if table_info["record_count"] > 0:
-                    df = pd.DataFrame(table_info["data"])
                     csv_path = f"{csv_dir}/{table_name}.csv"
-                    df.to_csv(csv_path, index=False, encoding='utf-8')
-            conn.close()
+                    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+                        if table_info["data"]:
+                            fieldnames = table_info["columns"]
+                            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                            writer.writeheader()
+                            writer.writerows(table_info["data"])
             
             # 5. Crear archivo ZIP
             zip_path = f"{self.github_backup_dir}/{backup_name}.zip"
