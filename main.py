@@ -931,13 +931,16 @@ def dict_from_row(row):
     """Convertir Row de SQLite a diccionario"""
     return dict(zip(row.keys(), row)) if row else None
 
-def trigger_auto_backup(operation_type="data_change"):
+async def trigger_auto_backup(operation_type="data_change"):
     """Ejecutar backup automático después de cambios en la base de datos"""
     if AUTO_BACKUP_ENABLED and backup_system:
         try:
-            # Ejecutar backup en background para no bloquear la respuesta API
-            asyncio.create_task(backup_system.create_and_upload_backup("auto_" + operation_type))
-            logger.info(f"✅ Backup automático programado después de: {operation_type}")
+            # Ejecutar backup de manera asíncrona
+            success, filename = await backup_system.create_and_upload_backup("auto_" + operation_type)
+            if success:
+                logger.info(f"✅ Backup automático completado: {filename} después de: {operation_type}")
+            else:
+                logger.error(f"❌ Error en backup automático después de: {operation_type}")
         except Exception as e:
             logger.warning(f"⚠️ Error programando backup automático: {e}")
     else:
@@ -1048,7 +1051,7 @@ async def create_vehiculo(vehiculo: VehiculoCreate):
         logger.info(f"📊 Total vehículos: {count_after}")
         
         # Backup automático después de crear vehículo
-        trigger_auto_backup("create_vehiculo")
+        await trigger_auto_backup("create_vehiculo")
         
         # Respuesta con verificación
         return {
@@ -1095,7 +1098,7 @@ async def update_vehiculo(placa: str, vehiculo: VehiculoUpdate):
         conn.close()
         
         # Backup automático después de actualizar vehículo
-        trigger_auto_backup("update_vehiculo")
+        await trigger_auto_backup("update_vehiculo")
         
         return {"success": True, "message": "Vehículo actualizado exitosamente"}
     except Exception as e:
@@ -1118,7 +1121,7 @@ async def delete_vehiculo(placa: str):
         conn.close()
         
         # Backup automático después de eliminar vehículo
-        trigger_auto_backup("delete_vehiculo")
+        await trigger_auto_backup("delete_vehiculo")
         
         return {"success": True, "message": "Vehículo eliminado exitosamente"}
     except Exception as e:
@@ -1161,7 +1164,7 @@ async def create_mantenimiento(mantenimiento: MantenimientoCreate):
         conn.close()
         
         # Backup automático después de crear mantenimiento
-        trigger_auto_backup("create_mantenimiento")
+        await trigger_auto_backup("create_mantenimiento")
         
         return {"success": True, "message": "Mantenimiento creado exitosamente"}
     except Exception as e:
@@ -1184,7 +1187,7 @@ async def delete_mantenimiento(mantenimiento_id: int):
         conn.close()
         
         # Backup automático después de eliminar mantenimiento
-        trigger_auto_backup("delete_mantenimiento")
+        await trigger_auto_backup("delete_mantenimiento")
         
         return {"success": True, "message": "Mantenimiento eliminado exitosamente"}
     except Exception as e:
@@ -1252,7 +1255,7 @@ async def create_combustible(combustible: CombustibleCreate):
         conn.close()
         
         # Backup automático después de crear registro de combustible
-        trigger_auto_backup("create_combustible")
+        await trigger_auto_backup("create_combustible")
         
         return {"success": True, "message": "Registro de combustible creado exitosamente"}
     except Exception as e:

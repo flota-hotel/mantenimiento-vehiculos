@@ -21,12 +21,27 @@ logger = logging.getLogger(__name__)
 class GitHubBackupSystem:
     """Sistema de backup automático que guarda datos en GitHub"""
     
-    def __init__(self, db_path="/home/user/webapp/vehicular_system.db"):
-        self.db_path = db_path
-        self.backup_dir = "/home/user/webapp/backups"
-        self.github_backup_dir = "/home/user/webapp/github_backups"
-        self.repo_path = "/home/user/webapp"
+    def __init__(self, db_path=None):
+        # Obtener directorio de trabajo actual
+        current_dir = os.getcwd()
+        # En Railway, usar la ruta actual, en desarrollo usar webapp
+        if db_path is None:
+            self.db_path = os.path.join(current_dir, "vehicular_system.db")
+        else:
+            self.db_path = db_path
+            
+        self.backup_dir = os.path.join(current_dir, "backups")
+        self.github_backup_dir = os.path.join(current_dir, "github_backups")
+        self.repo_path = current_dir
         self.ensure_directories()
+        
+        # Log para debugging
+        logger.info(f"📍 GitHubBackupSystem inicializado:")
+        logger.info(f"   🗂️ DB Path: {self.db_path}")
+        logger.info(f"   📁 Backup Dir: {self.backup_dir}")
+        logger.info(f"   🐙 GitHub Dir: {self.github_backup_dir}")
+        logger.info(f"   📂 Repo Path: {self.repo_path}")
+        logger.info(f"   ✅ DB Exists: {os.path.exists(self.db_path)}")
         
     def ensure_directories(self):
         """Crear directorios necesarios"""
@@ -237,9 +252,14 @@ class GitHubBackupSystem:
             logger.error(f"Error subiendo backup a GitHub: {e}")
             return False, None
     
-    def create_and_upload_backup(self, backup_type="automatic"):
-        """Proceso completo: crear backup y subirlo a GitHub"""
+    async def create_and_upload_backup(self, backup_type="automatic"):
+        """Proceso completo: crear backup y subirlo a GitHub (async)"""
         logger.info(f"Iniciando backup {backup_type}...")
+        
+        # Verificar que la base de datos existe
+        if not os.path.exists(self.db_path):
+            logger.error(f"❌ Base de datos no encontrada: {self.db_path}")
+            return False, None
         
         # Crear paquete de backup
         backup_path, stats = self.create_backup_package(backup_type)
@@ -313,10 +333,10 @@ def manual_backup():
         print("❌ Error en backup manual")
         return False
 
-def automatic_backup():
-    """Función para ejecutar backup automático"""
+async def automatic_backup():
+    """Función para ejecutar backup automático (async)"""
     backup_system = GitHubBackupSystem()
-    success, filename = backup_system.create_and_upload_backup("automatic")
+    success, filename = await backup_system.create_and_upload_backup("automatic")
     
     if success:
         print(f"✅ Backup automático completado: {filename}")
