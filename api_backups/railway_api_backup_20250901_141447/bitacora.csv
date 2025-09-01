@@ -1,0 +1,3 @@
+id,placa,chofer,fecha_salida,km_salida,nivel_combustible_salida,estado_vehiculo_salida,fecha_retorno,km_retorno,nivel_combustible_retorno,estado_vehiculo_retorno,observaciones,estado,created_at
+9,BLC725,Test Driver 3,2025-08-25T17:27:02.266775,50053,1/2,bueno,,,,,Prueba 2 km diferencia,en_curso,2025-08-25 17:27:02
+6,AB 844,Gabriel,2025-08-25T17:15:08.365912,5010,vacio,excelente,2025-08-25T17:15:56.803540,5011,vacio,excelente,,completado,2025-08-25 17:15:08

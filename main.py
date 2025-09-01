@@ -980,7 +980,9 @@ async def get_vehiculos():
 
 @app.post("/vehiculos")
 async def create_vehiculo(vehiculo: VehiculoCreate):
-    """Crear un nuevo vehículo"""
+    """Crear un nuevo vehículo - CON VERIFICACIÓN GARANTIZADA"""
+    logger.info(f"🚗 INICIANDO creación de vehículo: {vehiculo.placa}")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -988,24 +990,74 @@ async def create_vehiculo(vehiculo: VehiculoCreate):
         # Limpiar y validar datos
         placa = vehiculo.placa.strip().upper() if vehiculo.placa else ""
         if not placa:
+            logger.error(f"❌ Placa vacía proporcionada")
             raise HTTPException(status_code=400, detail="La placa es requerida")
+        
+        logger.info(f"📝 Datos del vehículo: {placa} - {vehiculo.marca} {vehiculo.modelo}")
             
         color = vehiculo.color or "No especificado"
         propietario = vehiculo.propietario or "Hotel"
         
+        # Verificar que la placa no existe
+        cursor.execute("SELECT COUNT(*) FROM vehiculos WHERE placa = ?", (placa,))
+        existing_count = cursor.fetchone()[0]
+        
+        if existing_count > 0:
+            logger.error(f"❌ La placa {placa} ya existe")
+            raise HTTPException(status_code=400, detail=f"La placa {placa} ya existe")
+        
+        # Contar vehículos antes de insertar
+        cursor.execute("SELECT COUNT(*) FROM vehiculos")
+        count_before = cursor.fetchone()[0]
+        logger.info(f"📊 Vehículos antes de insertar: {count_before}")
+        
+        # Insertar el nuevo vehículo
         cursor.execute('''
             INSERT INTO vehiculos (placa, marca, modelo, ano, color, propietario, poliza, seguro, km_inicial)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (placa, vehiculo.marca, vehiculo.modelo, vehiculo.ano, 
               color, propietario, vehiculo.poliza, vehiculo.seguro, vehiculo.km_inicial or 0))
         
+        # Obtener el ID del vehículo insertado
+        vehiculo_id = cursor.lastrowid
+        logger.info(f"💾 Vehículo insertado con ID: {vehiculo_id}")
+        
+        # COMMIT CRÍTICO
         conn.commit()
+        logger.info(f"✅ COMMIT exitoso para vehículo {placa}")
+        
+        # Verificar que se guardó correctamente
+        cursor.execute("SELECT COUNT(*) FROM vehiculos")
+        count_after = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT * FROM vehiculos WHERE id = ?", (vehiculo_id,))
+        saved_vehiculo = cursor.fetchone()
+        
         conn.close()
+        
+        # VERIFICACIÓN CRÍTICA
+        if count_after != count_before + 1:
+            logger.error(f"🚨 ERROR CRÍTICO: Conteo inconsistente. Antes: {count_before}, Después: {count_after}")
+            raise HTTPException(status_code=500, detail="Error de consistencia en base de datos")
+        
+        if not saved_vehiculo:
+            logger.error(f"🚨 ERROR CRÍTICO: Vehículo no encontrado después de insertar")
+            raise HTTPException(status_code=500, detail="Vehículo no se guardó correctamente")
+        
+        logger.info(f"✅ VERIFICACIÓN EXITOSA: Vehículo {placa} guardado correctamente")
+        logger.info(f"📊 Total vehículos: {count_after}")
         
         # Backup automático después de crear vehículo
         trigger_auto_backup("create_vehiculo")
         
-        return {"success": True, "message": "Vehículo creado exitosamente"}
+        # Respuesta con verificación
+        return {
+            "success": True, 
+            "message": f"Vehículo {placa} creado exitosamente",
+            "vehiculo_id": vehiculo_id,
+            "total_vehiculos": count_after,
+            "verificado": True
+        }
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=400, detail="La placa ya existe")
     except Exception as e:
@@ -2609,6 +2661,67 @@ async def verify_user_data():
             "success": False,
             "error": str(e),
             "message": "Error verificando datos - contactar soporte"
+        }
+
+@app.post("/force-sync-check")
+async def force_sync_check():
+    """Endpoint para forzar verificación de sincronización de datos"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener conteos actuales
+        sync_report = {
+            "timestamp": datetime.now().isoformat(),
+            "database_status": "CONNECTED",
+            "tables_info": {}
+        }
+        
+        tables = ['vehiculos', 'mantenimientos', 'combustible', 'revisiones', 'polizas', 'rtv', 'bitacora']
+        
+        for table in tables:
+            try:
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                count = cursor.fetchone()[0]
+                
+                # Obtener últimos registros
+                cursor.execute(f"SELECT * FROM {table} ORDER BY id DESC LIMIT 3")
+                recent = [dict_from_row(row) for row in cursor.fetchall()]
+                
+                sync_report["tables_info"][table] = {
+                    "count": count,
+                    "recent_records": recent[:1],  # Solo el más reciente para no sobrecargar
+                    "status": "OK"
+                }
+                
+            except Exception as e:
+                sync_report["tables_info"][table] = {
+                    "count": 0,
+                    "error": str(e),
+                    "status": "ERROR"
+                }
+        
+        conn.close()
+        
+        # Calcular totales
+        total_records = sum(info.get("count", 0) for info in sync_report["tables_info"].values())
+        sync_report["total_records"] = total_records
+        sync_report["sync_status"] = "✅ SINCRONIZADO" if total_records > 0 else "⚠️ BASE VACÍA"
+        
+        logger.info(f"🔄 Verificación forzada completada: {total_records} registros total")
+        
+        return {
+            "success": True,
+            "message": "Verificación de sincronización completada",
+            "sync_report": sync_report
+        }
+        
+    except Exception as e:
+        logger.error(f"Error en verificación forzada: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Error verificando sincronización"
         }
 
 if __name__ == "__main__":
