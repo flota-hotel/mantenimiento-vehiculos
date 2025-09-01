@@ -1,0 +1,21 @@
+{
+  "monitoring_started": "2025-09-01T14:01:45.586962",
+  "states": [
+    {
+      "timestamp": "2025-09-01T14:01:45.335831",
+      "vehiculos": [
+        [
+          "BNN407",
+          "TOYOTA",
+          "HIACE",
+          2017,
+          "BLANCO"
+        ]
+      ],
+      "vehiculos_count": 1,
+      "mantenimientos_count": 0,
+      "combustible_count": 0,
+      "revisiones_count": 0
+    }
+  ]
+}

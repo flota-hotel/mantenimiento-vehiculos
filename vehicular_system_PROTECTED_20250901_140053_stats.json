@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-09-01T14:00:53.734899",
+  "backup_path": "/home/user/webapp/vehicular_system_PROTECTED_20250901_140053.db",
+  "vehiculos": 1,
+  "mantenimientos": 0,
+  "combustible": 0,
+  "status": "PROTEGIDO"
+}
