@@ -7467,16 +7467,33 @@
   async function procesarBitacora(e) {
     e.preventDefault();
     
+    console.log('🔥 === PROCESANDO BITÁCORA ===');
+    console.log('🔥 Event type:', e.type);
+    console.log('🔥 Event target:', e.target);
+    console.log('🔥 Event timestamp:', new Date().toISOString());
+    
     const vehiculoId = byId('bVeh').value;
     const chofer = byId('bChofer').value.trim();
     
+    console.log('🔥 VehiculoId seleccionado:', vehiculoId);
+    console.log('🔥 Chofer ingresado:', chofer);
+    console.log('🔥 currentBitacoraId actual:', currentBitacoraId);
+    console.log('🔥 Estado del formulario:');
+    console.log('   - Campos de salida visibles:', !byId('salidaFields').classList.contains('hidden'));
+    console.log('   - Campos de retorno visibles:', !byId('retornoFields').classList.contains('hidden'));
+    console.log('   - Texto del botón:', byId('btnBitacora').innerHTML);
+    
+    // Validación básica
     if (!vehiculoId || !chofer) {
+      console.warn('❌ Validación fallida: vehículo o chofer faltante');
       alert('Debe seleccionar un vehículo e ingresar el nombre del chofer');
       return;
     }
     
     const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
     if (!vehiculo) {
+      console.error('❌ Vehículo no encontrado en la lista de vehículos');
+      console.log('Vehículos disponibles:', Vehiculos.map(v => `ID: ${v.id}, Placa: ${v.placa}`));
       alert('Vehículo no encontrado');
       return;
     }
@@ -7484,11 +7501,32 @@
     // Verificar si es una salida o retorno
     const isRetorno = currentBitacoraId !== null;
     
+    console.log('🎯 DECISIÓN DE FLUJO:');
+    console.log('   - Es retorno?:', isRetorno);
+    console.log('   - Vehículo encontrado:', vehiculo.placa);
+    console.log('   - ID del vehículo:', vehiculo.id);
+    
     if (isRetorno) {
-      await registrarRetorno();
+      console.log('🔄 === EJECUTANDO FLUJO DE RETORNO ===');
+      console.log('🔄 Llamando a registrarRetorno()...');
+      try {
+        await registrarRetorno();
+        console.log('🔄 registrarRetorno() completado exitosamente');
+      } catch (error) {
+        console.error('💥 Error en registrarRetorno():', error);
+      }
     } else {
-      await registrarSalida(vehiculo.placa, chofer);
+      console.log('🚗 === EJECUTANDO FLUJO DE SALIDA ===');
+      console.log('🚗 Llamando a registrarSalida()...');
+      try {
+        await registrarSalida(vehiculo.placa, chofer);
+        console.log('🚗 registrarSalida() completado exitosamente');
+      } catch (error) {
+        console.error('💥 Error en registrarSalida():', error);
+      }
     }
+    
+    console.log('🏁 === PROCESAMIENTO DE BITÁCORA COMPLETADO ===');
   }
   
   async function registrarSalida(placa, chofer) {
@@ -7532,7 +7570,18 @@
       console.log('Formulario en modo retorno:', !byId('retornoFields').classList.contains('hidden'));
       console.log('Botón actual:', byId('btnBitacora').innerHTML);
       
-      // Verificar que los elementos existan
+      // CRÍTICO: Verificar si realmente estamos en modo retorno
+      if (currentBitacoraId === null) {
+        console.error('❌ PROBLEMA CRÍTICO: currentBitacoraId es null');
+        alert('❌ Error: No hay un registro de bitácora seleccionado para completar el retorno.\n\nPasos para solucionarlo:\n1. Seleccione un vehículo que tenga una salida pendiente\n2. Haga clic en "Sí" cuando se le pregunte si desea completar el retorno');
+        return;
+      }
+      
+      // Debug adicional
+      console.log('API URL:', API);
+      console.log('Endpoint completo:', `${API}/bitacora/${currentBitacoraId}/retorno`);
+      
+      // Verificar que los elementos del formulario existan
       const kmInput = byId('bKmRetorno');
       const combustibleSelect = byId('bCombustibleRetorno');
       const estadoSelect = byId('bEstadoRetorno');
@@ -7546,6 +7595,7 @@
       });
       
       if (!kmInput || !combustibleSelect || !estadoSelect) {
+        console.error('❌ PROBLEMA CRÍTICO: Elementos del formulario de retorno no encontrados');
         alert('❌ Error: No se encontraron los campos del formulario de retorno');
         return;
       }
@@ -7555,20 +7605,31 @@
       const combustibleRetorno = combustibleSelect.value;
       const estadoRetorno = estadoSelect.value;
       
-      console.log('Valores del formulario:', {
+      console.log('Valores del formulario de retorno:', {
         kmRetorno,
         combustibleRetorno,
-        estadoRetorno
+        estadoRetorno,
+        observaciones: obsInput?.value
       });
       
       if (!kmRetorno || kmRetorno <= 0) {
+        console.warn('❌ Validación fallida: kilometraje de retorno inválido');
         alert('❌ Por favor ingrese un kilometraje válido para el retorno');
         kmInput.focus();
         return;
       }
       
-      if (!currentBitacoraId) {
-        alert('❌ Error: No hay un registro de bitácora seleccionado para completar');
+      if (!combustibleRetorno) {
+        console.warn('❌ Validación fallida: nivel de combustible no seleccionado');
+        alert('❌ Por favor seleccione el nivel de combustible de retorno');
+        combustibleSelect.focus();
+        return;
+      }
+      
+      if (!estadoRetorno) {
+        console.warn('❌ Validación fallida: estado del vehículo no seleccionado');
+        alert('❌ Por favor seleccione el estado del vehículo de retorno');
+        estadoSelect.focus();
         return;
       }
       
@@ -7579,39 +7640,56 @@
         observaciones: obsInput ? obsInput.value || '' : ''
       };
       
-      console.log('Enviando retorno:', retorno, 'para bitácora ID:', currentBitacoraId);
+      console.log('✅ Validación completa - Enviando retorno:', retorno, 'para bitácora ID:', currentBitacoraId);
       
+      // Llamada a la API con mejor manejo de errores
+      console.log('📡 Enviando petición HTTP...');
       const response = await fetch(`${API}/bitacora/${currentBitacoraId}/retorno`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(retorno)
       });
       
-      console.log('Response status:', response.status);
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        console.error('❌ HTTP Error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Error body:', errorText);
+        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
-      console.log('Respuesta del servidor:', data);
+      console.log('✅ Respuesta del servidor:', data);
       
       if (data.success) {
+        console.log('🎉 ¡Retorno registrado exitosamente!');
         alert('✅ Retorno registrado exitosamente');
         
         // Volver a modo salida
+        console.log('🔄 Cambiando a modo salida...');
         cambiarAModoSalida();
         currentBitacoraId = null;
         
         // Limpiar formulario
+        console.log('🧹 Limpiando formulario...');
         limpiarFormBitacora();
         
         // Actualizar datos
+        console.log('🔄 Actualizando datos de bitácora...');
         Bitacora = await apiGet('bitacora');
         renderBitacora();
         
-        console.log('=== RETORNO COMPLETADO EXITOSAMENTE ===');
+        console.log('=== ✅ RETORNO COMPLETADO EXITOSAMENTE ===');
       } else {
+        console.error('❌ Error en respuesta del servidor:', data);
         alert('❌ Error registrando retorno: ' + (data.message || data.detail || 'Error desconocido'));
       }
     } catch (e) {
-      console.error('Error en registrarRetorno:', e);
-      alert('❌ Error registrando retorno: ' + e.message);
+      console.error('💥 ERROR CRÍTICO en registrarRetorno:', e);
+      console.error('💥 Stack trace:', e.stack);
+      alert('❌ Error crítico registrando retorno: ' + e.message + '\n\nRevise la consola del navegador para más detalles.');
     }
   }
   
@@ -7646,27 +7724,50 @@
   }
   
   function completarRetorno(bitacoraId) {
+    console.log('🔄 === CONFIGURANDO RETORNO ===');
+    console.log('🔄 ID de bitácora:', bitacoraId);
+    
     const registro = Bitacora.find(b => b.id === bitacoraId);
     if (!registro) {
+      console.error('❌ Registro de bitácora no encontrado:', bitacoraId);
+      console.log('Registros disponibles:', Bitacora.map(b => `ID: ${b.id}, Placa: ${b.placa}, Estado: ${b.estado}`));
       alert('Registro de bitácora no encontrado');
       return;
     }
     
+    console.log('🔄 Registro encontrado:', registro);
+    
     // Cargar datos en el formulario
     const vehiculo = Vehiculos.find(v => v.placa === registro.placa);
     if (vehiculo) {
+      console.log('🔄 Configurando vehículo:', vehiculo);
       byId('bVeh').value = vehiculo.id;
+    } else {
+      console.warn('⚠️ Vehículo no encontrado para placa:', registro.placa);
     }
+    
+    console.log('🔄 Configurando chofer:', registro.chofer);
     byId('bChofer').value = registro.chofer;
     
     // Prellenar algunos campos del retorno con valores por defecto
+    console.log('🔄 Configurando campos de retorno...');
     byId('bKmRetorno').value = '';
     byId('bCombustibleRetorno').value = '3/4';
     byId('bEstadoRetorno').value = 'bueno';
     byId('bObsRetorno').value = '';
     
+    // CRÍTICO: Establecer el ID de la bitácora actual
+    console.log('🔄 Estableciendo currentBitacoraId:', bitacoraId);
     currentBitacoraId = bitacoraId;
+    
+    console.log('🔄 Cambiando a modo retorno...');
     cambiarAModoRetorno();
+    
+    console.log('🔄 Estado después de cambio:');
+    console.log('   - currentBitacoraId:', currentBitacoraId);
+    console.log('   - Campos de salida ocultos:', byId('salidaFields').classList.contains('hidden'));
+    console.log('   - Campos de retorno visibles:', !byId('retornoFields').classList.contains('hidden'));
+    console.log('   - Texto del botón:', byId('btnBitacora').innerHTML);
     
     // Scroll al formulario
     document.querySelector('#tab-bitacora .card').scrollIntoView({ behavior: 'smooth' });
@@ -7674,7 +7775,10 @@
     // Enfocar el campo de kilometraje
     setTimeout(() => {
       byId('bKmRetorno').focus();
+      console.log('🔄 Foco en campo de kilometraje establecido');
     }, 100);
+    
+    console.log('🔄 === CONFIGURACIÓN DE RETORNO COMPLETADA ===');
   }
   
   async function enviarAlertaRetornoPendiente() {
