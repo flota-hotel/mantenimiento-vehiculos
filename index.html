@@ -3370,6 +3370,12 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 100);
       }
+      
+      // Inicialización específica para pestaña de bitácora
+      if (name === 'bitacora') {
+        console.log('🚗 Accediendo a pestaña de bitácora, verificando estado...');
+        initBitacoraForm();
+      }
     }
     render();
   }
@@ -7694,17 +7700,79 @@
   }
   
   function cambiarAModoRetorno() {
+    console.log('🔄 === CAMBIANDO A MODO RETORNO ===');
+    
+    // Ocultar campos de salida y deshabilitar validación
     byId('salidaFields').classList.add('hidden');
+    const salidaInputs = ['bKmSalida', 'bCombustibleSalida', 'bEstadoSalida', 'bObsSalida'];
+    salidaInputs.forEach(id => {
+      const element = byId(id);
+      if (element) {
+        element.disabled = true;
+        element.removeAttribute('required');
+        console.log(`   - Deshabilitado campo salida: ${id}`);
+      }
+    });
+    
+    // Mostrar campos de retorno y habilitar validación
     byId('retornoFields').classList.remove('hidden');
+    const retornoInputs = ['bKmRetorno', 'bCombustibleRetorno', 'bEstadoRetorno'];
+    retornoInputs.forEach(id => {
+      const element = byId(id);
+      if (element) {
+        element.disabled = false;
+        element.setAttribute('required', 'required');
+        console.log(`   - Habilitado campo retorno: ${id}`);
+      }
+    });
+    
     byId('btnBitacora').innerHTML = '🔄 Registrar Retorno';
     byId('btnBitacora').className = 'success';
+    
+    console.log('✅ Modo retorno activado correctamente');
   }
   
   function cambiarAModoSalida() {
+    console.log('🚗 === CAMBIANDO A MODO SALIDA ===');
+    
+    // Mostrar campos de salida y habilitar validación
     byId('salidaFields').classList.remove('hidden');
+    const salidaInputs = ['bKmSalida', 'bCombustibleSalida', 'bEstadoSalida'];
+    salidaInputs.forEach(id => {
+      const element = byId(id);
+      if (element) {
+        element.disabled = false;
+        element.setAttribute('required', 'required');
+        console.log(`   - Habilitado campo salida: ${id}`);
+      }
+    });
+    
+    // Ocultar campos de retorno y deshabilitar validación
     byId('retornoFields').classList.add('hidden');
+    const retornoInputs = ['bKmRetorno', 'bCombustibleRetorno', 'bEstadoRetorno'];
+    retornoInputs.forEach(id => {
+      const element = byId(id);
+      if (element) {
+        element.disabled = true;
+        element.removeAttribute('required');
+        console.log(`   - Deshabilitado campo retorno: ${id}`);
+      }
+    });
+    
     byId('btnBitacora').innerHTML = '📝 Registrar Salida';
     byId('btnBitacora').className = 'success';
+    
+    console.log('✅ Modo salida activado correctamente');
+  }
+  
+  function initBitacoraForm() {
+    console.log('🚀 === INICIALIZANDO FORMULARIO DE BITÁCORA ===');
+    
+    // Asegurar que el formulario inicie en modo salida
+    currentBitacoraId = null;
+    cambiarAModoSalida();
+    
+    console.log('✅ Formulario de bitácora inicializado correctamente');
   }
   
   function limpiarFormBitacora() {
@@ -8523,6 +8591,9 @@
       
       // Cargar datos
       loadAll();
+      
+      // Inicializar formulario de bitácora en modo salida
+      initBitacoraForm();
       
       console.log('✅ Sesión restaurada automáticamente');
     } else {
