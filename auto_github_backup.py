@@ -5,11 +5,17 @@ Ejecuta backups periódicos de la base de datos
 """
 
 import time
-import schedule
 import logging
 from datetime import datetime
 import sys
 import os
+
+# Intentar importar schedule, si no está disponible, usar implementación básica
+try:
+    import schedule
+    SCHEDULE_AVAILABLE = True
+except ImportError:
+    SCHEDULE_AVAILABLE = False
 
 # Agregar el directorio actual al path para importar módulos locales
 sys.path.append('/home/user/webapp')
@@ -72,15 +78,18 @@ class AutoBackupService:
     
     def setup_schedule(self):
         """Configurar horarios de backup"""
-        # Backup diario a las 2 AM
-        schedule.every().day.at("02:00").do(self.daily_backup)
-        
-        # Backup cada hora en horario laboral
-        schedule.every().hour.do(self.hourly_backup)
-        
-        logger.info("✅ Horarios de backup configurados:")
-        logger.info("📅 Backup diario: 02:00 AM")
-        logger.info("⏰ Backup por hora: 8 AM - 8 PM")
+        if SCHEDULE_AVAILABLE:
+            # Backup diario a las 2 AM
+            schedule.every().day.at("02:00").do(self.daily_backup)
+            
+            # Backup cada hora en horario laboral
+            schedule.every().hour.do(self.hourly_backup)
+            
+            logger.info("✅ Horarios de backup configurados:")
+            logger.info("📅 Backup diario: 02:00 AM")
+            logger.info("⏰ Backup por hora: 8 AM - 8 PM")
+        else:
+            logger.warning("⚠️ Schedule no disponible, usando modo básico")
     
     def run(self):
         """Ejecutar el servicio de backup"""
@@ -99,7 +108,20 @@ class AutoBackupService:
         # Loop principal
         while self.running:
             try:
-                schedule.run_pending()
+                if SCHEDULE_AVAILABLE:
+                    schedule.run_pending()
+                else:
+                    # Implementación básica sin schedule
+                    current_time = datetime.now()
+                    # Backup cada hora en horario laboral
+                    if (current_time.minute == 0 and 
+                        8 <= current_time.hour <= 20):
+                        self.hourly_backup()
+                    # Backup diario a las 2 AM
+                    elif (current_time.hour == 2 and 
+                          current_time.minute == 0):
+                        self.daily_backup()
+                
                 time.sleep(60)  # Revisar cada minuto
             except KeyboardInterrupt:
                 logger.info("🛑 Deteniendo servicio de backup...")
