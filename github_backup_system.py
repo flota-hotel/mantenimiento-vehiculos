@@ -33,7 +33,20 @@ class GitHubBackupSystem:
         self.backup_dir = os.path.join(current_dir, "backups")
         self.github_backup_dir = os.path.join(current_dir, "github_backups")
         self.repo_path = current_dir
-        self.ensure_directories()
+        
+        # Detectar si Git está disponible
+        self.git_available = self._check_git_availability()
+        
+    def _check_git_availability(self):
+        """Verificar si Git está disponible y configurado"""
+        try:
+            # Verificar si estamos en un repositorio git
+            result = subprocess.run(['git', 'rev-parse', '--git-dir'], 
+                                  capture_output=True, text=True, check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            logger.warning("⚠️ Git no disponible o no configurado (normal en Railway)")
+            return False
         
         # Log para debugging
         logger.info(f"📍 GitHubBackupSystem inicializado:")
@@ -42,6 +55,7 @@ class GitHubBackupSystem:
         logger.info(f"   🐙 GitHub Dir: {self.github_backup_dir}")
         logger.info(f"   📂 Repo Path: {self.repo_path}")
         logger.info(f"   ✅ DB Exists: {os.path.exists(self.db_path)}")
+        logger.info(f"   🔧 Git Available: {self.git_available}")
         
     def ensure_directories(self):
         """Crear directorios necesarios"""
@@ -194,7 +208,7 @@ class GitHubBackupSystem:
             return None, None
     
     def commit_backup_to_github(self, backup_path, stats, backup_type="automatic"):
-        """Subir backup a GitHub"""
+        """Subir backup a GitHub (si Git está disponible) o guardar localmente"""
         try:
             # Verificar si el backup ya está en el directorio correcto
             backup_filename = os.path.basename(backup_path)
@@ -214,7 +228,13 @@ class GitHubBackupSystem:
             with open(stats_path, 'w', encoding='utf-8') as f:
                 json.dump(stats, f, indent=2, ensure_ascii=False)
             
-            # Commit a GitHub
+            # Si Git no está disponible (como en Railway), solo guardar localmente
+            if not self.git_available:
+                logger.info(f"📦 Backup guardado localmente (Railway): {backup_filename}")
+                logger.info(f"📊 Registros totales: {stats.get('total_records', 0)}")
+                return True, backup_filename
+            
+            # Si Git está disponible, hacer commit y push
             os.chdir(self.repo_path)
             
             # Agregar archivos
@@ -247,7 +267,8 @@ class GitHubBackupSystem:
             
         except subprocess.CalledProcessError as e:
             logger.error(f"Error en comando git: {e}")
-            return False, None
+            # Aunque falle Git, el backup local se guardó exitosamente
+            return True, backup_filename  
         except Exception as e:
             logger.error(f"Error subiendo backup a GitHub: {e}")
             return False, None
