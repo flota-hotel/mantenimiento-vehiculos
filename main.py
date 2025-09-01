@@ -48,6 +48,17 @@ except Exception as e:
     backup_system = None
     logger.warning(f"⚠️ GitHub backup system not available: {e}")
 
+# Importar sistema de backup directo a GitHub API (para Railway)
+try:
+    from github_api_backup import GitHubAPIBackup
+    github_api_backup = GitHubAPIBackup()
+    GITHUB_API_BACKUP_ENABLED = True
+    logger.info("✅ GitHub API backup system loaded")
+except Exception as e:
+    GITHUB_API_BACKUP_ENABLED = False
+    github_api_backup = None
+    logger.warning(f"⚠️ GitHub API backup system not available: {e}")
+
 # Importar sistema de preservación de datos (opcional)
 try:
     from data_preservation_system import preservation_system, protect_data_operation
@@ -933,18 +944,31 @@ def dict_from_row(row):
 
 async def trigger_auto_backup(operation_type="data_change"):
     """Ejecutar backup automático después de cambios en la base de datos"""
+    # 1. Backup local (sistema original)
     if AUTO_BACKUP_ENABLED and backup_system:
         try:
             # Ejecutar backup de manera asíncrona
             success, filename = await backup_system.create_and_upload_backup("auto_" + operation_type)
             if success:
-                logger.info(f"✅ Backup automático completado: {filename} después de: {operation_type}")
+                logger.info(f"✅ Backup local completado: {filename} después de: {operation_type}")
             else:
-                logger.error(f"❌ Error en backup automático después de: {operation_type}")
+                logger.error(f"❌ Error en backup local después de: {operation_type}")
         except Exception as e:
-            logger.warning(f"⚠️ Error programando backup automático: {e}")
-    else:
-        logger.debug("Backup automático deshabilitado o no disponible")
+            logger.warning(f"⚠️ Error en backup local: {e}")
+    
+    # 2. Backup directo a GitHub API (especialmente para Railway)
+    if GITHUB_API_BACKUP_ENABLED and github_api_backup:
+        try:
+            success, filename = await github_api_backup.backup_railway_database("railway_" + operation_type)
+            if success:
+                logger.info(f"🐙 Backup a GitHub API completado: {filename} después de: {operation_type}")
+            else:
+                logger.error(f"❌ Error en backup GitHub API después de: {operation_type}")
+        except Exception as e:
+            logger.warning(f"⚠️ Error en backup GitHub API: {e}")
+    
+    if not AUTO_BACKUP_ENABLED and not GITHUB_API_BACKUP_ENABLED:
+        logger.debug("Todos los sistemas de backup deshabilitados")
 
 # Inicializar base de datos al iniciar
 init_database()
