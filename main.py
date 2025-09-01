@@ -2582,7 +2582,7 @@ async def verify_user_data():
                 tables_info[table] = 0
         
         # Obtener últimos registros de actividad
-        cursor.execute("SELECT * FROM bitacora ORDER BY fecha DESC LIMIT 5")
+        cursor.execute("SELECT * FROM bitacora ORDER BY created_at DESC LIMIT 5")
         recent_activity = [dict_from_row(row) for row in cursor.fetchall()]
         
         conn.close()
