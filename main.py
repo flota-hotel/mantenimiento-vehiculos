@@ -1788,6 +1788,9 @@ async def registrar_salida(salida: BitacoraSalida):
 @app.put("/bitacora/{bitacora_id}/retorno")
 async def registrar_retorno(bitacora_id: int, retorno: BitacoraRetorno):
     """Registrar retorno de vehículo"""
+    logger.info(f"🔄 INICIANDO registro de retorno para bitácora ID: {bitacora_id}")
+    logger.info(f"📝 Datos del retorno: km={retorno.km_retorno}, combustible={retorno.nivel_combustible_retorno}, estado={retorno.estado_vehiculo_retorno}")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1802,11 +1805,17 @@ async def registrar_retorno(bitacora_id: int, retorno: BitacoraRetorno):
               retorno.observaciones, bitacora_id))
         
         if cursor.rowcount == 0:
+            logger.error(f"❌ No se encontró registro de bitácora con ID: {bitacora_id}")
             raise HTTPException(status_code=404, detail="Registro de bitácora no encontrado")
         
+        logger.info(f"✅ COMMIT exitoso para retorno de bitácora ID: {bitacora_id}")
         conn.commit()
         conn.close()
         
+        # Backup automático después de registrar retorno
+        await trigger_auto_backup("registrar_retorno")
+        
+        logger.info(f"✅ RETORNO REGISTRADO EXITOSAMENTE: Bitácora ID {bitacora_id} marcada como completada")
         return {"success": True, "message": "Retorno registrado exitosamente"}
     except Exception as e:
         logger.error(f"Error al registrar retorno: {e}")
