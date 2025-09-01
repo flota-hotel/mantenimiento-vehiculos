@@ -939,7 +939,7 @@
       padding-bottom: calc(var(--touch-target) + var(--spacing-lg) + env(safe-area-inset-bottom, 0));
     }
     
-    .mobile-compact .sticky-actions {
+    .mobile-compact .floating-fab {
       display: none;
     }
     
@@ -1141,16 +1141,110 @@
     }
     
     /* ========================================
-       STICKY ACTIONS & UI ELEMENTS
+       FLOATING FAB (DESPLEGABLE) & UI ELEMENTS
        ======================================== */
-    .sticky-actions {
+    .floating-fab {
       position: fixed;
       right: var(--spacing-lg);
       bottom: var(--spacing-lg);
+      z-index: 100;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .fab-toggle {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+    
+    .fab-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .fab-toggle:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .fab-icon {
+      font-size: 20px;
+      color: white;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .floating-fab.open .fab-icon {
+      transform: rotate(180deg);
+    }
+    
+    .fab-menu {
+      position: absolute;
+      bottom: 68px;
+      right: 0;
       display: flex;
       flex-direction: column;
       gap: var(--spacing-sm);
-      z-index: 50;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px) scale(0.9);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+    
+    .floating-fab.open .fab-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+      pointer-events: all;
+    }
+    
+    .fab-action {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-lg);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      color: var(--text-color);
+      min-width: 160px;
+    }
+    
+    .fab-action:hover {
+      background: var(--primary-color);
+      color: white;
+      transform: translateX(-4px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+    
+    .fab-action-icon {
+      font-size: 18px;
+      width: 20px;
+      text-align: center;
+    }
+    
+    .fab-action-text {
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    /* Estados de visibilidad */
+    .floating-fab.hidden {
+      transform: translateY(100px);
+      opacity: 0;
+      pointer-events: none;
     }
     
     .footer {
@@ -1331,11 +1425,28 @@
         width: calc(100% - 2 * var(--spacing-md));
       }
       
-      /* Sticky actions mobile positioning */
-      .sticky-actions {
+      /* Floating FAB mobile positioning */
+      .floating-fab {
         right: var(--spacing-md);
         bottom: var(--spacing-md);
-        gap: var(--spacing-xs);
+      }
+      
+      .fab-toggle {
+        width: 48px;
+        height: 48px;
+      }
+      
+      .fab-icon {
+        font-size: 18px;
+      }
+      
+      .fab-action {
+        min-width: 140px;
+        padding: var(--spacing-xs) var(--spacing-sm);
+      }
+      
+      .fab-action-text {
+        font-size: 13px;
       }
       
       /* Enhanced touch targets for mobile */
@@ -2515,10 +2626,28 @@
       </div>
     </section>
 
-    <div class="sticky-actions" id="stickyActions">
-      <button onclick="setTab('mantenimientos')" data-roles="admin,operador">🔧 + Mantenimiento</button>
-      <button onclick="setTab('combustible')" class="secondary" data-roles="admin,operador">⛽ + Combustible</button>
-      <button onclick="setTab('revision')" class="secondary" data-roles="admin,supervisor">🔍 + Revisión</button>
+    <!-- Botón Flotante Desplegable -->
+    <div class="floating-fab" id="floatingFab">
+      <!-- Botón principal toggle -->
+      <div class="fab-toggle" id="fabToggle" onclick="toggleFab()">
+        <span class="fab-icon" id="fabIcon">⚡</span>
+      </div>
+      
+      <!-- Menú desplegable -->
+      <div class="fab-menu" id="fabMenu">
+        <button class="fab-action" onclick="setTab('mantenimientos')" data-roles="admin,operador" title="Agregar Mantenimiento">
+          <span class="fab-action-icon">🔧</span>
+          <span class="fab-action-text">Mantenimiento</span>
+        </button>
+        <button class="fab-action" onclick="setTab('combustible')" data-roles="admin,operador" title="Agregar Combustible">
+          <span class="fab-action-icon">⛽</span>
+          <span class="fab-action-text">Combustible</span>
+        </button>
+        <button class="fab-action" onclick="setTab('revision')" data-roles="admin,supervisor" title="Agregar Revisión">
+          <span class="fab-action-icon">🔍</span>
+          <span class="fab-action-text">Revisión</span>
+        </button>
+      </div>
     </div>
     
     <!-- Modales de Edición -->
@@ -8185,7 +8314,94 @@
     if (mobileCompactMode) {
       updateMobileNavActive();
     }
+    // Cerrar FAB después de seleccionar una opción
+    closeFab();
   };
+  
+  /* ========================================
+     FLOATING FAB FUNCTIONALITY
+     ======================================== */
+  let fabOpen = false;
+  let fabVisible = true;
+  
+  function toggleFab() {
+    const fab = document.getElementById('floatingFab');
+    const icon = document.getElementById('fabIcon');
+    
+    fabOpen = !fabOpen;
+    
+    if (fabOpen) {
+      fab.classList.add('open');
+      icon.textContent = '✕';
+    } else {
+      fab.classList.remove('open');
+      icon.textContent = '⚡';
+    }
+  }
+  
+  function closeFab() {
+    const fab = document.getElementById('floatingFab');
+    const icon = document.getElementById('fabIcon');
+    
+    fabOpen = false;
+    fab.classList.remove('open');
+    icon.textContent = '⚡';
+  }
+  
+  function hideFab() {
+    const fab = document.getElementById('floatingFab');
+    fabVisible = false;
+    fab.classList.add('hidden');
+  }
+  
+  function showFab() {
+    const fab = document.getElementById('floatingFab');
+    fabVisible = true;
+    fab.classList.remove('hidden');
+  }
+  
+  function toggleFabVisibility() {
+    if (fabVisible) {
+      hideFab();
+    } else {
+      showFab();
+    }
+  }
+  
+  // Cerrar FAB al hacer clic fuera
+  document.addEventListener('click', function(event) {
+    const fab = document.getElementById('floatingFab');
+    const fabToggle = document.getElementById('fabToggle');
+    
+    if (fabOpen && fab && !fab.contains(event.target)) {
+      closeFab();
+    }
+  });
+  
+  // Auto-ocultar FAB al hacer scroll (opcional)
+  let lastScrollY = window.scrollY;
+  let scrollTimeout;
+  
+  window.addEventListener('scroll', function() {
+    const currentScrollY = window.scrollY;
+    
+    // Limpiar timeout previo
+    clearTimeout(scrollTimeout);
+    
+    // Si está scrolleando hacia abajo rápidamente, ocultar FAB
+    if (currentScrollY > lastScrollY + 50 && fabVisible) {
+      hideFab();
+    }
+    
+    // Mostrar FAB después de parar de scrollear
+    scrollTimeout = setTimeout(() => {
+      if (!fabVisible) {
+        showFab();
+      }
+    }, 1000);
+    
+    lastScrollY = currentScrollY;
+  });
   
   // Cargar preferencia de modo compacto al iniciar
   document.addEventListener('DOMContentLoaded', function() {

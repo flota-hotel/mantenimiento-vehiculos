@@ -37,6 +37,31 @@ except ImportError:
     logger.warning("⚠️ SendGrid not available, using SMTP fallback")
     EMAIL_METHOD = "SMTP"
 
+# Importar sistema de backup automático a GitHub
+try:
+    from github_backup_system import GitHubBackupSystem
+    backup_system = GitHubBackupSystem()
+    AUTO_BACKUP_ENABLED = True
+    logger.info("✅ GitHub backup system loaded")
+except ImportError:
+    AUTO_BACKUP_ENABLED = False
+    logger.warning("⚠️ GitHub backup system not available")
+
+# Importar sistema de preservación de datos
+try:
+    from data_preservation_system import preservation_system, protect_data_operation
+    DATA_PRESERVATION_ENABLED = True
+    logger.info("✅ Data preservation system loaded")
+except ImportError:
+    DATA_PRESERVATION_ENABLED = False
+    logger.warning("⚠️ Data preservation system not available")
+    
+    # Crear decorador dummy si no está disponible
+    def protect_data_operation(description):
+        def decorator(func):
+            return func
+        return decorator
+
 # Crear aplicación FastAPI
 app = FastAPI(title="Sistema de Gestión Vehicular", version="1.0.0")
 
@@ -904,6 +929,18 @@ def dict_from_row(row):
     """Convertir Row de SQLite a diccionario"""
     return dict(zip(row.keys(), row)) if row else None
 
+def trigger_auto_backup(operation_type="data_change"):
+    """Ejecutar backup automático después de cambios en la base de datos"""
+    if AUTO_BACKUP_ENABLED:
+        try:
+            # Ejecutar backup en background para no bloquear la respuesta API
+            asyncio.create_task(backup_system.create_and_upload_backup("auto_" + operation_type))
+            logger.info(f"✅ Backup automático programado después de: {operation_type}")
+        except Exception as e:
+            logger.warning(f"⚠️ Error programando backup automático: {e}")
+    else:
+        logger.debug("Backup automático deshabilitado")
+
 # Inicializar base de datos al iniciar
 init_database()
 
@@ -963,6 +1000,9 @@ async def create_vehiculo(vehiculo: VehiculoCreate):
         conn.commit()
         conn.close()
         
+        # Backup automático después de crear vehículo
+        trigger_auto_backup("create_vehiculo")
+        
         return {"success": True, "message": "Vehículo creado exitosamente"}
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=400, detail="La placa ya existe")
@@ -1000,6 +1040,9 @@ async def update_vehiculo(placa: str, vehiculo: VehiculoUpdate):
         conn.commit()
         conn.close()
         
+        # Backup automático después de actualizar vehículo
+        trigger_auto_backup("update_vehiculo")
+        
         return {"success": True, "message": "Vehículo actualizado exitosamente"}
     except Exception as e:
         logger.error(f"Error al actualizar vehículo: {e}")
@@ -1019,6 +1062,9 @@ async def delete_vehiculo(placa: str):
         
         conn.commit()
         conn.close()
+        
+        # Backup automático después de eliminar vehículo
+        trigger_auto_backup("delete_vehiculo")
         
         return {"success": True, "message": "Vehículo eliminado exitosamente"}
     except Exception as e:
@@ -1060,6 +1106,9 @@ async def create_mantenimiento(mantenimiento: MantenimientoCreate):
         conn.commit()
         conn.close()
         
+        # Backup automático después de crear mantenimiento
+        trigger_auto_backup("create_mantenimiento")
+        
         return {"success": True, "message": "Mantenimiento creado exitosamente"}
     except Exception as e:
         logger.error(f"Error al crear mantenimiento: {e}")
@@ -1079,6 +1128,9 @@ async def delete_mantenimiento(mantenimiento_id: int):
         
         conn.commit()
         conn.close()
+        
+        # Backup automático después de eliminar mantenimiento
+        trigger_auto_backup("delete_mantenimiento")
         
         return {"success": True, "message": "Mantenimiento eliminado exitosamente"}
     except Exception as e:
@@ -1144,6 +1196,9 @@ async def create_combustible(combustible: CombustibleCreate):
         
         conn.commit()
         conn.close()
+        
+        # Backup automático después de crear registro de combustible
+        trigger_auto_backup("create_combustible")
         
         return {"success": True, "message": "Registro de combustible creado exitosamente"}
     except Exception as e:
@@ -2413,6 +2468,80 @@ async def backup_stats():
         
     except Exception as e:
         logger.error(f"❌ Error obteniendo estadísticas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/data-preservation/status")
+async def data_preservation_status():
+    """Obtener estado del sistema de preservación de datos"""
+    try:
+        if not DATA_PRESERVATION_ENABLED:
+            return {
+                "success": False,
+                "message": "Sistema de preservación de datos no disponible"
+            }
+        
+        # Obtener conteos actuales
+        current_counts = preservation_system.get_current_data_counts()
+        
+        # Obtener backups disponibles
+        available_backups = preservation_system.get_available_backups()
+        
+        return {
+            "success": True,
+            "preservation_enabled": True,
+            "github_backup_enabled": AUTO_BACKUP_ENABLED,
+            "current_data_counts": current_counts,
+            "available_backups": len(available_backups),
+            "latest_backup": available_backups[0] if available_backups else None,
+            "total_records": sum(current_counts.values()),
+            "system_status": "✅ PROTEGIDO - Todos los datos están respaldados automáticamente",
+            "last_check": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado de preservación: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/data-preservation/manual-backup")
+async def create_manual_preservation_backup():
+    """Crear backup manual de preservación"""
+    try:
+        if not DATA_PRESERVATION_ENABLED:
+            raise HTTPException(status_code=503, detail="Sistema de preservación no disponible")
+        
+        backup_path, metadata = preservation_system.create_pre_change_backup("Backup manual solicitado por usuario")
+        
+        if backup_path:
+            return {
+                "success": True,
+                "message": "Backup manual creado exitosamente",
+                "backup_path": backup_path,
+                "metadata": metadata
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Error creando backup manual")
+            
+    except Exception as e:
+        logger.error(f"Error creando backup manual: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/data-preservation/backups")
+async def list_preservation_backups():
+    """Listar todos los backups de preservación disponibles"""
+    try:
+        if not DATA_PRESERVATION_ENABLED:
+            raise HTTPException(status_code=503, detail="Sistema de preservación no disponible")
+        
+        backups = preservation_system.get_available_backups()
+        
+        return {
+            "success": True,
+            "backups": backups,
+            "count": len(backups)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listando backups: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
