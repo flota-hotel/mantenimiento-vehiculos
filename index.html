@@ -3455,6 +3455,11 @@
       if (name === 'alertas-config' && currentUser?.role === 'admin') {
         console.log('⚠️ Accediendo a configuración de alertas como administrador');
         verificarEstadoBackup();
+        
+        // Cargar historial de alertas
+        setTimeout(() => {
+          cargarHistorialAlertas();
+        }, 500);
       }
       
       // Inicialización específica para pestaña de configuración de alertas (admin)
@@ -9005,6 +9010,10 @@
       }
       
       actualizarEstadoAlertas();
+      
+      // Cargar historial de alertas
+      cargarHistorialAlertas();
+      
     } catch (e) {
       console.error('Error cargando configuración de alertas:', e);
     }
@@ -9168,6 +9177,116 @@
         emailIndicator.innerHTML = '✅';
         emailIndicator.style.color = 'var(--success)';
       }
+    }
+  }
+  
+  // Cargar historial de alertas enviadas
+  async function cargarHistorialAlertas() {
+    console.log('📜 Cargando historial de alertas...');
+    
+    const contenedor = byId('historialAlertas');
+    if (!contenedor) return;
+    
+    try {
+      // Mostrar estado de carga
+      contenedor.innerHTML = `
+        <div style="text-align:center;padding:20px;color:var(--muted)">
+          <span style="font-size:18px">🔄</span><br>
+          <small>Cargando historial de alertas...</small>
+        </div>
+      `;
+      
+      // Obtener historial del backend
+      const response = await fetch(`${API}/historial/alertas?limit=20`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.alertas && data.alertas.length > 0) {
+        // Mostrar alertas
+        let html = `
+          <div style="margin-bottom:12px;padding:8px;background:#f8f9fa;border-radius:6px;text-align:center">
+            <small><strong>📊 Total de alertas:</strong> ${data.total} | <strong>📅 Últimas 20 alertas</strong></small>
+          </div>
+        `;
+        
+        data.alertas.forEach(alerta => {
+          const fechaFormateada = new Date(alerta.created_at + ' UTC').toLocaleString('es-CR', {
+            timeZone: 'America/Costa_Rica',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          const tipoIcon = {
+            'Mantenimiento Vencido': '🔧',
+            'Póliza Próxima a Vencer': '🛡️',
+            'RTV Próximo a Vencer': '📋',
+            'Combustible Anómalo': '⛽',
+            'Revisión Pendiente': '👀'
+          }[alerta.tipo_alerta] || '📧';
+          
+          html += `
+            <div style="border:1px solid #e3e6f0;border-radius:8px;padding:12px;margin-bottom:8px;background:white">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                <div style="flex:1">
+                  <div style="font-weight:bold;color:#2e59d9;margin-bottom:4px">
+                    ${tipoIcon} ${alerta.tipo_alerta}
+                  </div>
+                  <div style="font-size:13px;color:#6c757d">
+                    📧 ${alerta.destinatario_email} | 🚗 ${alerta.vehiculo_placa || 'General'}
+                  </div>
+                </div>
+                <div style="text-align:right;font-size:11px;color:#6c757d">
+                  ${fechaFormateada}
+                </div>
+              </div>
+              
+              <div style="font-size:14px;margin-bottom:6px;color:#495057">
+                <strong>📬 ${alerta.asunto}</strong>
+              </div>
+              
+              ${alerta.mensaje ? `
+                <div style="font-size:12px;color:#6c757d;background:#f8f9fa;padding:8px;border-radius:4px;margin-top:8px">
+                  💬 ${alerta.mensaje}
+                </div>
+              ` : ''}
+              
+              <div style="text-align:right;margin-top:8px">
+                <span class="tag" style="background:#d4edda;color:#155724;font-size:11px">✅ ${alerta.estado}</span>
+              </div>
+            </div>
+          `;
+        });
+        
+        contenedor.innerHTML = html;
+        
+      } else {
+        // No hay alertas
+        contenedor.innerHTML = `
+          <div style="text-align:center;padding:40px;color:var(--muted)">
+            <div style="font-size:48px;margin-bottom:16px">📭</div>
+            <div style="font-size:16px;margin-bottom:8px">No hay alertas registradas</div>
+            <small>Las alertas enviadas aparecerán aquí automáticamente</small>
+          </div>
+        `;
+      }
+      
+      console.log(`✅ Historial de alertas cargado: ${data.total} alertas`);
+      
+    } catch (error) {
+      console.error('❌ Error cargando historial de alertas:', error);
+      contenedor.innerHTML = `
+        <div style="text-align:center;padding:20px;color:var(--error)">
+          <div style="font-size:24px;margin-bottom:8px">⚠️</div>
+          <div>Error cargando historial de alertas</div>
+          <small style="color:var(--muted)">${error.message}</small>
+        </div>
+      `;
     }
   }
   

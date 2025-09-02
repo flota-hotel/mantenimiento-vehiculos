@@ -305,6 +305,21 @@ def init_database():
         )
     ''')
     
+    # Tabla de historial de alertas enviadas
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS historial_alertas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo_alerta TEXT NOT NULL,
+            vehiculo_placa TEXT,
+            destinatario_email TEXT NOT NULL,
+            asunto TEXT NOT NULL,
+            mensaje TEXT,
+            estado TEXT DEFAULT 'enviado',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (vehiculo_placa) REFERENCES vehiculos (placa)
+        )
+    ''')
+    
     # Agregar nuevas columnas a la tabla revisiones si no existen
     try:
         cursor.execute("ALTER TABLE revisiones ADD COLUMN luces_delanteras BOOLEAN DEFAULT 1")
@@ -3112,6 +3127,90 @@ async def force_sync_check():
             "error": str(e),
             "message": "Error verificando sincronización"
         }
+
+# ================================
+# ENDPOINT HISTORIAL DE ALERTAS
+# ================================
+
+@app.get("/historial/alertas")
+async def obtener_historial_alertas(limit: int = 50):
+    """Obtener historial de alertas enviadas"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener últimas alertas enviadas
+        cursor.execute("""
+            SELECT 
+                id,
+                tipo_alerta,
+                vehiculo_placa,
+                destinatario_email,
+                asunto,
+                mensaje,
+                estado,
+                created_at
+            FROM historial_alertas 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        """, (limit,))
+        
+        alertas = []
+        for row in cursor.fetchall():
+            alertas.append({
+                "id": row[0],
+                "tipo_alerta": row[1],
+                "vehiculo_placa": row[2],
+                "destinatario_email": row[3],
+                "asunto": row[4],
+                "mensaje": row[5],
+                "estado": row[6],
+                "created_at": row[7]
+            })
+        
+        conn.close()
+        
+        return {
+            "success": True,
+            "alertas": alertas,
+            "total": len(alertas)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo historial de alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/historial/alertas")
+async def registrar_alerta_enviada(alerta_data: dict):
+    """Registrar una alerta enviada en el historial"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO historial_alertas 
+            (tipo_alerta, vehiculo_placa, destinatario_email, asunto, mensaje, estado)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            alerta_data.get("tipo_alerta"),
+            alerta_data.get("vehiculo_placa"),
+            alerta_data.get("destinatario_email"),
+            alerta_data.get("asunto"),
+            alerta_data.get("mensaje"),
+            alerta_data.get("estado", "enviado")
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Alerta registrada en historial"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error registrando alerta en historial: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     init_database()
