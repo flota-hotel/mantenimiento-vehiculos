@@ -2540,35 +2540,6 @@
             </div>
           </div>
           
-          <!-- Backup Manual de Base de Datos -->
-          <div class="card" style="background:#fff3cd;margin:20px 0;border-left:4px solid #ffc107">
-            <h4 style="margin:0 0 16px 0;color:#856404">💾 Backup Manual de Railway → GitHub</h4>
-            <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:center">
-              <div>
-                <p style="margin:0 0 8px 0;font-size:0.9em;color:#856404">
-                  <strong>🛡️ Protección de datos:</strong> Respalda toda la base de datos de Railway<br>
-                  <strong>📂 Destino:</strong> GitHub repository en carpeta <code>api_backups/</code><br>
-                  <strong>📋 Incluye:</strong> SQLite + JSON export + estadísticas + metadatos<br>
-                  <strong>🕐 Recomendado:</strong> Ejecutar antes de cambios importantes<br>
-                  <strong>⚡ Evita pérdida de datos:</strong> Respaldo seguro en la nube
-                </p>
-                <div id="backupStatus" style="margin-top:8px">
-                  <span class="tag" style="background:#d4edda;color:#155724">✅ Sistema listo</span>
-                </div>
-              </div>
-              <div style="text-align:center">
-                <button type="button" class="primary" onclick="ejecutarBackupManual()" id="btnBackupManual">
-                  🚀 Respaldar Railway
-                </button>
-                <div style="margin-top:8px">
-                  <small style="color:#856404">
-                    <span id="ultimoBackup">Verificando último backup...</span>
-                  </small>
-                </div>
-              </div>
-            </div>
-          </div>
-          
           <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
             <button type="submit" class="success">💾 Guardar Configuración</button>
             <button type="button" class="secondary" onclick="probarAlertas()">📧 Probar Alertas</button>
@@ -3105,8 +3076,8 @@
 
   <script>
   // ====== API: Backend Python FastAPI ======
-  const API = "https://mantenimiento-vehiculos-production.up.railway.app";
-  const API_KEY = ""; // si activas API key, colócala aquí
+  const API = "https://8000-i2csqmmo4txbkyhmexll8-6532622b.e2b.dev";
+  const API = "https://8000-i2csqmmo4txbkyhmexll8-6532622b.e2b.dev";
 
   // ====== ESTADO ======
   let Vehiculos=[], Polizas=[], RTV=[], Mantenimientos=[], Combustible=[], Bitacora=[], Alertas=[], Revisiones=[];
@@ -3399,24 +3370,6 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 100);
       }
-      
-      // Inicialización específica para pestaña de bitácora
-      if (name === 'bitacora') {
-        console.log('🚗 Accediendo a pestaña de bitácora, verificando estado...');
-        initBitacoraForm();
-      }
-      
-      // Inicialización para configuración de alertas (admin)
-      if (name === 'alertas-config' && currentUser?.role === 'admin') {
-        console.log('⚠️ Accediendo a configuración de alertas como administrador');
-        verificarEstadoBackup();
-      }
-      
-      // Inicialización específica para pestaña de configuración de alertas (admin)
-      if (name === 'alertas-config') {
-        console.log('⚙️ Accediendo a configuración de alertas...');
-        setTimeout(verificarUltimoBackup, 500);
-      }
     }
     render();
   }
@@ -3579,25 +3532,12 @@
     try{
       // Cargar datos del nuevo backend
       Vehiculos = await apiGet('vehiculos');
-      console.log('✅ Vehículos cargados:', Vehiculos.length);
-      
       Mantenimientos = await apiGet('mantenimientos');
-      console.log('✅ Mantenimientos cargados:', Mantenimientos.length);
-      
       Combustible = await apiGet('combustible');
-      console.log('✅ Combustible cargado:', Combustible.length);
-      
       Revisiones = await apiGet('revisiones');
-      console.log('✅ Revisiones cargadas:', Revisiones.length);
-      
       Polizas = await apiGet('polizas');
-      console.log('✅ Pólizas cargadas:', Polizas.length);
-      
       RTV = await apiGet('rtv');
-      console.log('✅ RTV cargados:', RTV.length);
-      
       Bitacora = await apiGet('bitacora');
-      console.log('✅ Bitácora cargada:', Bitacora.length);
       
       // Inicializar arrays vacíos para compatibilidad con el frontend
       Alertas = [];
@@ -3633,294 +3573,9 @@
       fillPlacaFilters();
       render(); // Llama a la función render existente
       
-      // Forzar actualización del dashboard si estamos en esa pestaña
-      const currentTab = document.querySelector('.tab.active');
-      if (currentTab && currentTab.dataset.tab === 'dashboard') {
-        setTimeout(() => renderKpis(), 100);
-        console.log('🎯 Dashboard actualizado forzadamente');
-      }
-      
       console.log('🔄 Vistas actualizadas automáticamente');
     } catch (error) {
       console.error('❌ Error actualizando vistas:', error);
-    }
-  }
-  
-  // ====== ZONA HORARIA CENTROAMÉRICA ======
-  function getNowCentralAmerica() {
-    // Crear fecha en zona horaria de Centroamérica (GMT-6)
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const centralAmericaTime = new Date(utc + (-6 * 3600000)); // GMT-6
-    return centralAmericaTime;
-  }
-  
-  function formatDateCentralAmerica(date = null) {
-    const fecha = date || getNowCentralAmerica();
-    return fecha.toLocaleString('es-CR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Costa_Rica'
-    });
-  }
-  
-  function formatDateTimeCA(dateString) {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString('es-CR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'America/Costa_Rica'
-      });
-    } catch (e) {
-      return dateString;
-    }
-  }
-  
-  function formatDateCA(dateString) {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('es-CR', {
-        timeZone: 'America/Costa_Rica'
-      });
-    } catch (e) {
-      return dateString;
-    }
-  }
-
-  // ====== BACKUP MANUAL DE BASE DE DATOS ======
-  async function ejecutarBackupManual() {
-    console.log('💾 === INICIANDO BACKUP MANUAL ADMIN ===');
-    
-    const btnBackup = byId('btnBackupManual');
-    const backupStatus = byId('backupStatus');
-    
-    try {
-      // Deshabilitar botón y mostrar progreso
-      btnBackup.disabled = true;
-      btnBackup.innerHTML = '⏳ Respaldando...';
-      backupStatus.innerHTML = '<span class="tag" style="background:#fff3cd;color:#856404">🔄 Ejecutando backup...</span>';
-      
-      console.log('📡 Enviando solicitud de backup...');
-      const response = await fetch(`${API}/admin/backup-manual`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const resultado = await response.json();
-      console.log('📥 Respuesta del backup:', resultado);
-      
-      if (resultado.success) {
-        // Backup exitoso
-        console.log(`✅ Backup completado: ${resultado.sistemas_exitosos}/${resultado.sistemas_totales} sistemas`);
-        
-        backupStatus.innerHTML = `
-          <span class="tag" style="background:#d4edda;color:#155724">✅ Backup exitoso</span>
-          <span class="tag" style="background:#e7f3ff;color:#0c5aa6">${resultado.sistemas_exitosos}/${resultado.sistemas_totales} sistemas</span>
-        `;
-        
-        // Mostrar detalles del backup
-        let detallesHtml = `
-          <div style="margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
-            <h5 style="margin: 0 0 8px 0; color: #155724;">📋 Detalles del Backup</h5>
-            <p style="margin: 0 0 8px 0;"><strong>Timestamp:</strong> ${resultado.timestamp}</p>
-            <div style="display: grid; gap: 8px;">
-        `;
-        
-        resultado.resultados.forEach(sistema => {
-          const iconoEstado = sistema.estado === 'exitoso' ? '✅' : 
-                            sistema.estado === 'no_disponible' ? '⚠️' : '❌';
-          detallesHtml += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px; background: white; border-radius: 4px;">
-              <span><strong>${sistema.sistema}:</strong></span>
-              <span>${iconoEstado} ${sistema.estado}</span>
-            </div>
-          `;
-        });
-        
-        detallesHtml += '</div></div>';
-        backupStatus.innerHTML += detallesHtml;
-        
-        // Actualizar último backup
-        const ultimoBackup = byId('ultimoBackup');
-        if (ultimoBackup) {
-          ultimoBackup.textContent = `Último backup: ${formatDateTimeCA(new Date().toISOString())}`;
-        }
-        
-        alert('✅ Backup completado exitosamente!\n\n' + 
-              `Sistemas exitosos: ${resultado.sistemas_exitosos}/${resultado.sistemas_totales}\n` +
-              'Los datos han sido respaldados en GitHub en la carpeta api_backups/');
-      } else {
-        // Backup falló
-        console.error('❌ Backup falló:', resultado.message);
-        backupStatus.innerHTML = '<span class="tag" style="background:#f8d7da;color:#721c24">❌ Error en backup</span>';
-        
-        alert('❌ Error en el backup:\n' + resultado.message + 
-              '\n\nRevise la consola para más detalles.');
-      }
-    } catch (error) {
-      console.error('💥 Error crítico en backup:', error);
-      backupStatus.innerHTML = '<span class="tag" style="background:#f8d7da;color:#721c24">💥 Error crítico</span>';
-      
-      alert('💥 Error crítico durante el backup:\n' + error.message +
-            '\n\nVerifique su conexión y los logs del servidor.');
-    } finally {
-      // Restaurar botón
-      btnBackup.disabled = false;
-      btnBackup.innerHTML = '💾 Respaldar Ahora';
-      
-      console.log('🏁 Proceso de backup finalizado');
-    }
-  }
-  
-  // Verificar estado del último backup al cargar
-  async function verificarUltimoBackup() {
-    try {
-      const ultimoBackup = byId('ultimoBackup');
-      const backupStatus = byId('backupStatus');
-      
-      if (!ultimoBackup || !backupStatus) return;
-      
-      console.log('🔍 Verificando estado de sistemas de backup...');
-      
-      const response = await fetch(`${API}/admin/backup-status`);
-      if (response.ok) {
-        const estado = await response.json();
-        
-        if (estado.success) {
-          const sistemasActivos = estado.sistemas_activos;
-          const sistemasTotal = estado.sistemas_totales;
-          
-          if (sistemasActivos > 0) {
-            backupStatus.innerHTML = `
-              <span class="tag" style="background:#d4edda;color:#155724">✅ ${sistemasActivos}/${sistemasTotal} sistemas listos</span>
-            `;
-            ultimoBackup.textContent = 'Sistema listo para backup';
-          } else {
-            backupStatus.innerHTML = `
-              <span class="tag" style="background:#f8d7da;color:#721c24">⚠️ Sin sistemas de backup</span>
-            `;
-            ultimoBackup.textContent = 'Configuración requerida';
-          }
-          
-          console.log(`🔍 Estado backup: ${sistemasActivos}/${sistemasTotal} sistemas disponibles`);
-        } else {
-          ultimoBackup.textContent = 'Error verificando estado';
-        }
-      } else {
-        ultimoBackup.textContent = 'Verificación no disponible';
-      }
-    } catch (error) {
-      console.warn('⚠️ No se pudo verificar el estado del backup:', error);
-      const ultimoBackup = byId('ultimoBackup');
-      if (ultimoBackup) {
-        ultimoBackup.textContent = 'Estado no disponible';
-      }
-    }
-  }
-
-  // ====== VERIFICAR ESTADO DE BACKUP ======
-  async function verificarEstadoBackup() {
-    console.log('🔍 Verificando estado del sistema de backup...');
-    
-    const ultimoBackup = byId('ultimoBackup');
-    const backupStatus = byId('backupStatus');
-    
-    if (!ultimoBackup || !backupStatus) return;
-    
-    try {
-      // Verificar último backup desde el endpoint de estado
-      const response = await fetch(`${API}/admin/backup-status`);
-      
-      if (response.ok) {
-        const estado = await response.json();
-        console.log('📊 Estado de backup:', estado);
-        
-        // El endpoint no devuelve ultimo_backup, usar timestamp actual como referencia
-        ultimoBackup.textContent = `Sistema verificado: ${formatDateTimeCA(estado.timestamp)}`;
-        
-        // Actualizar estado del sistema
-        if (estado.sistemas_activos > 0) {
-          backupStatus.innerHTML = `
-            <span class="tag" style="background:#d4edda;color:#155724">✅ ${estado.sistemas_activos}/${estado.sistemas_totales} sistemas listos</span>
-          `;
-        } else {
-          backupStatus.innerHTML = `
-            <span class="tag" style="background:#f8d7da;color:#721c24">❌ No hay sistemas de backup disponibles</span>
-          `;
-        }
-      } else {
-        ultimoBackup.textContent = 'Error verificando último backup';
-        backupStatus.innerHTML = `
-          <span class="tag" style="background:#f8d7da;color:#721c24">❌ Error de conexión</span>
-        `;
-      }
-    } catch (error) {
-      console.error('❌ Error verificando estado de backup:', error);
-      ultimoBackup.textContent = 'Error verificando último backup';
-      backupStatus.innerHTML = `
-        <span class="tag" style="background:#f8d7da;color:#721c24">❌ Sistema no disponible</span>
-      `;
-    }
-  }
-
-  // ====== EXPORTAR COMBUSTIBLE A EXCEL ======
-  function exportarCombustible() {
-    console.log('📊 Exportando datos de combustible a Excel...');
-    
-    if (!Combustible || Combustible.length === 0) {
-      alert('No hay datos de combustible para exportar');
-      return;
-    }
-    
-    try {
-      // Preparar datos para exportación
-      const datos = Combustible.map(registro => ({
-        'Fecha': registro.fecha,
-        'Placa': registro.placa,
-        'Litros': registro.litros,
-        'Precio/Litro': registro.precio_por_litro,
-        'Costo Total': registro.costo,
-        'Odómetro': registro.odometro_actual,
-        'Km/L': registro.km_por_litro || 'N/A',
-        'Proveedor': registro.proveedor || 'N/A'
-      }));
-      
-      // Crear contenido CSV
-      const headers = Object.keys(datos[0]);
-      const csvContent = [
-        headers.join(','),
-        ...datos.map(row => headers.map(header => `"${row[header]}"`).join(','))
-      ].join('\n');
-      
-      // Crear y descargar archivo
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      const fechaExport = getNowCentralAmerica().toISOString().split('T')[0];
-      link.setAttribute('download', `combustible_${fechaExport}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      console.log('✅ Exportación de combustible completada');
-    } catch (error) {
-      console.error('❌ Error exportando combustible:', error);
-      alert('Error al exportar datos: ' + error.message);
     }
   }
 
@@ -7723,8 +7378,8 @@
       .filter(b => !estadoFlt || b.estado === estadoFlt)
       .sort((a, b) => new Date(b.fecha_salida) - new Date(a.fecha_salida))
       .map(b => {
-        const fechaSalida = formatDateTimeCA(b.fecha_salida);
-        const fechaRetorno = b.fecha_retorno ? formatDateTimeCA(b.fecha_retorno) : '-';
+        const fechaSalida = new Date(b.fecha_salida).toLocaleString('es-CR');
+        const fechaRetorno = b.fecha_retorno ? new Date(b.fecha_retorno).toLocaleString('es-CR') : '-';
         const estadoBadge = b.estado === 'en_curso' ? 
           '<span class="pill warnP">🔄 En Curso</span>' : 
           '<span class="pill ok">✅ Completado</span>';
@@ -7776,7 +7431,7 @@
       `⚠️ ELIMINAR REGISTRO DE BITÁCORA\n\n` +
       `Vehículo: ${registro.placa}\n` +
       `Chofer: ${registro.chofer}\n` +
-      `Fecha: ${formatDateTimeCA(registro.fecha_salida)}\n` +
+      `Fecha: ${new Date(registro.fecha_salida).toLocaleString('es-CR')}\n` +
       `Estado: ${registro.estado}\n\n` +
       `¿Está seguro de eliminar este registro?\n` +
       `Esta acción NO se puede deshacer.`
@@ -7812,33 +7467,23 @@
   async function procesarBitacora(e) {
     e.preventDefault();
     
-    console.log('🔥 === PROCESANDO BITÁCORA ===');
-    console.log('🔥 Event type:', e.type);
-    console.log('🔥 Event target:', e.target);
-    console.log('🔥 Event timestamp:', new Date().toISOString());
+    console.log('=== PROCESANDO BITÁCORA ===');
+    console.log('Event:', e);
     
     const vehiculoId = byId('bVeh').value;
     const chofer = byId('bChofer').value.trim();
     
-    console.log('🔥 VehiculoId seleccionado:', vehiculoId);
-    console.log('🔥 Chofer ingresado:', chofer);
-    console.log('🔥 currentBitacoraId actual:', currentBitacoraId);
-    console.log('🔥 Estado del formulario:');
-    console.log('   - Campos de salida visibles:', !byId('salidaFields').classList.contains('hidden'));
-    console.log('   - Campos de retorno visibles:', !byId('retornoFields').classList.contains('hidden'));
-    console.log('   - Texto del botón:', byId('btnBitacora').innerHTML);
+    console.log('VehiculoId:', vehiculoId);
+    console.log('Chofer:', chofer);
+    console.log('currentBitacoraId:', currentBitacoraId);
     
-    // Validación básica
     if (!vehiculoId || !chofer) {
-      console.warn('❌ Validación fallida: vehículo o chofer faltante');
       alert('Debe seleccionar un vehículo e ingresar el nombre del chofer');
       return;
     }
     
     const vehiculo = Vehiculos.find(v => v.id == vehiculoId);
     if (!vehiculo) {
-      console.error('❌ Vehículo no encontrado en la lista de vehículos');
-      console.log('Vehículos disponibles:', Vehiculos.map(v => `ID: ${v.id}, Placa: ${v.placa}`));
       alert('Vehículo no encontrado');
       return;
     }
@@ -7846,32 +7491,18 @@
     // Verificar si es una salida o retorno
     const isRetorno = currentBitacoraId !== null;
     
-    console.log('🎯 DECISIÓN DE FLUJO:');
-    console.log('   - Es retorno?:', isRetorno);
-    console.log('   - Vehículo encontrado:', vehiculo.placa);
-    console.log('   - ID del vehículo:', vehiculo.id);
+    console.log('Es retorno?:', isRetorno);
+    console.log('Vehículo encontrado:', vehiculo);
     
     if (isRetorno) {
-      console.log('🔄 === EJECUTANDO FLUJO DE RETORNO ===');
-      console.log('🔄 Llamando a registrarRetorno()...');
-      try {
-        await registrarRetorno();
-        console.log('🔄 registrarRetorno() completado exitosamente');
-      } catch (error) {
-        console.error('💥 Error en registrarRetorno():', error);
-      }
+      console.log('Llamando a registrarRetorno()...');
+      await registrarRetorno();
     } else {
-      console.log('🚗 === EJECUTANDO FLUJO DE SALIDA ===');
-      console.log('🚗 Llamando a registrarSalida()...');
-      try {
-        await registrarSalida(vehiculo.placa, chofer);
-        console.log('🚗 registrarSalida() completado exitosamente');
-      } catch (error) {
-        console.error('💥 Error en registrarSalida():', error);
-      }
+      console.log('Llamando a registrarSalida()...');
+      await registrarSalida(vehiculo.placa, chofer);
     }
     
-    console.log('🏁 === PROCESAMIENTO DE BITÁCORA COMPLETADO ===');
+    console.log('=== PROCESAMIENTO COMPLETADO ===');
   }
   
   async function registrarSalida(placa, chofer) {
@@ -7915,18 +7546,11 @@
       console.log('Formulario en modo retorno:', !byId('retornoFields').classList.contains('hidden'));
       console.log('Botón actual:', byId('btnBitacora').innerHTML);
       
-      // CRÍTICO: Verificar si realmente estamos en modo retorno
-      if (currentBitacoraId === null) {
-        console.error('❌ PROBLEMA CRÍTICO: currentBitacoraId es null');
-        alert('❌ Error: No hay un registro de bitácora seleccionado para completar el retorno.\n\nPasos para solucionarlo:\n1. Seleccione un vehículo que tenga una salida pendiente\n2. Haga clic en "Sí" cuando se le pregunte si desea completar el retorno');
-        return;
-      }
-      
       // Debug adicional
       console.log('API URL:', API);
       console.log('Endpoint completo:', `${API}/bitacora/${currentBitacoraId}/retorno`);
       
-      // Verificar que los elementos del formulario existan
+      // Verificar que los elementos existan
       const kmInput = byId('bKmRetorno');
       const combustibleSelect = byId('bCombustibleRetorno');
       const estadoSelect = byId('bEstadoRetorno');
@@ -7940,7 +7564,6 @@
       });
       
       if (!kmInput || !combustibleSelect || !estadoSelect) {
-        console.error('❌ PROBLEMA CRÍTICO: Elementos del formulario de retorno no encontrados');
         alert('❌ Error: No se encontraron los campos del formulario de retorno');
         return;
       }
@@ -7950,31 +7573,20 @@
       const combustibleRetorno = combustibleSelect.value;
       const estadoRetorno = estadoSelect.value;
       
-      console.log('Valores del formulario de retorno:', {
+      console.log('Valores del formulario:', {
         kmRetorno,
         combustibleRetorno,
-        estadoRetorno,
-        observaciones: obsInput?.value
+        estadoRetorno
       });
       
       if (!kmRetorno || kmRetorno <= 0) {
-        console.warn('❌ Validación fallida: kilometraje de retorno inválido');
         alert('❌ Por favor ingrese un kilometraje válido para el retorno');
         kmInput.focus();
         return;
       }
       
-      if (!combustibleRetorno) {
-        console.warn('❌ Validación fallida: nivel de combustible no seleccionado');
-        alert('❌ Por favor seleccione el nivel de combustible de retorno');
-        combustibleSelect.focus();
-        return;
-      }
-      
-      if (!estadoRetorno) {
-        console.warn('❌ Validación fallida: estado del vehículo no seleccionado');
-        alert('❌ Por favor seleccione el estado del vehículo de retorno');
-        estadoSelect.focus();
+      if (!currentBitacoraId) {
+        alert('❌ Error: No hay un registro de bitácora seleccionado para completar');
         return;
       }
       
@@ -7985,133 +7597,54 @@
         observaciones: obsInput ? obsInput.value || '' : ''
       };
       
-      console.log('✅ Validación completa - Enviando retorno:', retorno, 'para bitácora ID:', currentBitacoraId);
+      console.log('Enviando retorno:', retorno, 'para bitácora ID:', currentBitacoraId);
       
-      // Llamada a la API con mejor manejo de errores
-      console.log('📡 Enviando petición HTTP...');
       const response = await fetch(`${API}/bitacora/${currentBitacoraId}/retorno`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(retorno)
       });
       
-      console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
-      
-      if (!response.ok) {
-        console.error('❌ HTTP Error:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('❌ Error body:', errorText);
-        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
-      }
-      
+      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('✅ Respuesta del servidor:', data);
+      console.log('Respuesta del servidor:', data);
       
       if (data.success) {
-        console.log('🎉 ¡Retorno registrado exitosamente!');
         alert('✅ Retorno registrado exitosamente');
         
         // Volver a modo salida
-        console.log('🔄 Cambiando a modo salida...');
         cambiarAModoSalida();
         currentBitacoraId = null;
         
         // Limpiar formulario
-        console.log('🧹 Limpiando formulario...');
         limpiarFormBitacora();
         
         // Actualizar datos
-        console.log('🔄 Actualizando datos de bitácora...');
         Bitacora = await apiGet('bitacora');
         renderBitacora();
         
-        console.log('=== ✅ RETORNO COMPLETADO EXITOSAMENTE ===');
+        console.log('=== RETORNO COMPLETADO EXITOSAMENTE ===');
       } else {
-        console.error('❌ Error en respuesta del servidor:', data);
         alert('❌ Error registrando retorno: ' + (data.message || data.detail || 'Error desconocido'));
       }
     } catch (e) {
-      console.error('💥 ERROR CRÍTICO en registrarRetorno:', e);
-      console.error('💥 Stack trace:', e.stack);
-      alert('❌ Error crítico registrando retorno: ' + e.message + '\n\nRevise la consola del navegador para más detalles.');
+      console.error('Error en registrarRetorno:', e);
+      alert('❌ Error registrando retorno: ' + e.message);
     }
   }
   
   function cambiarAModoRetorno() {
-    console.log('🔄 === CAMBIANDO A MODO RETORNO ===');
-    
-    // Ocultar campos de salida y deshabilitar validación
     byId('salidaFields').classList.add('hidden');
-    const salidaInputs = ['bKmSalida', 'bCombustibleSalida', 'bEstadoSalida', 'bObsSalida'];
-    salidaInputs.forEach(id => {
-      const element = byId(id);
-      if (element) {
-        element.disabled = true;
-        element.removeAttribute('required');
-        console.log(`   - Deshabilitado campo salida: ${id}`);
-      }
-    });
-    
-    // Mostrar campos de retorno y habilitar validación
     byId('retornoFields').classList.remove('hidden');
-    const retornoInputs = ['bKmRetorno', 'bCombustibleRetorno', 'bEstadoRetorno'];
-    retornoInputs.forEach(id => {
-      const element = byId(id);
-      if (element) {
-        element.disabled = false;
-        element.setAttribute('required', 'required');
-        console.log(`   - Habilitado campo retorno: ${id}`);
-      }
-    });
-    
     byId('btnBitacora').innerHTML = '🔄 Registrar Retorno';
     byId('btnBitacora').className = 'success';
-    
-    console.log('✅ Modo retorno activado correctamente');
   }
   
   function cambiarAModoSalida() {
-    console.log('🚗 === CAMBIANDO A MODO SALIDA ===');
-    
-    // Mostrar campos de salida y habilitar validación
     byId('salidaFields').classList.remove('hidden');
-    const salidaInputs = ['bKmSalida', 'bCombustibleSalida', 'bEstadoSalida'];
-    salidaInputs.forEach(id => {
-      const element = byId(id);
-      if (element) {
-        element.disabled = false;
-        element.setAttribute('required', 'required');
-        console.log(`   - Habilitado campo salida: ${id}`);
-      }
-    });
-    
-    // Ocultar campos de retorno y deshabilitar validación
     byId('retornoFields').classList.add('hidden');
-    const retornoInputs = ['bKmRetorno', 'bCombustibleRetorno', 'bEstadoRetorno'];
-    retornoInputs.forEach(id => {
-      const element = byId(id);
-      if (element) {
-        element.disabled = true;
-        element.removeAttribute('required');
-        console.log(`   - Deshabilitado campo retorno: ${id}`);
-      }
-    });
-    
     byId('btnBitacora').innerHTML = '📝 Registrar Salida';
     byId('btnBitacora').className = 'success';
-    
-    console.log('✅ Modo salida activado correctamente');
-  }
-  
-  function initBitacoraForm() {
-    console.log('🚀 === INICIALIZANDO FORMULARIO DE BITÁCORA ===');
-    
-    // Asegurar que el formulario inicie en modo salida
-    currentBitacoraId = null;
-    cambiarAModoSalida();
-    
-    console.log('✅ Formulario de bitácora inicializado correctamente');
   }
   
   function limpiarFormBitacora() {
@@ -8131,50 +7664,27 @@
   }
   
   function completarRetorno(bitacoraId) {
-    console.log('🔄 === CONFIGURANDO RETORNO ===');
-    console.log('🔄 ID de bitácora:', bitacoraId);
-    
     const registro = Bitacora.find(b => b.id === bitacoraId);
     if (!registro) {
-      console.error('❌ Registro de bitácora no encontrado:', bitacoraId);
-      console.log('Registros disponibles:', Bitacora.map(b => `ID: ${b.id}, Placa: ${b.placa}, Estado: ${b.estado}`));
       alert('Registro de bitácora no encontrado');
       return;
     }
     
-    console.log('🔄 Registro encontrado:', registro);
-    
     // Cargar datos en el formulario
     const vehiculo = Vehiculos.find(v => v.placa === registro.placa);
     if (vehiculo) {
-      console.log('🔄 Configurando vehículo:', vehiculo);
       byId('bVeh').value = vehiculo.id;
-    } else {
-      console.warn('⚠️ Vehículo no encontrado para placa:', registro.placa);
     }
-    
-    console.log('🔄 Configurando chofer:', registro.chofer);
     byId('bChofer').value = registro.chofer;
     
     // Prellenar algunos campos del retorno con valores por defecto
-    console.log('🔄 Configurando campos de retorno...');
     byId('bKmRetorno').value = '';
     byId('bCombustibleRetorno').value = '3/4';
     byId('bEstadoRetorno').value = 'bueno';
     byId('bObsRetorno').value = '';
     
-    // CRÍTICO: Establecer el ID de la bitácora actual
-    console.log('🔄 Estableciendo currentBitacoraId:', bitacoraId);
     currentBitacoraId = bitacoraId;
-    
-    console.log('🔄 Cambiando a modo retorno...');
     cambiarAModoRetorno();
-    
-    console.log('🔄 Estado después de cambio:');
-    console.log('   - currentBitacoraId:', currentBitacoraId);
-    console.log('   - Campos de salida ocultos:', byId('salidaFields').classList.contains('hidden'));
-    console.log('   - Campos de retorno visibles:', !byId('retornoFields').classList.contains('hidden'));
-    console.log('   - Texto del botón:', byId('btnBitacora').innerHTML);
     
     // Scroll al formulario
     document.querySelector('#tab-bitacora .card').scrollIntoView({ behavior: 'smooth' });
@@ -8182,10 +7692,7 @@
     // Enfocar el campo de kilometraje
     setTimeout(() => {
       byId('bKmRetorno').focus();
-      console.log('🔄 Foco en campo de kilometraje establecido');
     }, 100);
-    
-    console.log('🔄 === CONFIGURACIÓN DE RETORNO COMPLETADA ===');
   }
   
   async function enviarAlertaRetornoPendiente() {
@@ -8209,7 +7716,7 @@
         return;
       }
       
-      const fechaSalida = formatDateCA(registroSeleccionado.fecha_salida);
+      const fechaSalida = new Date(registroSeleccionado.fecha_salida).toLocaleDateString();
       const horasSalida = Math.floor((new Date() - new Date(registroSeleccionado.fecha_salida)) / (1000 * 60 * 60));
       
       const confirmar = confirm(
@@ -8305,8 +7812,8 @@
     const registro = Bitacora.find(b => b.id === id);
     if (!registro) return;
     
-    const fechaSalida = formatDateTimeCA(registro.fecha_salida);
-    const fechaRetorno = registro.fecha_retorno ? formatDateTimeCA(registro.fecha_retorno) : 'N/A';
+    const fechaSalida = new Date(registro.fecha_salida).toLocaleString('es-CR');
+    const fechaRetorno = registro.fecha_retorno ? new Date(registro.fecha_retorno).toLocaleString('es-CR') : 'N/A';
     
     const contenido = `
       <h3>📝 Detalle de Bitácora - ${registro.placa}</h3>
@@ -8356,11 +7863,11 @@
       const ws = XLSX.utils.json_to_sheet(Bitacora.map(b => ({
         'Placa': b.placa,
         'Chofer': b.chofer,
-        'Fecha Salida': formatDateTimeCA(b.fecha_salida),
+        'Fecha Salida': new Date(b.fecha_salida).toLocaleString('es-CR'),
         'Km Salida': b.km_salida,
         'Combustible Salida': b.nivel_combustible_salida,
         'Estado Salida': b.estado_vehiculo_salida,
-        'Fecha Retorno': b.fecha_retorno ? formatDateTimeCA(b.fecha_retorno) : '',
+        'Fecha Retorno': b.fecha_retorno ? new Date(b.fecha_retorno).toLocaleString('es-CR') : '',
         'Km Retorno': b.km_retorno || '',
         'Combustible Retorno': b.nivel_combustible_retorno || '',
         'Estado Retorno': b.estado_vehiculo_retorno || '',
@@ -8930,9 +8437,6 @@
       
       // Cargar datos
       loadAll();
-      
-      // Inicializar formulario de bitácora en modo salida
-      initBitacoraForm();
       
       console.log('✅ Sesión restaurada automáticamente');
     } else {

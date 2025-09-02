@@ -12,10 +12,21 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import sqlite3
 import json
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import os
 import logging
 import asyncio
+
+# Configurar zona horaria de Centroamérica (GMT-6)
+CENTRAL_AMERICA_TZ = timezone(timedelta(hours=-6))
+
+def now_ca():
+    """Obtener la fecha/hora actual en zona horaria de Centroamérica (GMT-6)"""
+    return datetime.now(CENTRAL_AMERICA_TZ)
+
+def date_ca():
+    """Obtener la fecha actual en zona horaria de Centroamérica"""
+    return now_ca().date()
 
 # Configurar logging PRIMERO
 logging.basicConfig(level=logging.INFO)
@@ -517,7 +528,7 @@ def check_maintenance_alerts():
         cursor = conn.cursor()
         
         # Obtener mantenimientos con alertas próximas
-        hoy = datetime.now().date()
+        hoy = date_ca()
         en_7_dias = hoy + timedelta(days=7)
         
         # Alertas por fecha
@@ -592,7 +603,7 @@ def generate_alert_email_body(alertas_fecha, alertas_km):
         html += "<h3>\ud83d\udcc5 Alertas por Fecha Próxima</h3>"
         html += "<table><tr><th>Placa</th><th>Tipo</th><th>Fecha Programada</th><th>Días Restantes</th></tr>"
         for alerta in alertas_fecha:
-            dias_restantes = (datetime.strptime(alerta['proxima_fecha'], '%Y-%m-%d').date() - datetime.now().date()).days
+            dias_restantes = (datetime.strptime(alerta['proxima_fecha'], '%Y-%m-%d').date() - date_ca()).days
             urgente = "urgent" if dias_restantes <= 3 else ""
             html += f"<tr class='{urgente}'><td>{alerta['placa']}</td><td>{alerta['tipo']}</td><td>{alerta['proxima_fecha']}</td><td>{dias_restantes} días</td></tr>"
         html += "</table>"
@@ -623,7 +634,7 @@ def check_all_alerts():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        hoy = datetime.now().date()
+        hoy = date_ca()
         en_30_dias = hoy + timedelta(days=30)
         en_7_dias = hoy + timedelta(days=7)
         
@@ -1791,7 +1802,7 @@ async def registrar_salida(salida: BitacoraSalida):
             INSERT INTO bitacora (placa, chofer, fecha_salida, km_salida, 
                                 nivel_combustible_salida, estado_vehiculo_salida, observaciones)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (salida.placa, salida.chofer, datetime.now().isoformat(), 
+        ''', (salida.placa, salida.chofer, now_ca().isoformat(), 
               salida.km_salida, salida.nivel_combustible_salida, 
               salida.estado_vehiculo_salida, salida.observaciones))
         
@@ -1824,7 +1835,7 @@ async def registrar_retorno(bitacora_id: int, retorno: BitacoraRetorno):
             SET fecha_retorno = ?, km_retorno = ?, nivel_combustible_retorno = ?,
                 estado_vehiculo_retorno = ?, observaciones = ?, estado = 'completado'
             WHERE id = ?
-        ''', (datetime.now().isoformat(), retorno.km_retorno, 
+        ''', (now_ca().isoformat(), retorno.km_retorno, 
               retorno.nivel_combustible_retorno, retorno.estado_vehiculo_retorno,
               retorno.observaciones, bitacora_id))
         
@@ -1857,7 +1868,7 @@ async def enviar_alerta_kilometraje(placa, chofer_actual, km_actual, km_anterior
         <p><strong>Diferencia detectada:</strong> {diferencia} km</p>
         <p><strong>Kilometraje anterior:</strong> {km_anterior} km (por {chofer_anterior})</p>
         <p><strong>Kilometraje actual:</strong> {km_actual} km (por {chofer_actual})</p>
-        <p><strong>Fecha:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+        <p><strong>Fecha:</strong> {now_ca().strftime('%d/%m/%Y %H:%M')}</p>
         
         <p style="color: red;"><strong>ACCIÓN REQUERIDA:</strong> Verificar la inconsistencia en el kilometraje del vehículo.</p>
         """
@@ -2240,7 +2251,7 @@ async def get_alertas_detalle():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        hoy = datetime.now().date()
+        hoy = date_ca()
         en_30_dias = hoy + timedelta(days=30)
         
         alertas = {
@@ -2599,6 +2610,139 @@ async def data_preservation_status():
             "preservation_enabled": False,
             "system_status": "⚠️ ERROR - Revisar logs del sistema"
         }
+
+@app.post("/admin/backup-manual")
+async def crear_backup_manual_admin():
+    """Crear backup manual completo para administradores - incluye todos los sistemas disponibles"""
+    try:
+        backup_results = []
+        timestamp = now_ca().strftime("%Y%m%d_%H%M%S")
+        
+        # 1. Backup usando sistema de preservación local
+        try:
+            if DATA_PRESERVATION_ENABLED and preservation_system:
+                backup_path, metadata = preservation_system.create_pre_change_backup(f"Backup manual admin {timestamp}")
+                
+                if backup_path:
+                    backup_results.append({
+                        "sistema": "DataPreservationSystem",
+                        "estado": "exitoso",
+                        "archivo": backup_path,
+                        "metadata": metadata
+                    })
+                else:
+                    backup_results.append({
+                        "sistema": "DataPreservationSystem", 
+                        "estado": "fallo",
+                        "error": "No se pudo crear backup local"
+                    })
+            else:
+                backup_results.append({
+                    "sistema": "DataPreservationSystem",
+                    "estado": "no_disponible",
+                    "razon": "Sistema no habilitado"
+                })
+        except Exception as e:
+            backup_results.append({
+                "sistema": "DataPreservationSystem",
+                "estado": "error", 
+                "error": str(e)
+            })
+        
+        # 2. Backup directo a GitHub API (para Railway)
+        if GITHUB_API_BACKUP_ENABLED and github_api_backup:
+            try:
+                success, filename = await github_api_backup.backup_railway_database(f"manual_admin_{timestamp}")
+                backup_results.append({
+                    "sistema": "GitHub API",
+                    "estado": "exitoso" if success else "fallo",
+                    "archivo": filename if success else "Error en GitHub API",
+                    "descripcion": "Backup completo subido a api_backups/ en GitHub"
+                })
+            except Exception as e:
+                backup_results.append({
+                    "sistema": "GitHub API",
+                    "estado": "error",
+                    "error": str(e)
+                })
+        else:
+            backup_results.append({
+                "sistema": "GitHub API",
+                "estado": "no_disponible",
+                "razon": "Sistema no habilitado o no configurado"
+            })
+        
+        # 3. Backup usando sistema tradicional
+        if AUTO_BACKUP_ENABLED and backup_system:
+            try:
+                success, filename = await backup_system.create_and_upload_backup(f"manual_admin_{timestamp}")
+                backup_results.append({
+                    "sistema": "GitHub Backup System", 
+                    "estado": "exitoso" if success else "fallo",
+                    "archivo": filename if success else "Error en backup tradicional"
+                })
+            except Exception as e:
+                backup_results.append({
+                    "sistema": "GitHub Backup System",
+                    "estado": "error",
+                    "error": str(e)
+                })
+        else:
+            backup_results.append({
+                "sistema": "GitHub Backup System",
+                "estado": "no_disponible", 
+                "razon": "Sistema no habilitado"
+            })
+        
+        # Determinar si al menos uno fue exitoso
+        exitosos = len([r for r in backup_results if r["estado"] == "exitoso"])
+        
+        logger.info(f"🔐 Backup manual admin completado: {exitosos}/{len(backup_results)} sistemas exitosos")
+        
+        return JSONResponse({
+            "success": exitosos > 0,
+            "message": f"Backup completado: {exitosos} de {len(backup_results)} sistemas exitosos",
+            "timestamp": timestamp,
+            "resultados": backup_results,
+            "sistemas_exitosos": exitosos,
+            "sistemas_totales": len(backup_results)
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error en backup manual admin: {e}")
+        return JSONResponse({
+            "success": False,
+            "message": f"Error crítico en backup: {str(e)}",
+            "error": str(e)
+        }, status_code=500)
+
+@app.get("/admin/backup-status")
+async def obtener_estado_backup():
+    """Obtener información del estado de los sistemas de backup"""
+    try:
+        sistemas_disponibles = {
+            "DataPreservationSystem": DATA_PRESERVATION_ENABLED and preservation_system is not None,
+            "GitHub API Backup": GITHUB_API_BACKUP_ENABLED and github_api_backup is not None,
+            "GitHub Backup System": AUTO_BACKUP_ENABLED and backup_system is not None
+        }
+        
+        sistemas_activos = len([k for k, v in sistemas_disponibles.items() if v])
+        
+        return JSONResponse({
+            "success": True,
+            "sistemas_disponibles": sistemas_disponibles,
+            "sistemas_activos": sistemas_activos,
+            "sistemas_totales": len(sistemas_disponibles),
+            "timestamp": now_ca().isoformat(),
+            "ready": sistemas_activos > 0
+        })
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado de backup: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
 
 @app.post("/data-preservation/manual-backup")
 async def create_manual_preservation_backup():
