@@ -2594,6 +2594,9 @@
                     <span id="ultimoBackup">Verificando último backup...</span>
                   </small>
                 </div>
+                <div id="backupStatus" style="margin-top:8px">
+                  <!-- Estado del backup aparecerá aquí -->
+                </div>
               </div>
             </div>
           </div>
@@ -3142,6 +3145,7 @@
   let currentUser = null;
   let currentBitacoraId = null; // Para manejar retorno de vehículos
   let kpiMonitorInterval = null; // Para monitoreo de KPIs
+  let systemInitialized = false; // Flag para verificar que el sistema esté completamente cargado
   let sessionTimeout = null; // Timer para timeout de sesión
   let lastActivity = Date.now(); // Última actividad del usuario
   
@@ -3395,7 +3399,14 @@
   }
 
   // ====== HELPERS ======
-  const byId = id=> document.getElementById(id);
+  const byId = id=> {
+    try {
+      return document.getElementById(id);
+    } catch (e) {
+      console.error(`Error obteniendo elemento ${id}:`, e);
+      return null;
+    }
+  };
   const fmt = n=> new Intl.NumberFormat('es-CR',{style:'currency',currency:'CRC',maximumFractionDigits:0}).format(Number(n)||0);
   const vehById = id=> Vehiculos.find(v=> Number(v.id)===Number(id));
   const today = ()=> new Date().toISOString().slice(0,10);
@@ -3726,6 +3737,9 @@
       }
       
       console.log('✅ Datos cargados exitosamente');
+      
+      // Marcar sistema como completamente inicializado
+      systemInitialized = true;
     }catch(e){
       console.error('❌ Error cargando datos:', e);
       alert('⚠️ Error cargando datos: ' + e.message + '\n\n🔄 Reintentando en unos segundos...');
@@ -4037,12 +4051,45 @@
     }
   }
 
+  // ====== FUNCIÓN DE PROTECCIÓN PARA BACKUP ======
+  function executeBackupSafely(backupFunction) {
+    try {
+      if (typeof backupFunction !== 'function') {
+        throw new Error('No es una función válida');
+      }
+      
+      // Verificar que el DOM esté listo
+      if (document.readyState !== 'complete') {
+        console.warn('⚠️ DOM no completamente cargado, reintentando...');
+        setTimeout(() => executeBackupSafely(backupFunction), 100);
+        return;
+      }
+      
+      // Ejecutar función
+      backupFunction();
+      
+    } catch (error) {
+      console.error('❌ Error ejecutando función de backup:', error);
+      alert('❌ Error ejecutando backup. Verifique la consola y recargue la página si es necesario.');
+    }
+  }
+
   // ====== BACKUP MANUAL DE BASE DE DATOS ======
   async function ejecutarBackupManual() {
     console.log('💾 === INICIANDO BACKUP MANUAL ADMIN ===');
     
     const btnBackup = byId('btnBackupManual');
     const backupStatus = byId('backupStatus');
+    
+    // Validar que los elementos existen
+    if (!btnBackup) {
+      console.error('❌ No se encontró el botón btnBackupManual');
+      return;
+    }
+    if (!backupStatus) {
+      console.error('❌ No se encontró el elemento backupStatus');
+      return;
+    }
     
     try {
       // Deshabilitar botón y mostrar progreso
@@ -4222,6 +4269,13 @@
     console.log('💾 === DESCARGANDO BACKUP COMPLETO DE BASE DE DATOS ===');
     
     const btnBackupDatabase = byId('btnBackupDatabase');
+    
+    // Validar que el elemento existe
+    if (!btnBackupDatabase) {
+      console.error('❌ No se encontró el botón btnBackupDatabase');
+      alert('❌ Error: No se pudo encontrar el botón de backup. Recargue la página.');
+      return;
+    }
     
     try {
       // Deshabilitar botón y mostrar progreso
@@ -9663,6 +9717,21 @@
     lastScrollY = currentScrollY;
   });
   
+  // Manejar errores globales de JavaScript para mejor UX
+  window.addEventListener('error', function(event) {
+    console.error('❌ Error JavaScript global:', {
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      error: event.error
+    });
+    
+    // Solo mostrar alerta si es un error crítico relacionado con funciones de usuario
+    if (event.message && event.message.includes('onclick')) {
+      console.warn('⚠️ Error en evento onclick detectado, pero manejado silenciosamente');
+    }
+  });
+
   // Cargar preferencia de modo compacto al iniciar
   document.addEventListener('DOMContentLoaded', function() {
     // Intentar restaurar sesión
