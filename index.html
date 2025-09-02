@@ -3605,6 +3605,10 @@
       // Actualizar todas las vistas
       refreshAllViews();
       
+      // EJECUTAR renderKpis() directamente después de cargar datos
+      console.log('🎯 Ejecutando renderKpis() después de cargar todos los datos...');
+      renderKpis();
+      
       // Cargar configuración de alertas si es administrador
       if (currentUser && currentUser.role === 'admin') {
         setTimeout(() => {
@@ -3636,7 +3640,10 @@
       // Forzar actualización del dashboard si estamos en esa pestaña
       const currentTab = document.querySelector('.tab.active');
       if (currentTab && currentTab.dataset.tab === 'dashboard') {
-        setTimeout(() => renderKpis(), 100);
+        setTimeout(() => {
+          console.log('🎯 Ejecutando renderKpis() después de cargar datos...');
+          renderKpis();
+        }, 500); // Aumentamos el delay para asegurar que los datos estén listos
         console.log('🎯 Dashboard actualizado forzadamente');
       }
       
@@ -3938,6 +3945,8 @@
   }
 
   function renderKpis(){
+    console.log('📊 Renderizando KPIs del dashboard...');
+    
     // === 1. CANTIDAD DE VEHÍCULOS ACTIVOS ===
     if(byId('kpiVeh')) byId('kpiVeh').textContent = Vehiculos.length;
     
@@ -4002,6 +4011,8 @@
     if(byId('kpiCombustibleMes')) byId('kpiCombustibleMes').textContent = fmt(gastosCombustibleMes);
     if(byId('kpiMantenimientoMes')) byId('kpiMantenimientoMes').textContent = fmt(gastosMantenimientoMes);
     if(byId('kpiCostoTotalMes')) byId('kpiCostoTotalMes').textContent = fmt(costoTotalMes);
+    
+    console.log(`💰 KPIs calculados - Combustible: ${fmt(gastosCombustibleMes)}, Total: ${fmt(costoTotalMes)}`);
     
     // Duplicar valores para el resumen del mes
     if(byId('kpiCombustibleMes2')) byId('kpiCombustibleMes2').textContent = fmt(gastosCombustibleMes);
