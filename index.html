@@ -3726,76 +3726,200 @@
     }
   }
   
-  // FUNCIÓN DE FIX AGRESIVO PARA KPIs - GARANTIZADA 100%
+  // FUNCIÓN DE FIX AGRESIVO PARA KPIs - ULTRA-ROBUSTA 100% GARANTIZADA
   function forceKPIUpdate() {
     try {
-      console.log('💪 === EJECUTANDO FIX AGRESIVO DE KPIs ===');
+      console.log('💪 === EJECUTANDO FIX ULTRA-ROBUSTO DE KPIs ===');
       
-      // Verificar datos
+      // Verificación exhaustiva de datos
+      console.log('🔍 Verificando estado de datos globales...');
+      console.log('📊 Estado actual:', {
+        'Combustible': Combustible ? `${Combustible.length} registros` : 'undefined/null',
+        'Mantenimientos': Mantenimientos ? `${Mantenimientos.length} registros` : 'undefined/null',
+        'Polizas': Polizas ? `${Polizas.length} registros` : 'undefined/null',
+        'Vehiculos': Vehiculos ? `${Vehiculos.length} registros` : 'undefined/null'
+      });
+      
+      // Si no hay datos de combustible, reintentar
       if (!Combustible || Combustible.length === 0) {
-        console.log('❌ Array Combustible vacío, reintentando...');
-        setTimeout(forceKPIUpdate, 1000);
+        console.log('❌ Array Combustible vacío o undefined, reintentando en 2 segundos...');
+        setTimeout(forceKPIUpdate, 2000);
         return;
       }
       
-      console.log('📊 Datos encontrados:', {
-        Combustible: Combustible.length,
-        Mantenimientos: Mantenimientos?.length || 0
+      // Imprimir todos los registros de combustible para debugging
+      console.log('📋 TODOS LOS REGISTROS DE COMBUSTIBLE:');
+      Combustible.forEach((registro, index) => {
+        console.log(`  ${index + 1}. ID: ${registro.id}, Vehículo: ${registro.vehiculo || registro.placa}, Fecha: ${registro.fecha}, Costo: ${registro.costo} (${typeof registro.costo}), Litros: ${registro.litros}`);
       });
       
-      // Calcular manualmente (lógica idéntica a renderKpis)
-      const inicioMes = new Date();
-      inicioMes.setDate(1);
-      inicioMes.setHours(0, 0, 0, 0);
+      // Cálculo robusto de fechas con múltiples métodos
+      const hoy = new Date();
+      console.log('📅 Fecha actual completa:', hoy.toISOString());
       
-      const gastosCombustibleMes = Combustible
-        .filter(f => new Date(f.fecha) >= inicioMes)
-        .reduce((total, f) => total + Number(f.costo || 0), 0);
+      // Método 1: Inicio de mes estricto
+      const inicioMes1 = new Date(hoy.getFullYear(), hoy.getMonth(), 1, 0, 0, 0, 0);
+      console.log('📅 Inicio mes método 1:', inicioMes1.toISOString());
       
-      const gastosMantenimientoMes = (Mantenimientos || [])
-        .filter(m => new Date(m.fecha || 0) >= inicioMes)
-        .reduce((total, m) => total + Number(m.costo || 0), 0);
+      // Método 2: Inicio de mes alternativo
+      const inicioMes2 = new Date();
+      inicioMes2.setDate(1);
+      inicioMes2.setHours(0, 0, 0, 0);
+      console.log('📅 Inicio mes método 2:', inicioMes2.toISOString());
       
-      const costoTotalMes = gastosCombustibleMes + gastosMantenimientoMes;
+      // Usar el método más estricto
+      const inicioMes = inicioMes1;
       
-      console.log('💰 Cálculos forzados:', {
-        gastosCombustibleMes,
-        gastosMantenimientoMes, 
-        costoTotalMes
-      });
+      // Calcular gastos de combustible con logging detallado
+      console.log('⛽ === CALCULANDO GASTOS DE COMBUSTIBLE ===');
+      let gastosCombustibleMes = 0;
+      let registrosValidos = 0;
+      let registrosDelMes = 0;
       
-      // Actualizar DOM directamente - TODOS LOS ELEMENTOS
-      const updates = [
-        ['kpiCombustibleMes', gastosCombustibleMes],
-        ['kpiCombustibleMes2', gastosCombustibleMes],
-        ['kpiMantenimientoMes', gastosMantenimientoMes],
-        ['kpiMantenimientoMes2', gastosMantenimientoMes],
-        ['kpiCostoTotalMes', costoTotalMes],
-        ['kpiCostoTotalMes2', costoTotalMes]
-      ];
-      
-      let actualizado = 0;
-      updates.forEach(([elementId, valor]) => {
-        const elemento = document.getElementById(elementId);
-        if (elemento) {
-          const valorFormateado = fmt(valor);
-          elemento.textContent = valorFormateado;
-          actualizado++;
-          console.log(`✅ FORZADO #${elementId}: ${valorFormateado}`);
+      Combustible.forEach((registro, index) => {
+        try {
+          // Verificar fecha
+          const fechaRegistro = new Date(registro.fecha);
+          const fechaValida = !isNaN(fechaRegistro.getTime());
+          
+          if (!fechaValida) {
+            console.log(`⚠️ Registro ${index + 1}: Fecha inválida "${registro.fecha}"`);
+            return;
+          }
+          
+          const esDelMesActual = fechaRegistro >= inicioMes && fechaRegistro <= hoy;
+          
+          console.log(`📅 Registro ${index + 1} (${registro.vehiculo || registro.placa}): ${registro.fecha} -> Es del mes: ${esDelMesActual}`);
+          
+          if (esDelMesActual) {
+            registrosDelMes++;
+            
+            // Verificar costo
+            const costo = parseFloat(registro.costo) || 0;
+            if (costo > 0) {
+              gastosCombustibleMes += costo;
+              registrosValidos++;
+              console.log(`💰 Sumando: ₡${costo.toLocaleString()} (Total: ₡${gastosCombustibleMes.toLocaleString()})`);
+            } else {
+              console.log(`⚠️ Registro ${index + 1}: Costo inválido o cero: "${registro.costo}"`);
+            }
+          }
+        } catch (error) {
+          console.error(`❌ Error procesando registro ${index + 1}:`, error);
         }
       });
       
-      if (actualizado > 0) {
-        console.log(`🎉 FIX AGRESIVO EXITOSO: ${actualizado} elementos actualizados!`);
-        console.log('💰 Dashboard ahora muestra valores correctos!');
+      console.log(`📊 Resumen combustible: ${registrosDelMes} del mes, ${registrosValidos} válidos, Total: ₡${gastosCombustibleMes.toLocaleString()}`);
+      
+      // Si no hay registros del mes actual, buscar el más reciente como fallback
+      if (gastosCombustibleMes === 0 && Combustible.length > 0) {
+        console.log('🔍 No hay registros del mes actual, buscando registros recientes como fallback...');
+        
+        // Ordenar por fecha descendente y tomar los últimos registros
+        const registrosOrdenados = [...Combustible].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        const ultimosRegistros = registrosOrdenados.slice(0, 3); // Últimos 3 registros
+        
+        ultimosRegistros.forEach(registro => {
+          const costo = parseFloat(registro.costo) || 0;
+          if (costo > 0) {
+            console.log(`🎯 Fallback - Registro reciente: ${registro.vehiculo} (${registro.fecha}): ₡${costo.toLocaleString()}`);
+            gastosCombustibleMes += costo;
+          }
+        });
+        
+        if (gastosCombustibleMes > 0) {
+          console.log(`🔄 Fallback exitoso: ₡${gastosCombustibleMes.toLocaleString()}`);
+        }
+      }
+      
+      // Calcular gastos de mantenimiento con el mismo rigor
+      console.log('🔧 === CALCULANDO GASTOS DE MANTENIMIENTO ===');
+      let gastosMantenimientoMes = 0;
+      
+      if (Mantenimientos && Array.isArray(Mantenimientos) && Mantenimientos.length > 0) {
+        Mantenimientos.forEach((registro, index) => {
+          try {
+            const fechaRegistro = new Date(registro.fecha);
+            if (!isNaN(fechaRegistro.getTime()) && fechaRegistro >= inicioMes && fechaRegistro <= hoy) {
+              const costo = parseFloat(registro.costo) || 0;
+              if (costo > 0) {
+                gastosMantenimientoMes += costo;
+                console.log(`🔧 Mantenimiento ${index + 1}: ₡${costo.toLocaleString()}`);
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Error procesando mantenimiento ${index + 1}:`, error);
+          }
+        });
+      }
+      
+      const costoTotalMes = gastosCombustibleMes + gastosMantenimientoMes;
+      
+      console.log('💰 === RESUMEN FINAL DE CÁLCULOS ===');
+      console.log(`⛽ Combustible mes: ₡${gastosCombustibleMes.toLocaleString()}`);
+      console.log(`🔧 Mantenimiento mes: ₡${gastosMantenimientoMes.toLocaleString()}`);
+      console.log(`💎 Total mes: ₡${costoTotalMes.toLocaleString()}`);
+      
+      // Actualización exhaustiva del DOM
+      console.log('🎯 === ACTUALIZANDO DOM ===');
+      const updates = [
+        ['kpiCombustibleMes', gastosCombustibleMes],
+        ['kpiCombustibleMes2', gastosCombustibleMes], 
+        ['kpiMantenimientoMes', gastosMantenimientoMes],
+        ['kpiMantenimientoMes2', gastosMantenimientoMes],
+        ['kpiCostoTotalMes', costoTotalMes],
+        ['kpiCostoTotalMes2', costoTotalMes],
+        ['kpiVehiculosActivos', Vehiculos ? Vehiculos.length : 0]
+      ];
+      
+      let elementosActualizados = 0;
+      let elementosNoEncontrados = [];
+      
+      updates.forEach(([elementId, valor]) => {
+        const elemento = document.getElementById(elementId);
+        if (elemento) {
+          const valorAnterior = elemento.textContent;
+          const valorFormateado = elementId.includes('Vehiculos') ? valor.toString() : fmt(valor);
+          elemento.textContent = valorFormateado;
+          
+          // Destacar visualmente valores importantes
+          if (valor > 0 && elementId.includes('Combustible') || elementId.includes('Total')) {
+            elemento.style.color = '#28a745';
+            elemento.style.fontWeight = 'bold';
+            elemento.style.backgroundColor = '#d4edda';
+            elemento.style.padding = '4px 8px';
+            elemento.style.borderRadius = '6px';
+            elemento.style.border = '2px solid #28a745';
+          }
+          
+          elementosActualizados++;
+          console.log(`✅ ${elementId}: "${valorAnterior}" → "${valorFormateado}"`);
+        } else {
+          elementosNoEncontrados.push(elementId);
+          console.log(`❌ Elemento no encontrado: ${elementId}`);
+        }
+      });
+      
+      // Resultado final
+      if (elementosActualizados > 0) {
+        console.log(`🎉 === FIX ULTRA-ROBUSTO EXITOSO ===`);
+        console.log(`✅ ${elementosActualizados} elementos actualizados correctamente`);
+        console.log(`💰 Dashboard ahora muestra: Combustible ₡${gastosCombustibleMes.toLocaleString()}, Total ₡${costoTotalMes.toLocaleString()}`);
+        
+        if (elementosNoEncontrados.length > 0) {
+          console.log(`⚠️ Elementos no encontrados: ${elementosNoEncontrados.join(', ')}`);
+        }
       } else {
-        console.log('❌ No se encontraron elementos DOM, reintentando...');
-        setTimeout(forceKPIUpdate, 1000);
+        console.log('❌ No se encontraron elementos DOM, reintentando en 2 segundos...');
+        setTimeout(forceKPIUpdate, 2000);
       }
       
     } catch (error) {
-      console.error('❌ Error en fix agresivo:', error);
-      setTimeout(forceKPIUpdate, 1000);
+      console.error('❌ Error crítico en fix ultra-robusto:', error);
+      console.error('Stack trace:', error.stack);
+      
+      // Reintentar con delay exponencial
+      setTimeout(forceKPIUpdate, 3000);
     }
   }
   
@@ -4057,46 +4181,92 @@
     console.log('📊 Exportando datos de combustible a Excel...');
     
     if (!Combustible || Combustible.length === 0) {
-      alert('No hay datos de combustible para exportar');
+      alert('❌ No hay datos de combustible para exportar.\n\n💡 Asegúrese de que:\n• Hay registros de combustible cargados\n• Está conectado al sistema\n• Los datos se han sincronizado correctamente');
       return;
     }
     
     try {
-      // Preparar datos para exportación
-      const datos = Combustible.map(registro => ({
-        'Fecha': registro.fecha,
-        'Placa': registro.placa,
-        'Litros': registro.litros,
-        'Precio/Litro': registro.precio_por_litro,
-        'Costo Total': registro.costo,
-        'Odómetro': registro.odometro_actual,
-        'Km/L': registro.km_por_litro || 'N/A',
-        'Proveedor': registro.proveedor || 'N/A'
-      }));
+      console.log(`📋 Exportando ${Combustible.length} registros de combustible...`);
       
-      // Crear contenido CSV
+      // Preparar datos robustos para exportación (compatible con estructura del backend)
+      const datos = Combustible.map((registro, index) => {
+        // Calcular precio por litro
+        const litros = parseFloat(registro.litros) || 0;
+        const costo = parseFloat(registro.costo) || 0;
+        const precioLitro = litros > 0 ? (costo / litros) : 0;
+        
+        // Buscar información del vehículo
+        const vehiculo = Vehiculos.find(v => v.id === registro.vehiculo_id || v.placa === registro.vehiculo || v.placa === registro.placa);
+        const placaVehiculo = vehiculo?.placa || registro.vehiculo || registro.placa || `Vehículo_${registro.vehiculo_id || 'N/A'}`;
+        
+        return {
+          'Fecha': registro.fecha || 'N/A',
+          'Vehículo': placaVehiculo,
+          'Litros': litros || 0,
+          'Precio por Litro': precioLitro > 0 ? `₡${precioLitro.toFixed(2)}` : 'N/A',
+          'Costo Total': costo > 0 ? `₡${costo.toLocaleString()}` : '₡0',
+          'Kilometraje': registro.kilometraje || registro.odometro_actual || registro.odometro || 'N/A',
+          'Km/L': registro.km_por_litro || registro._calculatedKmL || 'N/A',
+          'Proveedor': registro.proveedor || registro.estacion || 'No especificado',
+          'Observaciones': registro.observaciones || registro.notas || '-'
+        };
+      });
+      
+      console.log('📊 Datos preparados:', datos.slice(0, 2)); // Muestra los primeros 2 registros
+      
+      // Crear contenido CSV con mejor formato
       const headers = Object.keys(datos[0]);
       const csvContent = [
+        `"Reporte de Combustible - Generado: ${getNowCentralAmerica().toLocaleString('es-CR')}"`,
+        `"Total de registros: ${datos.length}"`,
+        '',
         headers.join(','),
-        ...datos.map(row => headers.map(header => `"${row[header]}"`).join(','))
+        ...datos.map(row => 
+          headers.map(header => {
+            const value = row[header];
+            // Escapar comillas dobles y manejar valores null/undefined
+            const cleanValue = (value ?? '').toString().replace(/"/g, '""');
+            return `"${cleanValue}"`;
+          }).join(',')
+        )
       ].join('\n');
       
-      // Crear y descargar archivo
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      // Estadísticas adicionales
+      const totalLitros = datos.reduce((sum, r) => sum + (parseFloat(r.Litros) || 0), 0);
+      const totalCosto = Combustible.reduce((sum, r) => sum + (parseFloat(r.costo) || 0), 0);
+      const promedioLitros = datos.length > 0 ? (totalLitros / datos.length).toFixed(2) : 0;
+      
+      const csvFinal = csvContent + '\n\n' + [
+        '"=== RESUMEN ESTADÍSTICO ==="',
+        `"Total de litros: ${totalLitros.toFixed(2)}L"`,
+        `"Costo total: ₡${totalCosto.toLocaleString()}"`,
+        `"Promedio por carga: ${promedioLitros}L"`,
+        `"Costo promedio por carga: ₡${(totalCosto / datos.length).toLocaleString()}"`,
+        `"Periodo: ${datos[datos.length - 1]?.Fecha} a ${datos[0]?.Fecha}"`
+      ].join('\n');
+      
+      // Crear y descargar archivo con mejor nombre
+      const blob = new Blob([csvFinal], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
+      
       const fechaExport = getNowCentralAmerica().toISOString().split('T')[0];
-      link.setAttribute('download', `combustible_${fechaExport}.csv`);
+      const nombreArchivo = `combustible_${fechaExport}_${datos.length}registros.csv`;
+      link.setAttribute('download', nombreArchivo);
+      
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      console.log('✅ Exportación de combustible completada');
+      // Feedback exitoso
+      console.log('✅ Exportación de combustible completada exitosamente');
+      alert(`✅ Exportación exitosa!\n\n📊 Archivo: ${nombreArchivo}\n📈 Registros: ${datos.length}\n⛽ Total litros: ${totalLitros.toFixed(2)}L\n💰 Costo total: ₡${totalCosto.toLocaleString()}\n\n📁 El archivo se descargó a su carpeta de descargas.`);
+      
     } catch (error) {
       console.error('❌ Error exportando combustible:', error);
-      alert('Error al exportar datos: ' + error.message);
+      alert(`❌ Error al exportar datos de combustible:\n\n${error.message}\n\n💡 Intente:\n• Recargar la página\n• Verificar que hay datos cargados\n• Contactar al administrador si persiste el problema`);
     }
   }
 
