@@ -1790,9 +1790,16 @@ async def registrar_salida(salida: BitacoraSalida):
         
         if ultimo_registro and ultimo_registro['km_retorno']:
             diferencia = abs(salida.km_salida - ultimo_registro['km_retorno'])
-            # Si la diferencia es mayor a 1 km, enviar alerta
-            if diferencia > 1:
+            
+            # Obtener configuración de alertas para verificar km_diferencia_alerta
+            cursor.execute("SELECT km_diferencia_alerta FROM config_alertas WHERE activo = 1 ORDER BY id DESC LIMIT 1")
+            config_km = cursor.fetchone()
+            km_limite = config_km['km_diferencia_alerta'] if config_km else 10
+            
+            # Si la diferencia es mayor al límite configurado, enviar alerta
+            if diferencia > km_limite:
                 alerta_km = True
+                logger.warning(f"🚨 ALERTA KILOMETRAJE: {salida.placa} - Diferencia {diferencia}km > límite {km_limite}km")
                 asyncio.create_task(enviar_alerta_kilometraje(
                     salida.placa, salida.chofer, salida.km_salida, 
                     ultimo_registro['km_retorno'], ultimo_registro['chofer']
@@ -1804,9 +1811,16 @@ async def registrar_salida(salida: BitacoraSalida):
             
             if vehiculo and vehiculo['km_inicial'] and vehiculo['km_inicial'] > 0:
                 diferencia = abs(salida.km_salida - vehiculo['km_inicial'])
-                # Si la diferencia es mayor a 1 km, enviar alerta
-                if diferencia > 1:
+                
+                # Obtener configuración de alertas para verificar km_diferencia_alerta
+                cursor.execute("SELECT km_diferencia_alerta FROM config_alertas WHERE activo = 1 ORDER BY id DESC LIMIT 1")
+                config_km = cursor.fetchone()
+                km_limite = config_km['km_diferencia_alerta'] if config_km else 10
+                
+                # Si la diferencia es mayor al límite configurado, enviar alerta
+                if diferencia > km_limite:
                     alerta_km = True
+                    logger.warning(f"🚨 ALERTA KILOMETRAJE: {salida.placa} - Diferencia {diferencia}km > límite {km_limite}km (vs KM inicial)")
                     asyncio.create_task(enviar_alerta_kilometraje(
                         salida.placa, salida.chofer, salida.km_salida, 
                         vehiculo['km_inicial'], "Sistema (KM Inicial)"
@@ -1888,10 +1902,33 @@ async def enviar_alerta_kilometraje(placa, chofer_actual, km_actual, km_anterior
         <p style="color: red;"><strong>ACCIÓN REQUERIDA:</strong> Verificar la inconsistencia en el kilometraje del vehículo.</p>
         """
         
+        # Enviar email
         send_email_notification(subject, body)
-        logger.info(f"Alerta de kilometraje enviada para vehículo {placa}")
+        
+        # Registrar en historial de alertas
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO historial_alertas 
+                (tipo_alerta, vehiculo_placa, destinatario_email, asunto, mensaje, estado)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                "Kilometraje Anómalo",
+                placa,
+                EMAIL_CONFIG["recipient_email"],
+                subject,
+                f"Diferencia detectada: {diferencia} km entre {km_anterior} km y {km_actual} km",
+                "enviado"
+            ))
+            conn.commit()
+            conn.close()
+        except Exception as hist_e:
+            logger.error(f"Error registrando alerta de kilometraje en historial: {hist_e}")
+        
+        logger.info(f"✅ Alerta de kilometraje enviada para vehículo {placa} - Diferencia: {diferencia} km")
     except Exception as e:
-        logger.error(f"Error enviando alerta de kilometraje: {e}")
+        logger.error(f"❌ Error enviando alerta de kilometraje: {e}")
 
 @app.post("/bitacora/alerta-retorno-pendiente")
 async def enviar_alerta_retorno_pendiente(request: dict):
