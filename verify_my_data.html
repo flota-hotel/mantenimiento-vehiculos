@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación de Mis Datos - Sistema Vehicular</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 5px solid #28a745;
+        }
+        
+        .status-card.loading {
+            border-left-color: #ffc107;
+        }
+        
+        .status-card.error {
+            border-left-color: #dc3545;
+        }
+        
+        .vehicles-section {
+            background: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .vehicles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .vehicle-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .vehicle-placa {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .vehicle-info {
+            opacity: 0.9;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-top: 4px solid #667eea;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .activity-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .activity-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #17a2b8;
+        }
+        
+        .timestamp {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Verificación de Mis Datos</h1>
+            <p>Verifica que todos tus vehículos y registros están seguros</p>
+        </div>
+        
+        <div class="content">
+            <div id="statusCard" class="status-card loading">
+                <div class="loading-spinner"></div>
+                <strong>Verificando tus datos...</strong>
+                <p>Conectando con la base de datos para verificar la integridad de tu información.</p>
+            </div>
+            
+            <div class="stats-grid" id="statsGrid" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-number" id="vehiculosCount">-</div>
+                    <div class="stat-label">Vehículos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="mantenimientosCount">-</div>
+                    <div class="stat-label">Mantenimientos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="combustibleCount">-</div>
+                    <div class="stat-label">Combustible</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="revisionesCount">-</div>
+                    <div class="stat-label">Revisiones</div>
+                </div>
+            </div>
+            
+            <div class="vehicles-section" id="vehiclesSection" style="display: none;">
+                <h2>🚗 Tus Vehículos</h2>
+                <div class="vehicles-grid" id="vehiclesGrid">
+                    <!-- Vehículos se cargarán aquí -->
+                </div>
+            </div>
+            
+            <div class="activity-section" id="activitySection" style="display: none;">
+                <h2>📋 Actividad Reciente</h2>
+                <div id="activityList">
+                    <!-- Actividad se cargará aquí -->
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn" onclick="verifyData()">🔄 Verificar Nuevamente</button>
+                <button class="btn" onclick="goToMainApp()">🏠 Ir a la Aplicación Principal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        async function verifyData() {
+            const statusCard = document.getElementById('statusCard');
+            const statsGrid = document.getElementById('statsGrid');
+            const vehiclesSection = document.getElementById('vehiclesSection');
+            const activitySection = document.getElementById('activitySection');
+            
+            // Mostrar estado de carga
+            statusCard.className = 'status-card loading';
+            statusCard.innerHTML = `
+                <div class="loading-spinner"></div>
+                <strong>Verificando tus datos...</strong>
+                <p>Conectando con la base de datos para verificar la integridad de tu información.</p>
+            `;
+            
+            // Ocultar secciones
+            statsGrid.style.display = 'none';
+            vehiclesSection.style.display = 'none';
+            activitySection.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE}/verify-my-data`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Mostrar estado exitoso
+                    statusCard.className = 'status-card';
+                    statusCard.innerHTML = `
+                        <strong>✅ ${data.sistema_estado}</strong>
+                        <p>Última verificación: ${new Date(data.verification_time).toLocaleString()}</p>
+                        <p>Base de datos protegida y respaldada automáticamente.</p>
+                    `;
+                    
+                    // Mostrar estadísticas
+                    document.getElementById('vehiculosCount').textContent = data.resumen_tablas.vehiculos || 0;
+                    document.getElementById('mantenimientosCount').textContent = data.resumen_tablas.mantenimientos || 0;
+                    document.getElementById('combustibleCount').textContent = data.resumen_tablas.combustible || 0;
+                    document.getElementById('revisionesCount').textContent = data.resumen_tablas.revisiones || 0;
+                    statsGrid.style.display = 'grid';
+                    
+                    // Mostrar vehículos
+                    const vehiclesGrid = document.getElementById('vehiclesGrid');
+                    if (data.vehiculos && data.vehiculos.length > 0) {
+                        vehiclesGrid.innerHTML = data.vehiculos.map(vehiculo => `
+                            <div class="vehicle-card">
+                                <div class="vehicle-placa">${vehiculo.placa}</div>
+                                <div class="vehicle-info">
+                                    <div><strong>${vehiculo.marca} ${vehiculo.modelo}</strong></div>
+                                    <div>Año: ${vehiculo.ano}</div>
+                                    <div>Color: ${vehiculo.color}</div>
+                                    <div>Propietario: ${vehiculo.propietario}</div>
+                                </div>
+                            </div>
+                        `).join('');
+                        vehiclesSection.style.display = 'block';
+                    } else {
+                        vehiclesGrid.innerHTML = `
+                            <div class="no-data">
+                                <h3>📝 Sin vehículos registrados</h3>
+                                <p>Agrega tu primer vehículo en la aplicación principal.</p>
+                            </div>
+                        `;
+                        vehiclesSection.style.display = 'block';
+                    }
+                    
+                    // Mostrar actividad reciente
+                    const activityList = document.getElementById('activityList');
+                    if (data.actividad_reciente && data.actividad_reciente.length > 0) {
+                        activityList.innerHTML = data.actividad_reciente.map(activity => `
+                            <div class="activity-item">
+                                <div class="timestamp">${new Date(activity.fecha).toLocaleString()}</div>
+                                <div><strong>${activity.accion}</strong></div>
+                                <div>${activity.descripcion}</div>
+                            </div>
+                        `).join('');
+                        activitySection.style.display = 'block';
+                    }
+                    
+                } else {
+                    // Mostrar error
+                    statusCard.className = 'status-card error';
+                    statusCard.innerHTML = `
+                        <strong>❌ Error verificando datos</strong>
+                        <p>${data.message || 'No se pudo conectar con la base de datos'}</p>
+                        <button class="btn" onclick="verifyData()">Reintentar</button>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                statusCard.className = 'status-card error';
+                statusCard.innerHTML = `
+                    <strong>❌ Error de conexión</strong>
+                    <p>No se pudo conectar con el servidor. Verifica tu conexión a internet.</p>
+                    <button class="btn" onclick="verifyData()">Reintentar</button>
+                `;
+            }
+        }
+        
+        function goToMainApp() {
+            window.location.href = '/';
+        }
+        
+        // Verificar automáticamente al cargar
+        document.addEventListener('DOMContentLoaded', verifyData);
+    </script>
+</body>
+</html>

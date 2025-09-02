@@ -1,0 +1,65 @@
+{
+  "backup_info": {
+    "timestamp": "2025-09-01T14:14:47.896962",
+    "source": "Railway API",
+    "api_base": "https://mantenimiento-vehiculos-production.up.railway.app",
+    "backup_name": "railway_api_backup_20250901_141447"
+  },
+  "data": {
+    "vehiculos": [
+      {
+        "id": 11,
+        "placa": "BNN407",
+        "marca": "TOYOTA",
+        "modelo": "HIACE",
+        "ano": 2017,
+        "color": "BLANCO",
+        "propietario": "Holding",
+        "poliza": null,
+        "seguro": "QUALITAS",
+        "created_at": "2025-08-25 19:14:55",
+        "updated_at": "2025-08-25 19:14:55",
+        "km_inicial": 0
+      }
+    ],
+    "mantenimientos": [],
+    "combustible": [],
+    "revisiones": [],
+    "polizas": [],
+    "rtv": [],
+    "bitacora": [
+      {
+        "id": 9,
+        "placa": "BLC725",
+        "chofer": "Test Driver 3",
+        "fecha_salida": "2025-08-25T17:27:02.266775",
+        "km_salida": 50053,
+        "nivel_combustible_salida": "1/2",
+        "estado_vehiculo_salida": "bueno",
+        "fecha_retorno": null,
+        "km_retorno": null,
+        "nivel_combustible_retorno": null,
+        "estado_vehiculo_retorno": null,
+        "observaciones": "Prueba 2 km diferencia",
+        "estado": "en_curso",
+        "created_at": "2025-08-25 17:27:02"
+      },
+      {
+        "id": 6,
+        "placa": "AB 844",
+        "chofer": "Gabriel",
+        "fecha_salida": "2025-08-25T17:15:08.365912",
+        "km_salida": 5010,
+        "nivel_combustible_salida": "vacio",
+        "estado_vehiculo_salida": "excelente",
+        "fecha_retorno": "2025-08-25T17:15:56.803540",
+        "km_retorno": 5011,
+        "nivel_combustible_retorno": "vacio",
+        "estado_vehiculo_retorno": "excelente",
+        "observaciones": "",
+        "estado": "completado",
+        "created_at": "2025-08-25 17:15:08"
+      }
+    ]
+  }
+}

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Dashboard KPIs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .kpi-card {
+            background: #e3f2fd;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+        .kpi-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        .kpi-label {
+            font-size: 0.9em;
+            color: #555;
+            margin-top: 5px;
+        }
+        .debug-section {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #6c757d;
+        }
+        pre {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Dashboard KPIs - Simulación renderKpis()</h1>
+        
+        <div class="debug-section">
+            <h3>📊 Estado de Arrays</h3>
+            <div id="arrayStatus"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>🧮 Cálculos de KPI</h3>
+            <div id="calculosKPI"></div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">💰 Costo Total Mes (Calculado)</div>
+            <div id="kpiCostoTotal" class="kpi-value">--</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">⛽ Combustible Mes (Calculado)</div>
+            <div id="kpiCombustible" class="kpi-value">--</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">🔧 Mantenimientos Mes (Calculado)</div>
+            <div id="kpiMantenimiento" class="kpi-value">--</div>
+        </div>
+
+        <div class="debug-section">
+            <h3>📋 Datos Raw</h3>
+            <pre id="rawData"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://mantenimiento-vehiculos-production.up.railway.app";
+        
+        // Simulación de variables globales como en el dashboard real
+        let Vehiculos = [];
+        let Combustible = [];
+        let Mantenimientos = [];
+        let Polizas = [];
+        
+        // Función fmt() igual que en el dashboard
+        const fmt = n => new Intl.NumberFormat('es-CR', {
+            style: 'currency',
+            currency: 'CRC',
+            maximumFractionDigits: 0
+        }).format(Number(n) || 0);
+
+        async function loadDataAndTest() {
+            try {
+                console.log('🔄 Cargando datos...');
+                
+                // Cargar datos como lo hace el dashboard real
+                const [vehiculosRes, combustibleRes, mantenimientosRes, polizasRes] = await Promise.all([
+                    fetch(`${API_URL}/vehiculos`).then(r => r.json()),
+                    fetch(`${API_URL}/combustible`).then(r => r.json()),
+                    fetch(`${API_URL}/mantenimientos`).then(r => r.json()),
+                    fetch(`${API_URL}/polizas`).then(r => r.json())
+                ]);
+
+                // Asignar a variables globales
+                Vehiculos = vehiculosRes.success ? vehiculosRes.data : [];
+                Combustible = combustibleRes.success ? combustibleRes.data : [];
+                Mantenimientos = mantenimientosRes.success ? mantenimientosRes.data : [];
+                Polizas = polizasRes.success ? polizasRes.data : [];
+
+                console.log('✅ Datos cargados:', {
+                    Vehiculos: Vehiculos.length,
+                    Combustible: Combustible.length,
+                    Mantenimientos: Mantenimientos.length,
+                    Polizas: Polizas.length
+                });
+
+                // Mostrar estado de arrays
+                document.getElementById('arrayStatus').innerHTML = `
+                    <p><strong>Vehículos:</strong> ${Vehiculos.length}</p>
+                    <p><strong>Combustible:</strong> ${Combustible.length}</p>
+                    <p><strong>Mantenimientos:</strong> ${Mantenimientos.length}</p>
+                    <p><strong>Pólizas:</strong> ${Polizas.length}</p>
+                `;
+
+                // Mostrar datos raw
+                document.getElementById('rawData').textContent = JSON.stringify({
+                    Combustible,
+                    Mantenimientos
+                }, null, 2);
+
+                // Ejecutar cálculos de KPI (simulando renderKpis)
+                testRenderKpis();
+
+            } catch (error) {
+                console.error('❌ Error:', error);
+                document.getElementById('arrayStatus').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        function testRenderKpis() {
+            console.log('🔥 === EJECUTANDO testRenderKpis() ===');
+            
+            // === CÁLCULO EXACTO COMO EN EL DASHBOARD ===
+            const inicioMes = new Date();
+            inicioMes.setDate(1);
+            inicioMes.setHours(0, 0, 0, 0);
+
+            console.log('📅 Inicio del mes para filtro:', inicioMes);
+            console.log('📋 Datos de combustible raw:', Combustible);
+
+            let debugInfo = `<p><strong>Inicio del mes:</strong> ${inicioMes}</p>`;
+            debugInfo += `<p><strong>Total registros combustible:</strong> ${Combustible.length}</p>`;
+
+            const gastosCombustibleMes = Combustible
+                .filter(f => {
+                    const fechaRecord = new Date(f.fecha);
+                    const incluido = fechaRecord >= inicioMes;
+                    console.log(`🔍 ${f.placa} (${f.fecha}): ${fechaRecord} >= ${inicioMes} = ${incluido} | Costo: ₡${f.costo}`);
+                    debugInfo += `<p>• ${f.placa} (${f.fecha}): ${incluido ? '✅ Incluido' : '❌ Excluido'} - ₡${f.costo}</p>`;
+                    return incluido;
+                })
+                .reduce((total, f) => total + Number(f.costo || 0), 0);
+
+            const gastosMantenimientoMes = Mantenimientos
+                .filter(m => new Date(m.fecha) >= inicioMes)
+                .reduce((total, m) => total + Number(m.costo || 0), 0);
+
+            const costoTotalMes = gastosCombustibleMes + gastosMantenimientoMes;
+
+            console.log('💰 Cálculos finales:', {
+                gastosCombustibleMes,
+                gastosMantenimientoMes,
+                costoTotalMes,
+                formatted: fmt(costoTotalMes)
+            });
+
+            debugInfo += `<p><strong>Gastos combustible mes:</strong> ₡${gastosCombustibleMes}</p>`;
+            debugInfo += `<p><strong>Gastos mantenimiento mes:</strong> ₡${gastosMantenimientoMes}</p>`;
+            debugInfo += `<p><strong>Costo total mes:</strong> ₡${costoTotalMes}</p>`;
+            debugInfo += `<p><strong>Formateado:</strong> ${fmt(costoTotalMes)}</p>`;
+
+            document.getElementById('calculosKPI').innerHTML = debugInfo;
+
+            // Actualizar KPIs
+            document.getElementById('kpiCostoTotal').textContent = fmt(costoTotalMes);
+            document.getElementById('kpiCombustible').textContent = fmt(gastosCombustibleMes);
+            document.getElementById('kpiMantenimiento').textContent = fmt(gastosMantenimientoMes);
+        }
+
+        // Cargar datos al cargar la página
+        window.addEventListener('DOMContentLoaded', loadDataAndTest);
+    </script>
+</body>
+</html>

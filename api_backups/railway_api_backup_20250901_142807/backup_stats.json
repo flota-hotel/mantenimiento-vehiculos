@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-09-01T14:28:07.824425",
+  "source": "Railway API",
+  "api_base": "https://mantenimiento-vehiculos-production.up.railway.app",
+  "backup_name": "railway_api_backup_20250901_142807",
+  "stats": {
+    "vehiculos": 3,
+    "mantenimientos": 0,
+    "combustible": 0,
+    "revisiones": 0,
+    "polizas": 0,
+    "rtv": 0,
+    "bitacora": 2
+  },
+  "total_records": 5
+}
