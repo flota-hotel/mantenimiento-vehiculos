@@ -3671,10 +3671,17 @@
       console.log('🎯 Ejecutando renderKpis() después de cargar todos los datos...');
       renderKpis();
       
+      // ACTUALIZAR estado de alertas ahora que los datos están disponibles
+      console.log('📊 Actualizando estado del sistema después de cargar datos...');
+      actualizarEstadoAlertas();
+      
       // SISTEMA DE VERIFICACIÓN Y RE-EJECUCIÓN GARANTIZADA
       setTimeout(() => {
         console.log('🔄 Verificando y re-ejecutando renderKpis() (backup 1s)...');
         renderKpis();
+        
+        // También actualizar estado de alertas en backup
+        actualizarEstadoAlertas();
         
         // Verificar si los valores se actualizaron correctamente
         const kpiElement = document.getElementById('kpiCostoTotalMes');
@@ -9080,14 +9087,25 @@
     const contenedor = byId('estadoAlertasContent');
     if (!contenedor) return;
     
+    // Verificar si los datos están disponibles
+    if (typeof Vehiculos === 'undefined' || !Vehiculos) {
+      contenedor.innerHTML = `
+        <div style="text-align:center;padding:20px;color:var(--muted)">
+          <span style="font-size:18px">🔄</span><br>
+          <small>Cargando datos del sistema...</small>
+        </div>
+      `;
+      return;
+    }
+    
     const totalVehiculos = Vehiculos.length;
     const alertasActivas = [
-      byId('alertaMant').checked,
-      byId('alertaPolizas').checked,
-      byId('alertaRTV').checked,
-      byId('alertaRevisiones').checked,
-      byId('alertaCombustible').checked,
-      byId('alertaBitacora').checked
+      byId('alertaMant') ? byId('alertaMant').checked : false,
+      byId('alertaPolizas') ? byId('alertaPolizas').checked : false,
+      byId('alertaRTV') ? byId('alertaRTV').checked : false,
+      byId('alertaRevisiones') ? byId('alertaRevisiones').checked : false,
+      byId('alertaCombustible') ? byId('alertaCombustible').checked : false,
+      byId('alertaBitacora') ? byId('alertaBitacora').checked : false
     ].filter(Boolean).length;
     
     contenedor.innerHTML = `
@@ -9101,7 +9119,7 @@
           <div style="font-size: 12px;">Tipos de Alertas Activas</div>
         </div>
         <div style="text-align: center; padding: 12px; background: white; border-radius: 8px;">
-          <div style="font-size: 24px; font-weight: bold; color: var(--warn);">${byId('alertaEmail').value ? '✅' : '❌'}</div>
+          <div style="font-size: 24px; font-weight: bold; color: var(--warn);">${(byId('alertaEmail') && byId('alertaEmail').value) ? '✅' : '❌'}</div>
           <div style="font-size: 12px;">Email Configurado</div>
         </div>
       </div>
