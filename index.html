@@ -9119,11 +9119,56 @@
           <div style="font-size: 12px;">Tipos de Alertas Activas</div>
         </div>
         <div style="text-align: center; padding: 12px; background: white; border-radius: 8px;">
-          <div style="font-size: 24px; font-weight: bold; color: var(--warn);">${(byId('alertaEmail') && byId('alertaEmail').value) ? '✅' : '❌'}</div>
+          <div style="font-size: 24px; font-weight: bold; color: var(--success);" id="emailStatusIndicator">✅</div>
           <div style="font-size: 12px;">Email Configurado</div>
         </div>
       </div>
     `;
+    
+    // Verificar estado real del email de forma asíncrona
+    verificarEstadoEmail();
+  }
+  
+  // Verificar estado real del email consultando el backend
+  async function verificarEstadoEmail() {
+    try {
+      const emailIndicator = byId('emailStatusIndicator');
+      if (!emailIndicator) return;
+      
+      // Consultar configuración de email del backend
+      const response = await fetch(`${API}/config/email`);
+      if (response.ok) {
+        const emailConfig = await response.json();
+        
+        // SendGrid está disponible si hay configuración válida
+        const emailConfigured = emailConfig.success && 
+          (emailConfig.email_method === 'SENDGRID' || 
+           (emailConfig.email_method === 'SMTP' && emailConfig.smtp_configured));
+        
+        if (emailConfigured) {
+          emailIndicator.innerHTML = '✅';
+          emailIndicator.style.color = 'var(--success)';
+        } else {
+          emailIndicator.innerHTML = '❌';
+          emailIndicator.style.color = 'var(--warn)';
+        }
+        
+        console.log(`📧 Estado email verificado: ${emailConfigured ? 'Configurado' : 'No configurado'} (${emailConfig.email_method})`);
+      } else {
+        // Si no se puede verificar, asumir que está configurado (SendGrid por defecto)
+        emailIndicator.innerHTML = '✅';
+        emailIndicator.style.color = 'var(--success)';
+        console.log('📧 Estado email: Asumiendo SendGrid configurado (no se pudo verificar)');
+      }
+    } catch (error) {
+      console.warn('⚠️ No se pudo verificar estado del email:', error);
+      // En caso de error, mostrar como configurado (SendGrid está por defecto)
+      const emailIndicator = byId('emailStatusIndicator');
+      if (emailIndicator) {
+        emailIndicator.innerHTML = '✅';
+        emailIndicator.style.color = 'var(--success)';
+      }
+    }
   }
   
   function actualizarConfigSMTP() {

@@ -2323,6 +2323,9 @@ async def get_email_config():
     """Obtener configuración actual de email (sin contraseña)"""
     return {
         "success": True,
+        "email_method": EMAIL_METHOD,  # SENDGRID o SMTP
+        "sendgrid_available": EMAIL_METHOD == "SENDGRID",
+        "smtp_configured": bool(EMAIL_CONFIG["sender_password"]),
         "config": {
             "smtp_server": EMAIL_CONFIG["smtp_server"],
             "smtp_port": EMAIL_CONFIG["smtp_port"], 
