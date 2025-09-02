@@ -1,0 +1,5 @@
+FORCE REDEPLOY - Dashboard KPI Fix
+Timestamp: 2025-09-02 14:40:00
+Commit: 59b2c06
+Issue: Railway not auto-deploying KPI fixes
+Action: Manual redeploy trigger
