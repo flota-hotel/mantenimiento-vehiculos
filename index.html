@@ -2542,26 +2542,55 @@
           
           <!-- Backup Manual de Base de Datos -->
           <div class="card" style="background:#fff3cd;margin:20px 0;border-left:4px solid #ffc107">
-            <h4 style="margin:0 0 16px 0;color:#856404">💾 Backup Manual de Railway → GitHub</h4>
+            <h4 style="margin:0 0 16px 0;color:#856404">💾 Backup Completo de Base de Datos</h4>
             <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:center">
               <div>
                 <p style="margin:0 0 8px 0;font-size:0.9em;color:#856404">
-                  <strong>🛡️ Protección de datos:</strong> Respalda toda la base de datos de Railway<br>
-                  <strong>📂 Destino:</strong> GitHub repository en carpeta <code>api_backups/</code><br>
-                  <strong>📋 Incluye:</strong> SQLite + JSON export + estadísticas + metadatos<br>
-                  <strong>🕐 Recomendado:</strong> Ejecutar antes de cambios importantes<br>
-                  <strong>⚡ Evita pérdida de datos:</strong> Respaldo seguro en la nube
+                  <strong>🗄️ Descarga completa:</strong> Archivo .db con toda la información<br>
+                  <strong>📦 Incluye:</strong> SQLite + metadatos + estadísticas + SQL dump<br>
+                  <strong>💾 Formato:</strong> Archivo ZIP con base de datos e instrucciones<br>
+                  <strong>🛡️ Propósito:</strong> Respaldo completo para restauración offline<br>
+                  <strong>⚡ Uso:</strong> Respaldo antes de cambios importantes o migración
                 </p>
-                <div id="backupStatus" style="margin-top:8px">
-                  <span class="tag" style="background:#d4edda;color:#155724">✅ Sistema listo</span>
+                <div id="databaseBackupStatus" style="margin-top:8px">
+                  <span class="tag" style="background:#d4edda;color:#155724">✅ Base de datos lista para backup</span>
                 </div>
               </div>
               <div style="text-align:center">
-                <button type="button" class="primary" onclick="ejecutarBackupManual()" id="btnBackupManual">
-                  🚀 Respaldar Railway
+                <button type="button" class="primary" onclick="descargarBackupCompleto()" id="btnBackupDatabase" style="margin-bottom:8px">
+                  💾 Descargar Base de Datos
+                </button>
+                <div style="margin-top:4px">
+                  <small style="color:#856404" id="databaseBackupInfo">
+                    Haz clic para descargar backup completo
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Backup Manual de Railway a GitHub (Sistema Original) -->
+          <div class="card" style="background:#e3f2fd;margin:20px 0;border-left:4px solid #2196f3">
+            <h4 style="margin:0 0 16px 0;color:#1565c0">🚀 Backup Automático Railway → GitHub</h4>
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:center">
+              <div>
+                <p style="margin:0 0 8px 0;font-size:0.9em;color:#1565c0">
+                  <strong>🛡️ Protección automática:</strong> Respaldo de Railway a GitHub<br>
+                  <strong>📂 Destino:</strong> GitHub repository carpeta <code>api_backups/</code><br>
+                  <strong>📋 Incluye:</strong> SQLite + JSON + metadatos + timestamp<br>
+                  <strong>🕐 Automático:</strong> Se ejecuta tras cambios importantes<br>
+                  <strong>⚡ Redundancia:</strong> Backup adicional en la nube
+                </p>
+                <div id="githubBackupStatus" style="margin-top:8px">
+                  <span class="tag" style="background:#d4edda;color:#155724">✅ Sistema activo</span>
+                </div>
+              </div>
+              <div style="text-align:center">
+                <button type="button" class="secondary" onclick="ejecutarBackupManual()" id="btnBackupManual">
+                  🚀 Ejecutar Backup Manual
                 </button>
                 <div style="margin-top:8px">
-                  <small style="color:#856404">
+                  <small style="color:#1565c0">
                     <span id="ultimoBackup">Verificando último backup...</span>
                   </small>
                 </div>
@@ -4173,6 +4202,70 @@
       backupStatus.innerHTML = `
         <span class="tag" style="background:#f8d7da;color:#721c24">❌ Sistema no disponible</span>
       `;
+    }
+  }
+
+  // ====== DESCARGAR BACKUP COMPLETO DE BASE DE DATOS ======
+  async function descargarBackupCompleto() {
+    console.log('💾 === DESCARGANDO BACKUP COMPLETO DE BASE DE DATOS ===');
+    
+    const btnBackupDatabase = byId('btnBackupDatabase');
+    
+    try {
+      // Deshabilitar botón y mostrar progreso
+      btnBackupDatabase.disabled = true;
+      btnBackupDatabase.innerHTML = '⏳ Generando backup...';
+      
+      console.log('📡 Solicitando backup completo de la base de datos...');
+      const response = await fetch(`${API}/backup/database`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/zip'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      console.log('📥 Descargando archivo de backup...');
+      const blob = await response.blob();
+      
+      // Crear nombre de archivo con timestamp
+      const timestamp = new Date().toISOString()
+        .replace(/[:.]/g, '-')
+        .replace('T', '_')
+        .substring(0, 19);
+      const filename = `vehiculos_database_backup_${timestamp}.zip`;
+      
+      // Crear enlace de descarga
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      
+      // Iniciar descarga
+      document.body.appendChild(a);
+      a.click();
+      
+      // Limpiar recursos
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      console.log(`✅ Backup descargado exitosamente: ${filename}`);
+      alert(`✅ Backup completo descargado exitosamente!\n\n📁 Archivo: ${filename}\n\n💾 El archivo ZIP contiene:\n• Base de datos SQLite completa (.db)\n• Metadatos del sistema\n• Estadísticas de registros\n• Dump SQL de respaldo\n\n🔒 Mantenga este archivo en lugar seguro para restaurar datos si es necesario.`);
+      
+    } catch (error) {
+      console.error('💥 Error descargando backup de base de datos:', error);
+      
+      alert(`💥 Error al descargar el backup de la base de datos:\n\n${error.message}\n\nVerifique:\n• Conexión a internet\n• Que el servidor esté disponible\n• Los logs de la consola para más detalles`);
+    } finally {
+      // Restaurar botón
+      btnBackupDatabase.disabled = false;
+      btnBackupDatabase.innerHTML = '💾 Descargar Base de Datos';
+      
+      console.log('🏁 Proceso de descarga de backup finalizado');
     }
   }
 

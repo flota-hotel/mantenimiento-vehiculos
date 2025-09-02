@@ -1996,6 +1996,205 @@ async def eliminar_bitacora(bitacora_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ================================
+# ENDPOINT BACKUP COMPLETO DE BASE DE DATOS
+# ================================
+
+@app.get("/backup/database")
+async def backup_complete_database():
+    """Generar y descargar backup completo de la base de datos SQLite"""
+    try:
+        import shutil
+        import tempfile
+        import zipfile
+        from datetime import datetime
+        
+        logger.info("🗄️ Iniciando backup completo de base de datos...")
+        
+        # Crear directorio temporal
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Timestamp para el archivo
+            timestamp = now_ca().strftime("%Y%m%d_%H%M%S")
+            
+            # Nombre del archivo de backup
+            backup_filename = f"vehicular_system_backup_{timestamp}.db"
+            backup_path = os.path.join(temp_dir, backup_filename)
+            
+            # Copiar la base de datos actual
+            shutil.copy2(DATABASE_PATH, backup_path)
+            
+            # Crear archivo ZIP con metadatos adicionales
+            zip_filename = f"vehicular_system_complete_backup_{timestamp}.zip"
+            zip_path = os.path.join(temp_dir, zip_filename)
+            
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Agregar la base de datos
+                zipf.write(backup_path, backup_filename)
+                
+                # Crear archivo de metadatos
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                
+                # Obtener estadísticas de la base de datos
+                stats = {}
+                tables = ['vehiculos', 'mantenimientos', 'combustible', 'revisiones', 'polizas', 'rtv', 'bitacora']
+                
+                for table in tables:
+                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                    stats[table] = cursor.fetchone()[0]
+                
+                # Obtener información adicional
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                all_tables = [row[0] for row in cursor.fetchall()]
+                
+                conn.close()
+                
+                # Crear archivo de metadatos
+                metadata = f"""BACKUP COMPLETO DEL SISTEMA DE GESTIÓN VEHICULAR
+==================================================
+
+Fecha/Hora del Backup: {now_ca().strftime('%d/%m/%Y %H:%M:%S')} (GMT-6)
+Zona Horaria: Centroamérica
+Archivo de Base de Datos: {backup_filename}
+Formato: SQLite Database (.db)
+
+ESTADÍSTICAS DE LA BASE DE DATOS:
+--------------------------------
+Vehículos: {stats.get('vehiculos', 0)} registros
+Mantenimientos: {stats.get('mantenimientos', 0)} registros  
+Combustible: {stats.get('combustible', 0)} registros
+Revisiones: {stats.get('revisiones', 0)} registros
+Pólizas: {stats.get('polizas', 0)} registros
+RTV: {stats.get('rtv', 0)} registros
+Bitácora: {stats.get('bitacora', 0)} registros
+
+TOTAL DE REGISTROS: {sum(stats.values())}
+
+TABLAS DISPONIBLES:
+-----------------
+{chr(10).join(f'- {table}' for table in all_tables)}
+
+INSTRUCCIONES DE RESTAURACIÓN:
+-----------------------------
+1. Extraer el archivo {backup_filename} del ZIP
+2. Reemplazar la base de datos actual con este archivo
+3. Reiniciar el servicio del sistema
+4. Verificar que todos los datos estén disponibles
+
+COMPATIBILIDAD:
+--------------
+- SQLite 3.x
+- Python sqlite3 module
+- Compatible con el Sistema de Gestión Vehicular v1.0.0
+
+INFORMACIÓN TÉCNICA:
+-------------------
+- Encoding: UTF-8
+- Estructura: Relacional con claves foráneas
+- Respaldo: Completo (datos + estructura + índices)
+
+CONTACTO TÉCNICO:
+----------------
+Sistema generado automáticamente
+Plataforma: Railway
+Endpoint: https://mantenimiento-vehiculos-production.up.railway.app
+
+ADVERTENCIA:
+-----------
+Este backup contiene información sensible del sistema vehicular.
+Mantener en lugar seguro y con acceso restringido.
+"""
+                
+                # Agregar metadatos al ZIP
+                metadata_path = os.path.join(temp_dir, f"LEEME_backup_info_{timestamp}.txt")
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    f.write(metadata)
+                zipf.write(metadata_path, f"LEEME_backup_info_{timestamp}.txt")
+                
+                # Agregar SQL dump como texto plano (opcional)
+                sql_dump_path = os.path.join(temp_dir, f"vehicular_system_dump_{timestamp}.sql")
+                with open(sql_dump_path, 'w', encoding='utf-8') as f:
+                    # Crear dump SQL usando sqlite3
+                    import subprocess
+                    result = subprocess.run([
+                        'sqlite3', DATABASE_PATH, '.dump'
+                    ], capture_output=True, text=True)
+                    
+                    if result.returncode == 0:
+                        f.write(f"-- DUMP SQL DEL SISTEMA DE GESTIÓN VEHICULAR\n")
+                        f.write(f"-- Generado el: {now_ca().strftime('%d/%m/%Y %H:%M:%S')} (GMT-6)\n")
+                        f.write(f"-- Comando: sqlite3 {DATABASE_PATH} .dump\n\n")
+                        f.write(result.stdout)
+                    else:
+                        f.write("-- Error generando dump SQL\n")
+                        f.write(f"-- Error: {result.stderr}\n")
+                
+                zipf.write(sql_dump_path, f"vehicular_system_dump_{timestamp}.sql")
+            
+            logger.info(f"✅ Backup completo generado: {zip_filename}")
+            
+            # Retornar el archivo ZIP
+            return FileResponse(
+                path=zip_path,
+                filename=zip_filename,
+                media_type='application/zip',
+                headers={
+                    "Content-Disposition": f"attachment; filename={zip_filename}",
+                    "X-Backup-Timestamp": timestamp,
+                    "X-Total-Records": str(sum(stats.values())),
+                    "X-Backup-Type": "complete_database"
+                }
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Error generando backup de base de datos: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error generando backup: {str(e)}"
+        )
+
+@app.get("/backup/status")
+async def backup_status():
+    """Obtener información sobre el estado de la base de datos para backup"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener estadísticas básicas
+        stats = {}
+        tables = ['vehiculos', 'mantenimientos', 'combustible', 'revisiones', 'polizas', 'rtv', 'bitacora']
+        
+        for table in tables:
+            cursor.execute(f"SELECT COUNT(*) FROM {table}")
+            stats[table] = cursor.fetchone()[0]
+        
+        # Obtener tamaño del archivo de base de datos
+        db_size = os.path.getsize(DATABASE_PATH) if os.path.exists(DATABASE_PATH) else 0
+        db_size_mb = round(db_size / (1024 * 1024), 2)
+        
+        # Obtener fecha de última modificación
+        last_modified = datetime.fromtimestamp(os.path.getmtime(DATABASE_PATH)).isoformat() if os.path.exists(DATABASE_PATH) else None
+        
+        conn.close()
+        
+        return {
+            "success": True,
+            "data": {
+                "database_path": DATABASE_PATH,
+                "database_size_bytes": db_size,
+                "database_size_mb": db_size_mb,
+                "last_modified": last_modified,
+                "total_records": sum(stats.values()),
+                "table_counts": stats,
+                "backup_ready": True,
+                "timestamp": now_ca().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado de backup: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================================
 # ENDPOINTS CONFIGURACIÓN DE ALERTAS
 # ================================
 
