@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-09-02T15:46:40.123076",
+  "operation": "Backup manual admin 20250902_094640",
+  "original_db_size": 57344,
+  "backup_path": "/home/user/webapp/data_preservation/pre_change/pre_change_backup_20250902_154640.db",
+  "data_counts": {
+    "vehiculos": 12,
+    "sqlite_sequence": 8,
+    "mantenimientos": 0,
+    "combustible": 1,
+    "revisiones": 0,
+    "polizas": 0,
+    "rtv": 0,
+    "bitacora": 5,
+    "config_alertas": 5
+  }
+}
