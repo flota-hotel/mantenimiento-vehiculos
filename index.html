@@ -8823,84 +8823,84 @@
   
   async function enviarAlertaRetornoPendiente() {
     try {
-      // Verificar si hay un vehículo seleccionado para retorno
-      if (!currentBitacoraId) {
-        alert('❌ Primero debe seleccionar un vehículo haciendo clic en "Registrar Retorno" en la tabla');
+      // Buscar todos los vehículos pendientes de retorno
+      const registrosPendientes = Bitacora.filter(b => b.estado === 'en_curso');
+      
+      if (registrosPendientes.length === 0) {
+        alert('✅ No hay vehículos pendientes de retorno en este momento.');
         return;
       }
       
-      // Buscar el registro específico seleccionado
-      const registroSeleccionado = Bitacora.find(b => b.id === currentBitacoraId);
+      let mensaje = `⚠️ VEHÍCULOS PENDIENTES DE RETORNO (${registrosPendientes.length}):\n\n`;
       
-      if (!registroSeleccionado) {
-        alert('❌ No se encontró el registro de bitácora seleccionado');
-        return;
-      }
+      registrosPendientes.forEach((registro, index) => {
+        const fechaSalida = formatDateCA(registro.fecha_salida);
+        const horasSalida = Math.floor((new Date() - new Date(registro.fecha_salida)) / (1000 * 60 * 60));
+        
+        mensaje += `${index + 1}. Vehículo: ${registro.placa}\n`;
+        mensaje += `   Chofer: ${registro.chofer}\n`;
+        mensaje += `   Salida: ${fechaSalida}\n`;
+        mensaje += `   Tiempo sin retorno: ${horasSalida} horas\n\n`;
+      });
       
-      if (registroSeleccionado.estado !== 'en_curso') {
-        alert('❌ El vehículo seleccionado ya tiene retorno registrado');
-        return;
-      }
+      mensaje += '¿Enviar alerta por email para TODOS estos vehículos?';
       
-      const fechaSalida = formatDateCA(registroSeleccionado.fecha_salida);
-      const horasSalida = Math.floor((new Date() - new Date(registroSeleccionado.fecha_salida)) / (1000 * 60 * 60));
-      
-      const confirmar = confirm(
-        `⚠️ ENVIAR ALERTA DE RETORNO PENDIENTE\n\n` +
-        `Vehículo: ${registroSeleccionado.placa}\n` +
-        `Chofer: ${registroSeleccionado.chofer}\n` +
-        `Salida: ${fechaSalida}\n` +
-        `Tiempo sin retorno: ${horasSalida} horas\n\n` +
-        `¿Enviar alerta por email?`
-      );
+      const confirmar = confirm(mensaje);
       
       if (!confirmar) return;
       
-      // Enviar alerta por email para este vehículo específico
+      // Mostrar mensaje de progreso
+      const originalButtonText = document.querySelector('button[onclick="enviarAlertaRetornoPendiente()"]').innerHTML;
+      const alertButton = document.querySelector('button[onclick="enviarAlertaRetornoPendiente()"]');
+      alertButton.innerHTML = '⏳ Enviando...';
+      alertButton.disabled = true;
+      
+      // Enviar alerta por email para todos los vehículos pendientes
       const response = await fetch(`${API}/bitacora/alerta-retorno-pendiente`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registros_pendientes: [registroSeleccionado] })
+        body: JSON.stringify({ registros_pendientes: registrosPendientes })
       });
       
       const data = await response.json();
       
+      // Restaurar botón
+      alertButton.innerHTML = originalButtonText;
+      alertButton.disabled = false;
+      
       if (data.success) {
-        alert(`✅ Alerta enviada exitosamente!\n\nSe notificó sobre el vehículo ${registroSeleccionado.placa} a cargo de ${registroSeleccionado.chofer}.`);
+        alert(`✅ Alerta enviada exitosamente!\n\nSe notificó sobre ${registrosPendientes.length} vehículo(s) pendiente(s) de retorno.`);
         
-        // Asegurar que el formulario permanezca en modo retorno después de la alerta
-        if (currentBitacoraId && currentBitacoraId === registroSeleccionado.id) {
-          console.log('🔧 Restaurando modo retorno después de alerta...');
-          
-          // Encontrar el vehículo y reconfigurar el formulario
-          const vehiculo = Vehiculos.find(v => v.placa === registroSeleccionado.placa);
-          if (vehiculo) {
-            byId('bVeh').value = vehiculo.id;
+        // Si hay un vehículo seleccionado actualmente, mantener el formulario en modo retorno
+        if (currentBitacoraId) {
+          const registroActual = Bitacora.find(b => b.id === currentBitacoraId);
+          if (registroActual && registroActual.estado === 'en_curso') {
+            console.log('🔧 Manteniendo modo retorno para vehículo seleccionado...');
+            
+            setTimeout(() => {
+              const kmField = byId('bKmRetorno');
+              if (kmField && !kmField.value) {
+                kmField.focus();
+              }
+            }, 100);
+            
+            setTimeout(() => {
+              alert('📝 Puede continuar completando el registro de retorno del vehículo seleccionado.');
+            }, 1000);
           }
-          byId('bChofer').value = registroSeleccionado.chofer;
-          
-          // Asegurar modo retorno
-          cambiarAModoRetorno();
-          
-          // Re-enfocar el campo de kilometraje y mostrar instrucciones
-          setTimeout(() => {
-            const kmField = byId('bKmRetorno');
-            if (kmField) {
-              kmField.focus();
-              console.log('✅ Formulario listo para registro de retorno');
-            }
-          }, 100);
-          
-          // Mostrar mensaje adicional
-          setTimeout(() => {
-            alert('📝 Ahora puede completar el registro de retorno del vehículo.');
-          }, 500);
         }
       } else {
         alert('❌ Error enviando alerta: ' + (data.message || 'Error desconocido'));
       }
       
     } catch (e) {
+      // Restaurar botón en caso de error
+      const alertButton = document.querySelector('button[onclick="enviarAlertaRetornoPendiente()"]');
+      if (alertButton) {
+        alertButton.innerHTML = '⚠️ Alerta';
+        alertButton.disabled = false;
+      }
+      
       alert('❌ Error enviando alerta: ' + e.message);
       console.error('Error enviando alerta de retorno pendiente:', e);
     }
