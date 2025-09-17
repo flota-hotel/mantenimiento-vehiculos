@@ -8863,17 +8863,31 @@
       alertButton.disabled = true;
       
       // Enviar alerta por email para este vehículo específico
+      console.log('🔥 Enviando alerta para:', registroSeleccionado);
+      console.log('🔥 URL del endpoint:', `${API}/bitacora/alerta-retorno-pendiente`);
+      
       const response = await fetch(`${API}/bitacora/alerta-retorno-pendiente`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ registros_pendientes: [registroSeleccionado] })
       });
       
-      const data = await response.json();
+      console.log('🔥 Response status:', response.status);
+      console.log('🔥 Response ok:', response.ok);
       
       // Restaurar botón
       alertButton.innerHTML = originalButtonText;
       alertButton.disabled = false;
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔥 Error response text:', errorText);
+        alert(`❌ Error del servidor (${response.status}): ${errorText}`);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('🔥 Response data:', data);
       
       if (data.success) {
         alert(`✅ Alerta enviada exitosamente!\n\nSe notificó sobre el vehículo ${registroSeleccionado.placa} a cargo de ${registroSeleccionado.chofer}.`);
