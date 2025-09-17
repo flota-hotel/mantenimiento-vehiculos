@@ -1943,7 +1943,9 @@ async def enviar_alerta_retorno_pendiente(request: dict):
         vehiculos_html = ""
         for registro in registros_pendientes:
             fecha_salida = datetime.fromisoformat(registro['fecha_salida'].replace('Z', '+00:00'))
-            dias_pendientes = (datetime.now() - fecha_salida).days
+            # Convertir ambas fechas a UTC para hacer la comparación correctamente
+            ahora_utc = datetime.now(timezone.utc)
+            dias_pendientes = (ahora_utc - fecha_salida).days
             
             vehiculos_html += f"""
             <tr style="background-color: {'#ffebee' if dias_pendientes > 3 else '#fff3e0'};">
