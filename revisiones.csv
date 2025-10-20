@@ -1,0 +1,15 @@
+id,fecha,placa,inspector,estado_motor,estado_frenos,estado_luces,estado_llantas,estado_carroceria,observaciones,aprobado,created_at,luces_delanteras,luces_traseras,luces_direccionales,luces_freno,luces_reversa,espejos_laterales,espejo_retrovisor,limpiaparabrisas,cinturones,bocina,nivel_combustible,kilometraje
+8,2025-09-23T08:23,BKZ889,Freddy,bueno,bueno,bueno,excelente,rayones_menores,"Un poste de una de las baterías está quebrado, pero sigue funcionando con normalidad ",1,2025-09-23 14:25:21,1,1,1,1,1,1,1,1,1,1,3/4,229584
+9,2025-09-24T10:02,AB8455,Freddy,bueno,bueno,bueno,excelente,excelente,,1,2025-09-24 16:03:18,1,1,1,1,1,1,1,1,1,1,1/2,49349
+10,2025-09-27T07:30,AB8573,Christian,bueno,bueno,bueno,bueno,excelente,,1,2025-09-27 13:32:04,1,1,1,1,1,1,1,1,1,1,3/4,57928
+11,2025-09-27T07:32,AB8164,Christian,bueno,bueno,bueno,desgastadas,excelente,Las llantas delanteras estan para recauchar,1,2025-09-27 13:35:23,1,1,1,1,1,1,1,1,1,1,lleno,192222
+12,2025-09-27T07:36,AB8455,Christian,bueno,bueno,bueno,excelente,excelente,,1,2025-09-27 13:38:40,1,1,1,1,1,1,1,1,1,1,lleno,49662
+13,2025-09-27T07:44,BNN407,Christian,bueno,bueno,bueno,excelente,excelente,,1,2025-09-27 13:45:04,1,1,1,1,1,1,1,1,1,1,lleno,149425
+14,2025-10-06T04:41,BKZ889,Freddy,bueno,bueno,bueno,excelente,excelente,,1,2025-10-06 10:42:18,1,1,1,1,1,1,1,1,1,1,lleno,229700
+15,2025-10-09T13:12,AB8455,Freddy ,bueno,bueno,bueno,excelente,golpes_menores,"Presenta un golpe en el. Dorado izquierdo, arriba de la llanta trasera.",1,2025-10-09 19:13:49,1,1,1,1,1,1,1,1,1,1,3/4,50062
+16,2025-10-11T05:49,AB8573,Freddy,bueno,bueno,bueno,excelente,excelente,,1,2025-10-11 11:49:52,1,1,1,1,1,1,1,1,1,1,lleno,58670
+17,2025-10-12T08:26,AGV 4053,Keilor González ,bueno,bueno,bueno,excelente,excelente,,1,2025-10-12 14:35:22,1,1,1,1,1,1,1,1,1,1,1/2,309
+18,2025-10-12T08:35,CL299881,Keilor González ,regular,regular,regular,regular,golpes_menores,,1,2025-10-12 14:53:01,1,1,0,1,1,1,1,1,1,0,3/4,138570
+19,2025-10-15T06:32,BKZ889,Freddy ,bueno,bueno,bueno,excelente,excelente,,1,2025-10-15 12:32:45,1,1,1,1,1,1,1,1,1,1,lleno,229943
+20,2025-10-18T09:50,BKZ889,Freddy ,bueno,bueno,bueno,excelente,excelente,,1,2025-10-18 15:51:09,1,1,1,1,1,1,1,1,1,1,3/4,330252
+21,2025-10-20T08:04,AB8573,Freddy ,bueno,bueno,bueno,excelente,excelente,,1,2025-10-20 14:04:29,1,1,1,1,1,1,1,1,1,1,lleno,59540

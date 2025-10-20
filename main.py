@@ -110,7 +110,7 @@ EMAIL_CONFIG = {
     "smtp_port": 587,
     "sender_email": "sistema.vehicular@arenalmanoa.com",  # CAMBIAR por su email real
     "sender_password": "",  # CONFIGURAR con contraseña de aplicación
-    "recipient_email": "contabilidad2@arenalmanoa.com"
+    "recipient_email": "tech@arenalmanoa.com"
 }
 
 # Configuraciones alternativas para diferentes proveedores
