@@ -110,7 +110,7 @@ EMAIL_CONFIG = {
     "smtp_port": 587,
     "sender_email": "sistema.vehicular@arenalmanoa.com",  # CAMBIAR por su email real
     "sender_password": "",  # CONFIGURAR con contraseña de aplicación
-    "recipient_email": "contabilidad2@arenalmanoa.com"
+    "recipient_email": "tech@arenalmanoa.com"
 }
 
 # Configuraciones alternativas para diferentes proveedores
@@ -302,6 +302,21 @@ def init_database():
             activo BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Tabla de historial de alertas enviadas
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS historial_alertas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo_alerta TEXT NOT NULL,
+            vehiculo_placa TEXT,
+            destinatario_email TEXT NOT NULL,
+            asunto TEXT NOT NULL,
+            mensaje TEXT,
+            estado TEXT DEFAULT 'enviado',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (vehiculo_placa) REFERENCES vehiculos (placa)
         )
     ''')
     
@@ -1775,9 +1790,16 @@ async def registrar_salida(salida: BitacoraSalida):
         
         if ultimo_registro and ultimo_registro['km_retorno']:
             diferencia = abs(salida.km_salida - ultimo_registro['km_retorno'])
-            # Si la diferencia es mayor a 1 km, enviar alerta
-            if diferencia > 1:
+            
+            # Obtener configuración de alertas para verificar km_diferencia_alerta
+            cursor.execute("SELECT km_diferencia_alerta FROM config_alertas WHERE activo = 1 ORDER BY id DESC LIMIT 1")
+            config_km = cursor.fetchone()
+            km_limite = config_km['km_diferencia_alerta'] if config_km else 10
+            
+            # Si la diferencia es mayor al límite configurado, enviar alerta
+            if diferencia > km_limite:
                 alerta_km = True
+                logger.warning(f"🚨 ALERTA KILOMETRAJE: {salida.placa} - Diferencia {diferencia}km > límite {km_limite}km")
                 asyncio.create_task(enviar_alerta_kilometraje(
                     salida.placa, salida.chofer, salida.km_salida, 
                     ultimo_registro['km_retorno'], ultimo_registro['chofer']
@@ -1789,9 +1811,16 @@ async def registrar_salida(salida: BitacoraSalida):
             
             if vehiculo and vehiculo['km_inicial'] and vehiculo['km_inicial'] > 0:
                 diferencia = abs(salida.km_salida - vehiculo['km_inicial'])
-                # Si la diferencia es mayor a 1 km, enviar alerta
-                if diferencia > 1:
+                
+                # Obtener configuración de alertas para verificar km_diferencia_alerta
+                cursor.execute("SELECT km_diferencia_alerta FROM config_alertas WHERE activo = 1 ORDER BY id DESC LIMIT 1")
+                config_km = cursor.fetchone()
+                km_limite = config_km['km_diferencia_alerta'] if config_km else 10
+                
+                # Si la diferencia es mayor al límite configurado, enviar alerta
+                if diferencia > km_limite:
                     alerta_km = True
+                    logger.warning(f"🚨 ALERTA KILOMETRAJE: {salida.placa} - Diferencia {diferencia}km > límite {km_limite}km (vs KM inicial)")
                     asyncio.create_task(enviar_alerta_kilometraje(
                         salida.placa, salida.chofer, salida.km_salida, 
                         vehiculo['km_inicial'], "Sistema (KM Inicial)"
@@ -1873,10 +1902,33 @@ async def enviar_alerta_kilometraje(placa, chofer_actual, km_actual, km_anterior
         <p style="color: red;"><strong>ACCIÓN REQUERIDA:</strong> Verificar la inconsistencia en el kilometraje del vehículo.</p>
         """
         
+        # Enviar email
         send_email_notification(subject, body)
-        logger.info(f"Alerta de kilometraje enviada para vehículo {placa}")
+        
+        # Registrar en historial de alertas
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO historial_alertas 
+                (tipo_alerta, vehiculo_placa, destinatario_email, asunto, mensaje, estado)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                "Kilometraje Anómalo",
+                placa,
+                EMAIL_CONFIG["recipient_email"],
+                subject,
+                f"Diferencia detectada: {diferencia} km entre {km_anterior} km y {km_actual} km",
+                "enviado"
+            ))
+            conn.commit()
+            conn.close()
+        except Exception as hist_e:
+            logger.error(f"Error registrando alerta de kilometraje en historial: {hist_e}")
+        
+        logger.info(f"✅ Alerta de kilometraje enviada para vehículo {placa} - Diferencia: {diferencia} km")
     except Exception as e:
-        logger.error(f"Error enviando alerta de kilometraje: {e}")
+        logger.error(f"❌ Error enviando alerta de kilometraje: {e}")
 
 @app.post("/bitacora/alerta-retorno-pendiente")
 async def enviar_alerta_retorno_pendiente(request: dict):
@@ -1891,7 +1943,9 @@ async def enviar_alerta_retorno_pendiente(request: dict):
         vehiculos_html = ""
         for registro in registros_pendientes:
             fecha_salida = datetime.fromisoformat(registro['fecha_salida'].replace('Z', '+00:00'))
-            dias_pendientes = (datetime.now() - fecha_salida).days
+            # Convertir ambas fechas a UTC para hacer la comparación correctamente
+            ahora_utc = datetime.now(timezone.utc)
+            dias_pendientes = (ahora_utc - fecha_salida).days
             
             vehiculos_html += f"""
             <tr style="background-color: {'#ffebee' if dias_pendientes > 3 else '#fff3e0'};">
@@ -1959,11 +2013,26 @@ async def enviar_alerta_retorno_pendiente(request: dict):
                 "count": len(registros_pendientes)
             }
         else:
-            return {"success": False, "message": "Error enviando la alerta por email"}
+            return {
+                "success": False, 
+                "message": "Error enviando la alerta por email. Verifique la configuración del sistema de email."
+            }
             
     except Exception as e:
         logger.error(f"Error enviando alerta de retorno pendiente: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/debug/email-config")
+async def debug_email_config():
+    """Debug endpoint para verificar configuración de email"""
+    import os
+    return {
+        "email_method": EMAIL_METHOD,
+        "sendgrid_api_key_configured": bool(os.environ.get('SENDGRID_API_KEY')),
+        "sendgrid_from_email": os.environ.get('SENDGRID_FROM_EMAIL', 'No configurado'),
+        "smtp_configured": bool(EMAIL_CONFIG.get("sender_password")),
+        "recipient_email": EMAIL_CONFIG.get("recipient_email", "contabilidad2@arenalmanoa.com")
+    }
 
 @app.delete("/bitacora/{bitacora_id}")
 async def eliminar_bitacora(bitacora_id: int):
@@ -1993,6 +2062,212 @@ async def eliminar_bitacora(bitacora_id: int):
         
     except Exception as e:
         logger.error(f"Error al eliminar registro de bitácora {bitacora_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================================
+# ENDPOINT BACKUP COMPLETO DE BASE DE DATOS
+# ================================
+
+@app.get("/backup/database")
+async def backup_complete_database():
+    """Generar y descargar backup completo de la base de datos SQLite"""
+    try:
+        import shutil
+        import tempfile
+        import zipfile
+        from datetime import datetime
+        import io
+        
+        logger.info("🗄️ Iniciando backup completo de base de datos...")
+        
+        # Verificar que la base de datos existe
+        if not os.path.exists(DATABASE_PATH):
+            raise HTTPException(status_code=404, detail="Base de datos no encontrada")
+        
+        # Timestamp para el archivo
+        timestamp = now_ca().strftime("%Y%m%d_%H%M%S")
+        
+        # Crear ZIP en memoria
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Agregar la base de datos directamente
+            backup_filename = f"vehicular_system_backup_{timestamp}.db"
+            zipf.write(DATABASE_PATH, backup_filename)
+            
+            # Crear archivo de metadatos
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Obtener estadísticas de la base de datos
+            stats = {}
+            tables = ['vehiculos', 'mantenimientos', 'combustible', 'revisiones', 'polizas', 'rtv', 'bitacora']
+            
+            for table in tables:
+                try:
+                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                    stats[table] = cursor.fetchone()[0]
+                except:
+                    stats[table] = 0
+            
+            # Obtener información adicional
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            all_tables = [row[0] for row in cursor.fetchall()]
+            
+            conn.close()
+                
+            # Crear archivo de metadatos
+            metadata = f"""BACKUP COMPLETO DEL SISTEMA DE GESTIÓN VEHICULAR
+==================================================
+
+Fecha/Hora del Backup: {now_ca().strftime('%d/%m/%Y %H:%M:%S')} (GMT-6)
+Zona Horaria: Centroamérica
+Archivo de Base de Datos: {backup_filename}
+Formato: SQLite Database (.db)
+
+ESTADÍSTICAS DE LA BASE DE DATOS:
+--------------------------------
+Vehículos: {stats.get('vehiculos', 0)} registros
+Mantenimientos: {stats.get('mantenimientos', 0)} registros  
+Combustible: {stats.get('combustible', 0)} registros
+Revisiones: {stats.get('revisiones', 0)} registros
+Pólizas: {stats.get('polizas', 0)} registros
+RTV: {stats.get('rtv', 0)} registros
+Bitácora: {stats.get('bitacora', 0)} registros
+
+TOTAL DE REGISTROS: {sum(stats.values())}
+
+TABLAS DISPONIBLES:
+-----------------
+{chr(10).join(f'- {table}' for table in all_tables)}
+
+INSTRUCCIONES DE RESTAURACIÓN:
+-----------------------------
+1. Extraer el archivo {backup_filename} del ZIP
+2. Reemplazar la base de datos actual con este archivo
+3. Reiniciar el servicio del sistema
+4. Verificar que todos los datos estén disponibles
+
+COMPATIBILIDAD:
+--------------
+- SQLite 3.x
+- Python sqlite3 module
+- Compatible con el Sistema de Gestión Vehicular v1.0.0
+
+INFORMACIÓN TÉCNICA:
+-------------------
+- Encoding: UTF-8
+- Estructura: Relacional con claves foráneas
+- Respaldo: Completo (datos + estructura + índices)
+
+CONTACTO TÉCNICO:
+----------------
+Sistema generado automáticamente
+Plataforma: Railway
+Endpoint: https://mantenimiento-vehiculos-production.up.railway.app
+
+ADVERTENCIA:
+-----------
+Este backup contiene información sensible del sistema vehicular.
+Mantener en lugar seguro y con acceso restringido.
+"""
+            
+            # Agregar metadatos al ZIP directamente desde memoria
+            zipf.writestr(f"LEEME_backup_info_{timestamp}.txt", metadata)
+            
+            # Agregar SQL dump como texto plano (opcional)
+            try:
+                import subprocess
+                result = subprocess.run([
+                    'sqlite3', DATABASE_PATH, '.dump'
+                ], capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    sql_dump = f"""-- DUMP SQL DEL SISTEMA DE GESTIÓN VEHICULAR
+-- Generado el: {now_ca().strftime('%d/%m/%Y %H:%M:%S')} (GMT-6)
+-- Comando: sqlite3 {DATABASE_PATH} .dump
+
+{result.stdout}"""
+                else:
+                    sql_dump = f"""-- Error generando dump SQL
+-- Error: {result.stderr}"""
+                
+                zipf.writestr(f"vehicular_system_dump_{timestamp}.sql", sql_dump)
+            except Exception as e:
+                logger.warning(f"No se pudo generar SQL dump: {e}")
+                zipf.writestr(f"vehicular_system_dump_{timestamp}.sql", "-- Error generando dump SQL")
+        
+        # Preparar buffer para response
+        zip_buffer.seek(0)
+        zip_data = zip_buffer.read()
+        zip_buffer.close()
+        
+        zip_filename = f"vehicular_system_complete_backup_{timestamp}.zip"
+        
+        logger.info(f"✅ Backup completo generado en memoria: {zip_filename}")
+        
+        # Retornar usando Response con bytes
+        from fastapi.responses import Response
+        
+        return Response(
+            content=zip_data,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={zip_filename}",
+                "Content-Length": str(len(zip_data)),
+                "X-Backup-Timestamp": timestamp,
+                "X-Total-Records": str(sum(stats.values())),
+                "X-Backup-Type": "complete_database"
+            }
+        )
+            
+    except Exception as e:
+        logger.error(f"❌ Error generando backup de base de datos: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error generando backup: {str(e)}"
+        )
+
+@app.get("/backup/status")
+async def backup_status():
+    """Obtener información sobre el estado de la base de datos para backup"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener estadísticas básicas
+        stats = {}
+        tables = ['vehiculos', 'mantenimientos', 'combustible', 'revisiones', 'polizas', 'rtv', 'bitacora']
+        
+        for table in tables:
+            cursor.execute(f"SELECT COUNT(*) FROM {table}")
+            stats[table] = cursor.fetchone()[0]
+        
+        # Obtener tamaño del archivo de base de datos
+        db_size = os.path.getsize(DATABASE_PATH) if os.path.exists(DATABASE_PATH) else 0
+        db_size_mb = round(db_size / (1024 * 1024), 2)
+        
+        # Obtener fecha de última modificación
+        last_modified = datetime.fromtimestamp(os.path.getmtime(DATABASE_PATH)).isoformat() if os.path.exists(DATABASE_PATH) else None
+        
+        conn.close()
+        
+        return {
+            "success": True,
+            "data": {
+                "database_path": DATABASE_PATH,
+                "database_size_bytes": db_size,
+                "database_size_mb": db_size_mb,
+                "last_modified": last_modified,
+                "total_records": sum(stats.values()),
+                "table_counts": stats,
+                "backup_ready": True,
+                "timestamp": now_ca().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado de backup: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ================================
@@ -2117,6 +2392,9 @@ async def get_email_config():
     """Obtener configuración actual de email (sin contraseña)"""
     return {
         "success": True,
+        "email_method": EMAIL_METHOD,  # SENDGRID o SMTP
+        "sendgrid_available": EMAIL_METHOD == "SENDGRID",
+        "smtp_configured": bool(EMAIL_CONFIG["sender_password"]),
         "config": {
             "smtp_server": EMAIL_CONFIG["smtp_server"],
             "smtp_port": EMAIL_CONFIG["smtp_port"], 
@@ -2903,6 +3181,90 @@ async def force_sync_check():
             "error": str(e),
             "message": "Error verificando sincronización"
         }
+
+# ================================
+# ENDPOINT HISTORIAL DE ALERTAS
+# ================================
+
+@app.get("/historial/alertas")
+async def obtener_historial_alertas(limit: int = 50):
+    """Obtener historial de alertas enviadas"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener últimas alertas enviadas
+        cursor.execute("""
+            SELECT 
+                id,
+                tipo_alerta,
+                vehiculo_placa,
+                destinatario_email,
+                asunto,
+                mensaje,
+                estado,
+                created_at
+            FROM historial_alertas 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        """, (limit,))
+        
+        alertas = []
+        for row in cursor.fetchall():
+            alertas.append({
+                "id": row[0],
+                "tipo_alerta": row[1],
+                "vehiculo_placa": row[2],
+                "destinatario_email": row[3],
+                "asunto": row[4],
+                "mensaje": row[5],
+                "estado": row[6],
+                "created_at": row[7]
+            })
+        
+        conn.close()
+        
+        return {
+            "success": True,
+            "alertas": alertas,
+            "total": len(alertas)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo historial de alertas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/historial/alertas")
+async def registrar_alerta_enviada(alerta_data: dict):
+    """Registrar una alerta enviada en el historial"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO historial_alertas 
+            (tipo_alerta, vehiculo_placa, destinatario_email, asunto, mensaje, estado)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            alerta_data.get("tipo_alerta"),
+            alerta_data.get("vehiculo_placa"),
+            alerta_data.get("destinatario_email"),
+            alerta_data.get("asunto"),
+            alerta_data.get("mensaje"),
+            alerta_data.get("estado", "enviado")
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Alerta registrada en historial"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error registrando alerta en historial: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     init_database()
